@@ -1,0 +1,13 @@
+{
+    "id": "org.webosbrew.cccbib",
+    "version": "0.1.0",
+    "vendor": "volkovmqx",
+    "type": "web",
+    "main": "index.html",
+    "title": "CCCBib",
+    "iconColor": "#231f20",
+    "appDescription": "media.ccc.de library application (EXPERIMENTAL)",
+    "icon": "icon80.png",
+    "splashBackground": "splash.png",
+    "largeIcon": "icon130.png"
+}

@@ -1,0 +1,19 @@
+#app {
+    height: 100%;
+  }
+  
+  .swiper {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .swiper-slide {
+    height: auto;
+  }
+  .swiper-event-slide {
+    width: 310px;
+  }
+  .conference {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
