@@ -3,7 +3,7 @@ import { gql } from '@apollo/client';
 
 export const GET_RECENT_CONFERENCES = gql`
   query conferencesRecent($offset: Int) {
-        conferencesRecent(offset: $offset, first: 3) {
+        conferencesRecent(offset: $offset, first: 6) {
           id
           title
           slug
@@ -12,14 +12,16 @@ export const GET_RECENT_CONFERENCES = gql`
           scheduleUrl
           updatedAt
           eventLastReleasedAt
-          lectures  {
+          lectures {
             nodes {
               guid
               title
               persons
               duration
+              description
               viewCount
               images {
+                thumbUrl
                 posterUrl
               }
               videos {

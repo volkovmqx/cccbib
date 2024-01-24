@@ -1,6 +1,6 @@
 {
   "name": "org.webosbrew.cccbib",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "media.ccc.de library application (EXPERIMENTAL)",
   "main": "index.js",
   "scripts": {
@@ -37,12 +37,12 @@
     "@mantine/hooks": "^7.4.2",
     "@tabler/icons-react": "^2.46.0",
     "core-js": "^3.20.1",
+    "embla-carousel-react": "^8.0.0-rc20",
     "graphql": "^16.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.2.1",
     "react-tv-player": "^1.1.4",
-    "regenerator-runtime": "^0.14.1",
-    "swiper": "^11.0.5"
+    "regenerator-runtime": "^0.14.1"
   }
 }

@@ -22,7 +22,6 @@ fs.writeFileSync(
     iconUri:
       'https://raw.githubusercontent.com/volkovmqx/cccbib/main/assets/icon130.png',
     sourceUrl: 'https://github.com/volkovmqx/cccbib',
-    rootRequired: true,
     ipkUrl: ipkfile,
     ipkHash: {
       sha256: ipkhash,
