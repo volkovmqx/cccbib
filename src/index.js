@@ -3,9 +3,12 @@ import 'core-js/stable';
 import React from 'react';
 import '@mantine/core/styles.css';
 
-import { createTheme, MantineProvider } from '@mantine/core';
+
+import { MantineProvider, createTheme } from '@mantine/core';
 import { createRoot } from 'react-dom/client';
 import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
+
+const theme = createTheme();
 
 const cache = new InMemoryCache({
   typePolicies: {
@@ -43,14 +46,11 @@ const client = new ApolloClient({
 
 import App from './App';
 
-const theme = createTheme({
-  /** Put your mantine theme override here */
-});
 
 const container = document.getElementById('app');
 const root = createRoot(container); // createRoot(container!) if you use TypeScript
 root.render(
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+    <MantineProvider defaultColorScheme="dark" theme={theme}>
       <ApolloProvider client={client}>
         <App />
       </ApolloProvider>

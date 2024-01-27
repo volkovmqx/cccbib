@@ -9,21 +9,24 @@
 
 ## Background
 
-This app uses the official media.ccc.de/graphql endpoint. It is built using React, Swiper, Mantine, React TV Player and ❤️ from Leipzig.
+This app uses the official media.ccc.de/graphql endpoint. It is built using React, Embla, Mantine, React TV Player and ❤️ from Leipzig.
 
 ## Features
 
 - Support for conferences lazy loading.
+- Preview of the events on scroll.
 - Support for language change.
 
 ## Roadmap
 
-- &#9744; Switch to Swiper virtual slides to optimise the DOM
-- &#9744; Add Search functionnality
+- &#9744; Add Search functionnality.
+- &#9744; Add Watchlist functionnality.
+- &#9744; Add configuration page.
+- &#9744; Add substitles functionnality.
 
 ##  Contributions
 
-Either you found a bug, optimisation strategy or want something implemented, go ahead and hack your way into the code, PRs are welcome.
+Either you found a bug, optimisation strategy or want something implemented, go ahead and hack your way into the code, PRs are welcome 🌱.
 
 
 ## Development
@@ -31,7 +34,7 @@ Either you found a bug, optimisation strategy or want something implemented, go 
 ```sh
 yarm install
 
-# Serve development build on http://127.0.0.1:3000
+# Serve development build on http://127.0.0.1:3333
 yarn start
 
 # Production build (dumped into dist/)
