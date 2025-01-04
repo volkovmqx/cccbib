@@ -3,35 +3,47 @@ const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  entry: path.resolve(__dirname, './src/index.js'),
+  entry: {
+    app: [
+      'core-js/modules/es.global-this',
+      'core-js/stable',
+      'regenerator-runtime/runtime',
+      './src/index.js'
+    ]
+  },
   devtool: false,
   module: {
     rules: [
       {
         test: /\.(ts|tsx|js|jsx|mjs)$/,
-        // exclude: /node_modules/,
         exclude: /core-js/,
         use: ['babel-loader'],
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1
+            }
+          }
+        ],
       },
       {
         test: /\.s[ac]ss$/i,
         use: [
-          // Creates `style` nodes from JS strings
           'style-loader',
-          // Translates CSS into CommonJS
           'css-loader',
-          // Compiles Sass to CSS
           'sass-loader',
         ],
       },
     ],
   },
   resolve: {
-    extensions: ['*', '.js', '.jsx', '.ts', '.tsx', '.mjs'],
+    extensions: ['.*', '.js', '.jsx', '.ts', '.tsx', '.mjs'],
+    modules: [path.resolve(__dirname, 'src'), 'node_modules'],
   },
   output: {
     path: path.resolve(__dirname, './dist'),

@@ -7,18 +7,18 @@ export function getVideo(videos) {
         defaultValue: 'deu',
       });
       let recording = videos.find(
-        (s) => (s.language === language && s.mimeType === "video/mp4" && s.url)
+        (s) => (s.language === language && s.mimeType === "video/webm" && s.url)
       );
       let foundLanguage = true;
       // check if another language is available
       let otherLanguage = language === "deu" ? "eng" : "deu";
       const otherLanguageAvailable = videos.find(
-        (s) => (s.language === otherLanguage && s.mimeType === "video/mp4" && s.url)
+        (s) => (s.language === otherLanguage && s.mimeType === "video/webm" && s.url)
       );
       // video in language not found, try to find any video
       if (!recording) {
         recording = videos.find(
-          (s) => s.mimeType === "video/mp4" && s.url
+          (s) => s.mimeType === "video/webm" && s.url
         );
         foundLanguage = false;
       }

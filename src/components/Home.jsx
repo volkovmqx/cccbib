@@ -3,10 +3,10 @@ import { GET_RECENT_CONFERENCES } from '../data';
 import { Center, Loader, Container, Box } from '@mantine/core';
 import { useWindowEvent, useListState } from '@mantine/hooks';
 import { useQuery } from '@apollo/client';
-import { Preview } from '../components/Preview';
-import { Player } from '../components/Player';
+import { Preview } from './Preview';
+import { Player } from './Player';
 import { handleArrowDown, handleArrowUp, handleArrowLeft, handleArrowRight } from '../helpers/helpers';
-import { EventCarousel } from '../components/EventCarousel';
+import { EventCarousel } from './EventCarousel';
 
 import '../styles.css';
 
