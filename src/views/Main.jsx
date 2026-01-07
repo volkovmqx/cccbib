@@ -1,32 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Home } from '../components/Home';
+import { Sidebar } from '../components/Sidebar';
 
-import { AppShell, Stack, ActionIcon } from '@mantine/core';
-import { IconHeart, IconInfoCircle, IconSearch, IconSettings } from '@tabler/icons-react';
+import { AppShell } from '@mantine/core';
 
 export default function App() {
+  const [sidebarFocused, setSidebarFocused] = useState(false);
+  const [selectedItem, setSelectedItem] = useState('recent');
+  const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
 
   return (
     <AppShell
       navbar={
-        <Stack justify="center" gap={0}>
-          <ActionIcon variant="subtle" color="gray" className='actionButton' disabled={true}>
-            <IconSearch style={{ width: '70%', height: '70%' }} stroke={1.5} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" color="gray" className='actionButton' disabled={true}>
-            <IconHeart style={{ width: '70%', height: '70%' }} stroke={1.5} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" color="gray" className='actionButton' disabled={true}>
-            <IconSettings style={{ width: '70%', height: '70%' }} stroke={1.5} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" color="gray" className='actionButton' disabled={true}>
-            <IconInfoCircle style={{ width: '70%', height: '70%' }} stroke={1.5} />
-          </ActionIcon>
-        </Stack>
+        !isPlayerFullscreen && (
+          <Sidebar
+            selectedItem={selectedItem}
+            onSelectItem={(item) => {
+              setSelectedItem(item);
+              setSidebarFocused(false);
+            }}
+            focused={sidebarFocused}
+          />
+        )
       }
+      padding={0}
+      styles={{
+        main: {
+          marginLeft: isPlayerFullscreen ? 0 : 'var(--sidebar-width)',
+          width: isPlayerFullscreen ? '100vw' : 'calc(100% - var(--sidebar-width))',
+          paddingLeft: 0,
+        }
+      }}
     >
-     
-      <Home />
+      <Home
+        selectedItem={selectedItem}
+        onFocusSidebar={() => setSidebarFocused(true)}
+        onSelectItem={(item) => setSelectedItem(item)}
+        sidebarFocused={sidebarFocused}
+        isPlayerFullscreen={isPlayerFullscreen}
+        setIsPlayerFullscreen={setIsPlayerFullscreen}
+      />
     </AppShell>
   );
 }
