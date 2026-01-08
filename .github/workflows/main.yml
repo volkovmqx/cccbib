@@ -5,37 +5,36 @@ name: Build & Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [20.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - run: yarn install --frozen-lockfile
-    - run: yarn run build
-    - run: yarn run package
+      - run: yarn install --frozen-lockfile
+      - run: yarn run build
+      - run: yarn run package
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: cccbib_ipk
-        path: |
-          ${{github.workspace}}/org.webosbrew.cccbib_*_all.ipk
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cccbib_ipk
+          path: |
+            ${{github.workspace}}/org.webosbrew.cccbib_*_all.ipk

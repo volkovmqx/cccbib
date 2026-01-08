@@ -3,35 +3,46 @@ const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  entry: path.resolve(__dirname, './src/index.js'),
+  entry: {
+    app: [
+      'core-js/stable',
+      'regenerator-runtime/runtime',
+      './src/index.jsx'
+    ]
+  },
   devtool: false,
   module: {
     rules: [
       {
         test: /\.(ts|tsx|js|jsx|mjs)$/,
-        // exclude: /node_modules/,
         exclude: /core-js/,
         use: ['babel-loader'],
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1
+            }
+          }
+        ],
       },
       {
         test: /\.s[ac]ss$/i,
         use: [
-          // Creates `style` nodes from JS strings
           'style-loader',
-          // Translates CSS into CommonJS
           'css-loader',
-          // Compiles Sass to CSS
           'sass-loader',
         ],
       },
     ],
   },
   resolve: {
-    extensions: ['*', '.js', '.jsx', '.ts', '.tsx', '.mjs'],
+    extensions: ['.*', '.js', '.jsx', '.ts', '.tsx', '.mjs'],
+    modules: [path.resolve(__dirname, 'src'), 'node_modules'],
   },
   output: {
     path: path.resolve(__dirname, './dist'),
@@ -48,5 +59,44 @@ module.exports = {
   devServer: {
     static: path.resolve(__dirname, './dist'),
     port: 3333,
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'https://api.media.ccc.de',
+        pathRewrite: { '^/api': '' },
+        changeOrigin: true,
+        secure: true,
+      },
+      {
+        context: ['/subtitles'],
+        target: 'https://cdn.media.ccc.de',
+        pathRewrite: { '^/subtitles': '' },
+        changeOrigin: true,
+        secure: true,
+        followRedirects: true,
+        onProxyRes: function(proxyRes, req, res) {
+          // Remove CORS headers from the proxied response
+          delete proxyRes.headers['access-control-allow-origin'];
+          delete proxyRes.headers['access-control-allow-credentials'];
+        },
+      },
+      {
+        context: ['/subtitles-static'],
+        target: 'https://static.media.ccc.de',
+        pathRewrite: { '^/subtitles-static': '' },
+        changeOrigin: true,
+        secure: true,
+        followRedirects: true,
+        logLevel: 'debug',
+        onProxyReq: function(proxyReq, req, res) {
+          console.log('Proxying to:', proxyReq.path);
+        },
+        onProxyRes: function(proxyRes, req, res) {
+          // Remove CORS headers from the proxied response
+          delete proxyRes.headers['access-control-allow-origin'];
+          delete proxyRes.headers['access-control-allow-credentials'];
+        },
+      },
+    ],
   },
 };
