@@ -16,13 +16,17 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Support for conferences lazy loading.
 - Preview of the events on scroll.
 - Support for language change.
+- Smart TV Navigation with React! (Thanks to [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1).)
+- Search functionnality.
+- Watchlist.
+- Quality of Life remote button usage.
+- Configuration page for preferred languages and subtitles.
+- Substitles functionnality.
 
 ## Roadmap
 
-- &#9744; Add Search functionnality.
-- &#9744; Add Watchlist functionnality.
-- &#9744; Add configuration page.
-- &#9744; Add substitles functionnality.
+- &#9744; Add Speaker page.
+- &#9744; Add Info page.
 
 ##  Contributions
 
@@ -55,6 +59,8 @@ yarn launch
 The Logo ["Voctocat"](https://morr.cc/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under CC BY-NC-SA 4.0 License.
 
 WebOS Project architecture from ["Informatic"](https://github.com/informatic/streamkatze)
+
+
 
 ## License
 

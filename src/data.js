@@ -30,6 +30,11 @@ export const GET_RECENT_CONFERENCES = gql`
                 language
                 url
               }
+              subtitles {
+                mimeType
+                language
+                url
+              }
             }
           }
         }
@@ -48,7 +53,47 @@ export const GET_LECTURE = gql`
         mimeType
         url
         language
-      }        
+      }
+    }
+  }
+`;
+
+export const GET_CONFERENCE = gql`
+  query conference($id: ID!) {
+    conference(id: $id) {
+      id
+      title
+      slug
+      logoUrl
+      aspectRatio
+      scheduleUrl
+      updatedAt
+      eventLastReleasedAt
+      lectures {
+        nodes {
+          guid
+          title
+          persons
+          duration
+          description
+          viewCount
+          images {
+            thumbUrl
+            posterUrl
+          }
+          videos {
+            width
+            mimeType
+            language
+            url
+          }
+          subtitles {
+            mimeType
+            language
+            url
+          }
+        }
+      }
     }
   }
 `;

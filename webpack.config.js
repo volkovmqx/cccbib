@@ -5,10 +5,9 @@ const CopyPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: {
     app: [
-      'core-js/modules/es.global-this',
       'core-js/stable',
       'regenerator-runtime/runtime',
-      './src/index.js'
+      './src/index.jsx'
     ]
   },
   devtool: false,
@@ -60,5 +59,44 @@ module.exports = {
   devServer: {
     static: path.resolve(__dirname, './dist'),
     port: 3333,
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'https://api.media.ccc.de',
+        pathRewrite: { '^/api': '' },
+        changeOrigin: true,
+        secure: true,
+      },
+      {
+        context: ['/subtitles'],
+        target: 'https://cdn.media.ccc.de',
+        pathRewrite: { '^/subtitles': '' },
+        changeOrigin: true,
+        secure: true,
+        followRedirects: true,
+        onProxyRes: function(proxyRes, req, res) {
+          // Remove CORS headers from the proxied response
+          delete proxyRes.headers['access-control-allow-origin'];
+          delete proxyRes.headers['access-control-allow-credentials'];
+        },
+      },
+      {
+        context: ['/subtitles-static'],
+        target: 'https://static.media.ccc.de',
+        pathRewrite: { '^/subtitles-static': '' },
+        changeOrigin: true,
+        secure: true,
+        followRedirects: true,
+        logLevel: 'debug',
+        onProxyReq: function(proxyReq, req, res) {
+          console.log('Proxying to:', proxyReq.path);
+        },
+        onProxyRes: function(proxyRes, req, res) {
+          // Remove CORS headers from the proxied response
+          delete proxyRes.headers['access-control-allow-origin'];
+          delete proxyRes.headers['access-control-allow-credentials'];
+        },
+      },
+    ],
   },
 };
