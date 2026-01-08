@@ -15,50 +15,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Use Node.js 14.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 14.x
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
 
-    - run: yarn install --frozen-lockfile
-    - run: yarn run build
-    - run: yarn run package
-    - run: echo RELEASE_FILENAME_IPK=`ls *.ipk` >> $GITHUB_ENV
-    - run: yarn manifest
+      - run: yarn install --frozen-lockfile
+      - run: yarn run build
+      - run: yarn run package
+      - run: echo RELEASE_FILENAME_IPK=`ls *.ipk` >> $GITHUB_ENV
+      - run: yarn manifest
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: true
-
-    - name: Upload IPK asset
-      id: upload-ipk-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ${{github.workspace}}/${{env.RELEASE_FILENAME_IPK}}
-        asset_name: ${{env.RELEASE_FILENAME_IPK}}
-        asset_content_type: application/vnd.debian.binary-package
-
-    - name: Upload Manifest asset
-      id: upload-manifest-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ${{github.workspace}}/org.webosbrew.cccbib.manifest.json
-        asset_name: org.webosbrew.cccbib.manifest.json
-        asset_content_type: application/json
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: true
+          files: |
+            ${{github.workspace}}/${{env.RELEASE_FILENAME_IPK}}
+            ${{github.workspace}}/org.webosbrew.cccbib.manifest.json
+        id: upload-ipk-asset
