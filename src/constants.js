@@ -61,7 +61,6 @@ export const LANGUAGES = [
   { code: 'pol', name: 'Polish' },
   { code: 'nld', name: 'Dutch' },
   { code: 'ces', name: 'Czech' },
-  { code: 'gsw', name: 'Swiss German' },
   { code: 'jpn', name: 'Japanese' },
   { code: 'zho', name: 'Chinese' },
   { code: 'ara', name: 'Arabic' },
@@ -75,12 +74,12 @@ export const LANGUAGE_NAMES = Object.fromEntries(
 export const LANG_CODE_MAP = {
   'eng': 'en', 'deu': 'de', 'fra': 'fr', 'spa': 'es', 'ita': 'it',
   'por': 'pt', 'rus': 'ru', 'jpn': 'ja', 'zho': 'zh', 'ara': 'ar',
-  'pol': 'pl', 'nld': 'nl', 'ces': 'cs', 'fin': 'fi', 'gsw': 'gsw'
+  'pol': 'pl', 'nld': 'nl', 'ces': 'cs', 'fin': 'fi'
 };
 
 // Subtitle options (includes 'none')
 export const SUBTITLE_LANGUAGES = [
-  { code: 'none', name: 'None (Off)' },
+  { code: 'none', name: 'None' },
   ...LANGUAGES.filter(l => l.code !== 'auto')
 ];
 

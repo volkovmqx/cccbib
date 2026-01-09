@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
+const appInfo = require('./assets/appinfo.json');
 
 module.exports = {
   entry: {
@@ -49,6 +50,10 @@ module.exports = {
     filename: 'bundle.js',
   },
   plugins: [
+    new webpack.DefinePlugin({
+      APP_VERSION: JSON.stringify(appInfo.version),
+      APP_ID: JSON.stringify(appInfo.id),
+    }),
     new CopyPlugin({
       patterns: [
         { context: 'assets', from: '**/*' },

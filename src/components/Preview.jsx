@@ -7,7 +7,7 @@ import { Logo } from './Logo';
 
 const PREVIEW_DEBOUNCE_MS = 300;
 
-export const Preview = React.memo(function Preview({ event, conferenceTitle }) {
+export const Preview = React.memo(function Preview({ event, conferenceTitle, disableVideo = false }) {
     const [language] = useLocalStorage({
         key: 'language',
         defaultValue: 'deu',
@@ -78,7 +78,7 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle }) {
             </div>
             <div className="preview">
                 <div className="previewOverlay" />
-                {showVideo && recording && recording.url && (
+                {showVideo && recording && recording.url && !disableVideo && (
                     <video
                         src={`${recording.url}#t=${previewTimestamp}`}
                         preload="none"

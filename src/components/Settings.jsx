@@ -321,6 +321,11 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
             ))}
           </div>
         </div>
+
+        <div className="settingsView__section settingsView__about">
+          <h3 className="settingsView__sectionTitle">About</h3>
+          <p className="settingsView__sectionDescription" style={{ textAlign: 'center' }}>CCCBib made with ♥. {APP_ID} {APP_VERSION}.<br />Powered by media.ccc.de. Sponsor and help if you can!<br />Could I interest you in a pet rock? 🪨</p>
+        </div>
       </div>
     </div>
   );

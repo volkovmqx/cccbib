@@ -11,7 +11,7 @@ export const SelectorModal = React.memo(function SelectorModal({
   getLabel,
 }) {
   const defaultGetLabel = (opt) => {
-    if (opt === 'none') return 'None (Off)';
+    if (opt === 'none') return 'None';
     return LANGUAGE_NAMES[opt] || opt;
   };
 
