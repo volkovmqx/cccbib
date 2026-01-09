@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Center, Loader, Container, Title } from '@mantine/core';
 import { useWindowEvent } from '@mantine/hooks';
 import { useQuery } from '@apollo/client';
@@ -20,6 +20,35 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
   });
 
   const eventsPerRow = 4;
+  const visibleRowBuffer = 3; // Render ±3 rows around active row
+  const itemHeight = 180; // Approximate height of each grid item in px
+
+  // Calculate visible window of events for virtual scrolling
+  const { visibleEvents, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
+    if (!data?.conference?.lectures?.nodes) {
+      return { visibleEvents: [], topSpacerHeight: 0, bottomSpacerHeight: 0 };
+    }
+
+    const events = data.conference.lectures.nodes;
+    const totalEvents = events.length;
+    const totalRows = Math.ceil(totalEvents / eventsPerRow);
+    const activeRow = Math.floor(activeEvent / eventsPerRow);
+
+    const startRow = Math.max(0, activeRow - visibleRowBuffer);
+    const endRow = Math.min(totalRows - 1, activeRow + visibleRowBuffer);
+
+    const startIndex = startRow * eventsPerRow;
+    const endIndex = Math.min(totalEvents, (endRow + 1) * eventsPerRow);
+
+    return {
+      visibleEvents: events.slice(startIndex, endIndex).map((event, i) => ({
+        ...event,
+        originalIndex: startIndex + i
+      })),
+      topSpacerHeight: startRow * itemHeight,
+      bottomSpacerHeight: Math.max(0, (totalRows - endRow - 1) * itemHeight)
+    };
+  }, [data, activeEvent, eventsPerRow, visibleRowBuffer, itemHeight]);
 
   // Keep scroll position
   const savedScrollPositionRef = useRef(0);
@@ -145,51 +174,62 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
   const conference = data.conference;
   const events = conference.lectures.nodes;
 
-  if (playerIsOpen) {
-    return (
-      <div className="player-fullscreen-container">
-        <Player
+  return (
+    <>
+      {playerIsOpen && (
+        <div className="player-fullscreen-container">
+          <Player
+            event={events[activeEvent]}
+            conferenceTitle={conference.title}
+            onClose={() => {
+              setPlayerIsOpen(false);
+              setIsPlayerFullscreen(false);
+            }}
+          />
+        </div>
+      )}
+      <Container fluid style={{ display: playerIsOpen ? 'none' : 'block' }}>
+        <Preview
           event={events[activeEvent]}
           conferenceTitle={conference.title}
-          onClose={() => {
-            setPlayerIsOpen(false);
-            setIsPlayerFullscreen(false);
-          }}
         />
-      </div>
-    );
-  }
-
-  return (
-    <Container fluid>
-      <Preview
-        event={events[activeEvent]}
-        conferenceTitle={conference.title}
-      />
-      <div className="conferenceView__container" ref={containerRef} onScroll={handleScroll}>
-        <div className="conferenceView__header">
-          <h2 className="conferenceView__title">{conference.title}</h2>
-        </div>
-        <div className="conferenceView__grid">
-          {events.map((event, index) => (
-            <div
-              key={event.guid}
-              ref={index === activeEvent ? selectedItemRef : null}
-              className={`conferenceView__gridItem ${index === activeEvent ? 'conferenceView__gridItem--active' : ''}`}
-              onClick={() => setActiveEvent(index)}
-            >
-              <img
-                src={event.images.thumbUrl}
-                alt={event.title}
-                className="conferenceView__gridItem__img"
-                loading="lazy"
+        <div className="conferenceView__container" ref={containerRef} onScroll={handleScroll}>
+          <div className="conferenceView__header">
+            <h2 className="conferenceView__title">{conference.title}</h2>
+          </div>
+          <div className="conferenceView__grid">
+            {topSpacerHeight > 0 && (
+              <div
+                className="conferenceView__gridSpacer"
+                style={{ height: topSpacerHeight, gridColumn: '1 / -1' }}
               />
-              <div className="conferenceView__gridItem__title">{event.title}</div>
-            </div>
-          ))}
+            )}
+            {visibleEvents.map((event) => (
+              <div
+                key={event.guid}
+                ref={event.originalIndex === activeEvent ? selectedItemRef : null}
+                className={`conferenceView__gridItem ${event.originalIndex === activeEvent ? 'conferenceView__gridItem--active' : ''}`}
+                onClick={() => setActiveEvent(event.originalIndex)}
+              >
+                <img
+                  src={event.images.thumbUrl}
+                  alt={event.title}
+                  className="conferenceView__gridItem__img"
+                  loading="lazy"
+                />
+                <div className="conferenceView__gridItem__title">{event.title}</div>
+              </div>
+            ))}
+            {bottomSpacerHeight > 0 && (
+              <div
+                className="conferenceView__gridSpacer"
+                style={{ height: bottomSpacerHeight, gridColumn: '1 / -1' }}
+              />
+            )}
+          </div>
         </div>
-      </div>
-    </Container>
+      </Container>
+    </>
   );
 });
 
