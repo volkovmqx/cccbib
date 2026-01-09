@@ -397,6 +397,7 @@ html {
 .embla__container {
   backface-visibility: hidden;
   display: flex;
+  will-change: transform;
 }
 
 .embla__container_vertical {
@@ -826,6 +827,7 @@ html {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   padding: 0 0 40px 0;
+  contain: layout style;
 }
 
 .conferenceView__gridItem {
@@ -1279,12 +1281,16 @@ body[data-subtitle-style="black"] video::cue {
   justify-content: center;
   gap: 10px;
   padding: 12px 20px;
-  background-color: rgba(220, 53, 69, 0.95);
+  background-color: rgba(0, 0, 0, 0.95);
   color: white;
   font-size: var(--font-size-sm);
   font-weight: 600;
   z-index: 9999;
   animation: slideDown 0.3s ease;
+}
+
+.offline-banner svg {
+  color: var(--ccc-green);
 }
 
 @keyframes slideDown {

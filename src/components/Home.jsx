@@ -41,6 +41,8 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
   const [dataSlice, dataSliceHandlers] = useListState([]);
   const [isLoading, setIsLoading] = useState(false)
   const [activeEvents, setActiveEvents] = useState({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+  const [previousView, setPreviousView] = useState('recent');
+  const [eventsSelectedIndex, setEventsSelectedIndex] = useState(0);
 
   const { loading, error, data, fetchMore } = useQuery(GET_RECENT_CONFERENCES, {
     variables: { offset: 0 },
@@ -235,9 +237,14 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
       <LazyView>
         <EventsListView
           onClose={() => onSelectItem('recent')}
-          onSelectEvent={onSelectItem}
+          onSelectEvent={(conferenceId) => {
+            setPreviousView('events');
+            onSelectItem(conferenceId);
+          }}
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
+          selectedIndex={eventsSelectedIndex}
+          setSelectedIndex={setEventsSelectedIndex}
         />
       </LazyView>
     );
@@ -276,6 +283,7 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
           setIsPlayerFullscreen={setIsPlayerFullscreen}
+          onClose={() => onSelectItem(previousView)}
         />
       </LazyView>
     );

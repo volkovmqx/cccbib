@@ -4,11 +4,10 @@ import { ListView } from './ListView';
 
 import '../styles.css';
 
-export const EventsListView = React.memo(function EventsListView({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused }) {
+export const EventsListView = React.memo(function EventsListView({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused, selectedIndex, setSelectedIndex }) {
   const [conferences, setConferences] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
 
   useEffect(() => {
     const fetchConferences = async () => {

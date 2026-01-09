@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Center, Loader, Container, Title } from '@mantine/core';
 import { useWindowEvent } from '@mantine/hooks';
 import { useQuery } from '@apollo/client';
@@ -8,7 +8,7 @@ import { Player } from './Player';
 
 import '../styles.css';
 
-export const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }) {
+export const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen, onClose }) {
   const [playerIsOpen, setPlayerIsOpen] = useState(false);
   const [activeEvent, setActiveEvent] = useState(0);
   const selectedItemRef = useRef(null);
@@ -21,27 +21,66 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
 
   const eventsPerRow = 4;
 
-  // Scroll selected item into view with header offset
-  useEffect(() => {
-    if (selectedItemRef.current && containerRef.current) {
-      const container = containerRef.current;
-      const item = selectedItemRef.current;
-      const headerOffset = 70; // Account for sticky header
+  // Keep scroll position
+  const savedScrollPositionRef = useRef(0);
+  const playerJustClosedRef = useRef(false);
 
-      const itemTop = item.offsetTop - headerOffset;
-      const itemBottom = item.offsetTop + item.offsetHeight;
-      const containerScrollTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
-
-      // Check if item is above visible area
-      if (itemTop < containerScrollTop) {
-        container.scrollTop = itemTop;
-      }
-      // Check if item is below visible area
-      else if (itemBottom > containerScrollTop + containerHeight) {
-        container.scrollTop = itemBottom - containerHeight + 20;
-      }
+  const handleScroll = useCallback(() => {
+    if (containerRef.current) {
+      savedScrollPositionRef.current = containerRef.current.scrollTop;
     }
+  }, []);
+
+  useEffect(() => {
+    if (playerIsOpen) {
+      playerJustClosedRef.current = false;
+      return;
+    }
+
+    playerJustClosedRef.current = true;
+    const resetTimeout = setTimeout(() => {
+      playerJustClosedRef.current = false;
+    }, 300);
+
+    if (savedScrollPositionRef.current > 0) {
+      const scrollTimeout = setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = savedScrollPositionRef.current;
+        }
+      }, 100);
+      return () => {
+        clearTimeout(resetTimeout);
+        clearTimeout(scrollTimeout);
+      };
+    }
+
+    return () => clearTimeout(resetTimeout);
+  }, [playerIsOpen]);
+
+  useEffect(() => {
+    if (playerIsOpen) return;
+
+    const timeoutId = setTimeout(() => {
+      if (selectedItemRef.current && containerRef.current) {
+        const container = containerRef.current;
+        const item = selectedItemRef.current;
+        const headerOffset = 70;
+
+        const itemTop = item.offsetTop - headerOffset;
+        const itemBottom = item.offsetTop + item.offsetHeight;
+        const containerScrollTop = container.scrollTop;
+        const containerHeight = container.clientHeight;
+
+        if (itemTop < containerScrollTop) {
+          container.scrollTop = itemTop;
+        } else if (itemBottom > containerScrollTop + containerHeight) {
+          container.scrollTop = itemBottom - containerHeight + 20;
+        }
+        savedScrollPositionRef.current = container.scrollTop;
+      }
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
   }, [activeEvent]);
 
   // Keyboard navigation
@@ -55,7 +94,12 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
     // Don't handle keyboard events if sidebar is focused
     if (sidebarFocused) return;
 
-    if (e.key === 'Enter') {
+    if (e.key === 'Escape' || e.keyCode === 461) {
+      e.preventDefault();
+      if (!playerJustClosedRef.current) {
+        onClose?.();
+      }
+    } else if (e.key === 'Enter') {
       setPlayerIsOpen(true);
       setIsPlayerFullscreen(true);
     } else if (e.key === 'ArrowRight') {
@@ -122,7 +166,7 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
         event={events[activeEvent]}
         conferenceTitle={conference.title}
       />
-      <div className="conferenceView__container" ref={containerRef}>
+      <div className="conferenceView__container" ref={containerRef} onScroll={handleScroll}>
         <div className="conferenceView__header">
           <h2 className="conferenceView__title">{conference.title}</h2>
         </div>

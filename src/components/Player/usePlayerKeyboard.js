@@ -196,11 +196,12 @@ export function usePlayerKeyboard({
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        const timeSinceActivity = Date.now() - lastActivityRef.current;
         const inNavigationMode = controlsFocusAreaRef.current !== 'none';
-        const controlsRecentlyShown = timeSinceActivity < 4500;
+        const timeSinceActivity = Date.now() - lastActivityRef.current;
+        const userHasInteracted = timeSinceActivity < 4000;
 
-        if (controlsVisibleRef.current && (inNavigationMode || controlsRecentlyShown)) {
+        // Hide controls if: in navigation mode, OR controls visible and user recently interacted
+        if (inNavigationMode || (controlsVisibleRef.current && userHasInteracted)) {
           hideControls();
           return;
         }
@@ -223,8 +224,8 @@ export function usePlayerKeyboard({
 
         if (isPlayKey) {
           e.preventDefault();
-          setPlaying(true);
           hideControls();
+          requestAnimationFrame(() => setPlaying(true));
           return;
         }
 

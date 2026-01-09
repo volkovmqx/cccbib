@@ -81,7 +81,7 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle }) {
                 {showVideo && recording && recording.url && (
                     <video
                         src={`${recording.url}#t=${previewTimestamp}`}
-                        preload="auto"
+                        preload="none"
                         autoPlay
                         className="player"
                     />

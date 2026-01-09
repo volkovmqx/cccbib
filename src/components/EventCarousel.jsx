@@ -5,7 +5,7 @@ import { IconWorld, IconBadgeCc } from '@tabler/icons-react';
 import { useImagePreload } from '../hooks/useImagePreload';
 
 export const EventCarousel = React.memo(function EventCarousel({ eventApis, eventRefs, events, activeEvent, ci, conferenceTitle }) {
-    const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', startIndex: activeEvent || 0 });
+    const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', startIndex: activeEvent || 0, duration: 15 });
 
     useEffect(() => {
       if (emblaRef && emblaApi) {
