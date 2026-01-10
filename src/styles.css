@@ -41,7 +41,7 @@
   --font-size-3xl: 4.5rem;
 }
 
-/* Scale up fonts slightly for Full HD+ (1920px width and up) */
+/* Scale up fonts slightly for Full HD+ (1920px width and up). There is probably some more elegant ways to do so. */
 @media (min-width: 1920px) {
   :root {
     --font-size-xs: 1.65rem;

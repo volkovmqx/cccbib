@@ -97,7 +97,7 @@ export const SUBTITLE_STYLES = [
   { code: 'black', name: 'Black Text' },
 ];
 
-// Preview video options
+// preview video options
 export const PREVIEW_VIDEO_OPTIONS = [
   { code: 'on', name: 'On' },
   { code: 'mute', name: 'Mute' },

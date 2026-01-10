@@ -16,7 +16,6 @@ const scrollItemIntoView = (itemRef, containerRef, instant = false) => {
   const itemRect = item.getBoundingClientRect();
   const containerRect = container.getBoundingClientRect();
 
-  // Check if item is above visible area
   if (itemRect.top < containerRect.top + SCROLL_PADDING) {
     const scrollOffset = itemRect.top - containerRect.top - SCROLL_PADDING;
     if (instant) {
@@ -25,7 +24,6 @@ const scrollItemIntoView = (itemRef, containerRef, instant = false) => {
       container.scrollBy({ top: scrollOffset, behavior: 'smooth' });
     }
   }
-  // Check if item is below visible area
   else if (itemRect.bottom > containerRect.bottom - SCROLL_PADDING) {
     const scrollOffset = itemRect.bottom - containerRect.bottom + SCROLL_PADDING;
     if (instant) {
@@ -68,26 +66,22 @@ export const ListView = React.memo(function ListView({
       const itemRect = item.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
 
-      // Only scroll if item is outside visible area
       const isVisible = itemRect.top >= containerRect.top &&
                         itemRect.bottom <= containerRect.bottom;
 
       if (!isVisible) {
-        // Scroll instantly but use custom function to add padding
         scrollItemIntoView(selectedItemRef, containerRef, true);
       }
       isInitialMount.current = false;
     }
-  }, [items.length]); // Run when items are loaded
+  }, [items.length]);
 
-  // For subsequent navigation, use custom scroll with padding
   useEffect(() => {
     if (!isInitialMount.current) {
       scrollItemIntoView(selectedItemRef, containerRef, false);
     }
   }, [selectedIndex]);
 
-  // Windowing: only render items near the selected index
   const { visibleItems, topSpacerHeight, bottomSpacerHeight, startIndex } = useMemo(() => {
     if (items.length === 0) {
       return { visibleItems: [], topSpacerHeight: 0, bottomSpacerHeight: 0, startIndex: 0 };

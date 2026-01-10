@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
+// needed to check webpack-bundle
 // const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const appInfo = require('./assets/appinfo.json');
 
