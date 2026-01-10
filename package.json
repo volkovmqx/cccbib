@@ -1,6 +1,6 @@
 {
   "name": "org.webosbrew.cccbib",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "media.ccc.de library application (EXPERIMENTAL)",
   "main": "index.js",
   "scripts": {
@@ -29,6 +29,7 @@
     "style-loader": "^3.3.1",
     "vite": "^7.3.0",
     "webpack": "^5.104.1",
+    "webpack-bundle-analyzer": "^5.1.1",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.1"
   },

@@ -1,7 +1,40 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect, useLayoutEffect } from 'react';
 import { Loader, Center, Text } from '@mantine/core';
-import { useScrollIntoView } from '../helpers/scrollHelpers';
 import { useListNavigation } from '../hooks/useListNavigation';
+
+// Windowing configuration
+const VISIBLE_BUFFER = 25; // Render ±25 items around selected
+const ESTIMATED_ITEM_HEIGHT = 110; // px - approximate height of list item
+const SCROLL_PADDING = 15; // Extra padding to ensure borders aren't clipped
+
+// Custom scroll function that adds padding to avoid border clipping
+const scrollItemIntoView = (itemRef, containerRef, instant = false) => {
+  const item = itemRef.current;
+  const container = containerRef.current;
+  if (!item || !container) return;
+
+  const itemRect = item.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  // Check if item is above visible area
+  if (itemRect.top < containerRect.top + SCROLL_PADDING) {
+    const scrollOffset = itemRect.top - containerRect.top - SCROLL_PADDING;
+    if (instant) {
+      container.scrollTop += scrollOffset;
+    } else {
+      container.scrollBy({ top: scrollOffset, behavior: 'smooth' });
+    }
+  }
+  // Check if item is below visible area
+  else if (itemRect.bottom > containerRect.bottom - SCROLL_PADDING) {
+    const scrollOffset = itemRect.bottom - containerRect.bottom + SCROLL_PADDING;
+    if (instant) {
+      container.scrollTop += scrollOffset;
+    } else {
+      container.scrollBy({ top: scrollOffset, behavior: 'smooth' });
+    }
+  }
+};
 
 export const ListView = React.memo(function ListView({
   title,
@@ -25,8 +58,51 @@ export const ListView = React.memo(function ListView({
 }) {
   const selectedItemRef = useRef(null);
   const containerRef = useRef(null);
+  const isInitialMount = useRef(true);
 
-  useScrollIntoView(selectedItemRef, containerRef, selectedIndex);
+  // On initial mount, only scroll if item is not visible
+  useLayoutEffect(() => {
+    if (isInitialMount.current && selectedItemRef.current && containerRef.current) {
+      const item = selectedItemRef.current;
+      const container = containerRef.current;
+      const itemRect = item.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      // Only scroll if item is outside visible area
+      const isVisible = itemRect.top >= containerRect.top &&
+                        itemRect.bottom <= containerRect.bottom;
+
+      if (!isVisible) {
+        // Scroll instantly but use custom function to add padding
+        scrollItemIntoView(selectedItemRef, containerRef, true);
+      }
+      isInitialMount.current = false;
+    }
+  }, [items.length]); // Run when items are loaded
+
+  // For subsequent navigation, use custom scroll with padding
+  useEffect(() => {
+    if (!isInitialMount.current) {
+      scrollItemIntoView(selectedItemRef, containerRef, false);
+    }
+  }, [selectedIndex]);
+
+  // Windowing: only render items near the selected index
+  const { visibleItems, topSpacerHeight, bottomSpacerHeight, startIndex } = useMemo(() => {
+    if (items.length === 0) {
+      return { visibleItems: [], topSpacerHeight: 0, bottomSpacerHeight: 0, startIndex: 0 };
+    }
+
+    const start = Math.max(0, selectedIndex - VISIBLE_BUFFER);
+    const end = Math.min(items.length - 1, selectedIndex + VISIBLE_BUFFER);
+
+    return {
+      visibleItems: items.slice(start, end + 1),
+      topSpacerHeight: start * ESTIMATED_ITEM_HEIGHT,
+      bottomSpacerHeight: (items.length - 1 - end) * ESTIMATED_ITEM_HEIGHT,
+      startIndex: start,
+    };
+  }, [items, selectedIndex]);
 
   const handleSelect = useCallback((index) => {
     onSelect(items[index], index);
@@ -82,16 +158,29 @@ export const ListView = React.memo(function ListView({
         )}
       </div>
       <div className={`${className}__list`} ref={containerRef}>
-        {items.map((item, index) => (
-          <div
-            key={item.guid || item.slug || item.acronym || index}
-            ref={index === selectedIndex ? selectedItemRef : null}
-            className={`${itemClassName} ${index === selectedIndex ? selectedItemClassName : ''}`}
-            onClick={() => onSelect(item, index)}
-          >
-            {renderItem(item, index)}
+        {topSpacerHeight > 0 && (
+          <div style={{ height: topSpacerHeight, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 20 }}>
+            <Loader color="#AAF40D" type="dots" size="md" />
           </div>
-        ))}
+        )}
+        {visibleItems.map((item, i) => {
+          const actualIndex = startIndex + i;
+          return (
+            <div
+              key={item.guid || item.slug || item.acronym || actualIndex}
+              ref={actualIndex === selectedIndex ? selectedItemRef : null}
+              className={`${itemClassName} ${actualIndex === selectedIndex ? selectedItemClassName : ''}`}
+              onClick={() => onSelect(item, actualIndex)}
+            >
+              {renderItem(item, actualIndex)}
+            </div>
+          );
+        })}
+        {bottomSpacerHeight > 0 && (
+          <div style={{ height: bottomSpacerHeight, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 20 }}>
+            <Loader color="#AAF40D" type="dots" size="md" />
+          </div>
+        )}
       </div>
     </div>
   );

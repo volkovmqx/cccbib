@@ -96,3 +96,10 @@ export const SUBTITLE_STYLES = [
   { code: 'white', name: 'White Text' },
   { code: 'black', name: 'Black Text' },
 ];
+
+// Preview video options
+export const PREVIEW_VIDEO_OPTIONS = [
+  { code: 'on', name: 'On' },
+  { code: 'mute', name: 'Mute' },
+  { code: 'off', name: 'Off' },
+];

@@ -12,6 +12,10 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle, dis
         key: 'language',
         defaultValue: 'deu',
     });
+    const [previewVideo] = useLocalStorage({
+        key: 'previewVideo',
+        defaultValue: 'on',
+    });
 
     // Debounce video loading - wait before loading video on rapid navigation
     const [showVideo, setShowVideo] = useState(false);
@@ -78,11 +82,12 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle, dis
             </div>
             <div className="preview">
                 <div className="previewOverlay" />
-                {showVideo && recording && recording.url && !disableVideo && (
+                {showVideo && recording && recording.url && !disableVideo && previewVideo !== 'off' && (
                     <video
                         src={`${recording.url}#t=${previewTimestamp}`}
                         preload="none"
                         autoPlay
+                        muted={previewVideo === 'mute'}
                         className="player"
                     />
                 )}

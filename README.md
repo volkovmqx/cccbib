@@ -22,11 +22,11 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Quality of Life remote button usage.
 - Configuration page for preferred languages and subtitles.
 - Substitles functionnality.
+- About Info page (in Settings on the bottom).
 
 ## Roadmap
 
 - &#9744; Add Speaker page.
-- &#9744; Add Info page.
 
 ##  Contributions
 

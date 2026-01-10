@@ -70,40 +70,43 @@ export const PopularView = React.memo(function PopularView({ onClose, onFocusSid
     </>
   ), []);
 
-  if (selectedVideo) {
-    return (
-      <div className="player-fullscreen-container">
-        <Player
-          event={selectedVideo}
-          conferenceTitle={selectedVideo.conference_title}
-          onClose={() => {
-            setSelectedVideo(null);
-            setIsPlayerFullscreen(false);
-          }}
-        />
-      </div>
-    );
-  }
+  const playerIsOpen = !!selectedVideo;
 
   return (
-    <ListView
-      title="Popular Videos"
-      items={videos}
-      loading={loading}
-      error={error?.message}
-      selectedIndex={selectedIndex}
-      setSelectedIndex={setSelectedIndex}
-      onClose={onClose}
-      onSelect={handleSelect}
-      onFocusSidebar={onFocusSidebar}
-      sidebarFocused={sidebarFocused}
-      disabled={!!selectedVideo}
-      emptyMessage="No videos found"
-      renderItem={renderItem}
-      className="popularView"
-      itemClassName="popularView__item"
-      selectedItemClassName="popularView__item--selected"
-    />
+    <>
+      {playerIsOpen && (
+        <div className="player-fullscreen-container">
+          <Player
+            event={selectedVideo}
+            conferenceTitle={selectedVideo.conference_title}
+            onClose={() => {
+              setSelectedVideo(null);
+              setIsPlayerFullscreen(false);
+            }}
+          />
+        </div>
+      )}
+      <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
+        <ListView
+          title="Popular Videos"
+          items={videos}
+          loading={loading}
+          error={error?.message}
+          selectedIndex={selectedIndex}
+          setSelectedIndex={setSelectedIndex}
+          onClose={onClose}
+          onSelect={handleSelect}
+          onFocusSidebar={onFocusSidebar}
+          sidebarFocused={sidebarFocused}
+          disabled={playerIsOpen}
+          emptyMessage="No videos found"
+          renderItem={renderItem}
+          className="popularView"
+          itemClassName="popularView__item"
+          selectedItemClassName="popularView__item--selected"
+        />
+      </div>
+    </>
   );
 });
 

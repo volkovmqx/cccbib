@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocalStorage, useWindowEvent } from '@mantine/hooks';
 import { Center, Text } from '@mantine/core';
-import { LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_STYLES } from '../constants';
+import { LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_STYLES, PREVIEW_VIDEO_OPTIONS } from '../constants';
 import { useScrollIntoView } from '../helpers/scrollHelpers';
 
 const ACTION_OPTIONS = [
@@ -26,8 +26,12 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
     key: 'subtitleStyle',
     defaultValue: 'green',
   });
+  const [previewVideo, setPreviewVideo] = useLocalStorage({
+    key: 'previewVideo',
+    defaultValue: 'on',
+  });
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [activeSection, setActiveSection] = useState('audio'); // 'audio', 'subtitle', 'subtitleSize', 'subtitleStyle', or 'actions'
+  const [activeSection, setActiveSection] = useState('audio'); // 'audio', 'subtitle', 'subtitleSize', 'subtitleStyle', 'previewVideo', or 'actions'
   const selectedItemRef = useRef(null);
   const gridRef = useRef(null);
   const [gridColumns, setGridColumns] = useState(4);
@@ -94,10 +98,15 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
       if (index !== -1) {
         setSelectedIndex(index);
       }
+    } else if (activeSection === 'previewVideo') {
+      const index = PREVIEW_VIDEO_OPTIONS.findIndex(opt => opt.code === previewVideo);
+      if (index !== -1) {
+        setSelectedIndex(index);
+      }
     } else if (activeSection === 'actions') {
       setSelectedIndex(0);
     }
-  }, [language, subtitleLanguage, subtitleSize, subtitleStyle, activeSection]);
+  }, [language, subtitleLanguage, subtitleSize, subtitleStyle, previewVideo, activeSection]);
 
   useWindowEvent('keydown', (e) => {
     if (sidebarFocused) return;
@@ -119,6 +128,8 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
       currentOptions = SUBTITLE_SIZES;
     } else if (activeSection === 'subtitleStyle') {
       currentOptions = SUBTITLE_STYLES;
+    } else if (activeSection === 'previewVideo') {
+      currentOptions = PREVIEW_VIDEO_OPTIONS;
     } else if (activeSection === 'actions') {
       currentOptions = ACTION_OPTIONS;
     }
@@ -149,6 +160,9 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
           setActiveSection('subtitleStyle');
           setSelectedIndex(0);
         } else if (activeSection === 'subtitleStyle') {
+          setActiveSection('previewVideo');
+          setSelectedIndex(0);
+        } else if (activeSection === 'previewVideo') {
           setActiveSection('actions');
           setSelectedIndex(0);
         }
@@ -170,8 +184,11 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
         } else if (activeSection === 'subtitleStyle') {
           setActiveSection('subtitleSize');
           setSelectedIndex(0);
-        } else if (activeSection === 'actions') {
+        } else if (activeSection === 'previewVideo') {
           setActiveSection('subtitleStyle');
+          setSelectedIndex(0);
+        } else if (activeSection === 'actions') {
+          setActiveSection('previewVideo');
           setSelectedIndex(0);
         }
       }
@@ -185,6 +202,8 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
         setSubtitleSize(SUBTITLE_SIZES[selectedIndex].code);
       } else if (activeSection === 'subtitleStyle') {
         setSubtitleStyle(SUBTITLE_STYLES[selectedIndex].code);
+      } else if (activeSection === 'previewVideo') {
+        setPreviewVideo(PREVIEW_VIDEO_OPTIONS[selectedIndex].code);
       } else if (activeSection === 'actions') {
         handleAction(ACTION_OPTIONS[selectedIndex].code);
       }
@@ -302,6 +321,32 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
         </div>
 
         <div className="settingsView__section">
+          <h3 className="settingsView__sectionTitle">Preview Videos</h3>
+          <p className="settingsView__sectionDescription">
+            Control video previews when browsing content.
+          </p>
+          <div className="settingsView__languageList" ref={activeSection === 'previewVideo' ? gridRef : null}>
+            {PREVIEW_VIDEO_OPTIONS.map((option, index) => (
+              <div
+                key={option.code}
+                ref={index === selectedIndex && activeSection === 'previewVideo' ? selectedItemRef : null}
+                className={`settingsView__languageItem ${index === selectedIndex && activeSection === 'previewVideo' ? 'settingsView__languageItem--selected' : ''} ${option.code === previewVideo ? 'settingsView__languageItem--current' : ''}`}
+                onClick={() => {
+                  setPreviewVideo(option.code);
+                  setSelectedIndex(index);
+                  setActiveSection('previewVideo');
+                }}
+              >
+                <span className="settingsView__languageName">{option.name}</span>
+                {option.code === previewVideo && (
+                  <span className="settingsView__currentBadge">Current</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="settingsView__section">
           <h3 className="settingsView__sectionTitle">Actions</h3>
           <p className="settingsView__sectionDescription">
             Clear cached data or reset watchlist.
@@ -324,7 +369,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
 
         <div className="settingsView__section settingsView__about">
           <h3 className="settingsView__sectionTitle">About</h3>
-          <p className="settingsView__sectionDescription" style={{ textAlign: 'center' }}>CCCBib made with ♥. {APP_ID} {APP_VERSION}.<br />Powered by media.ccc.de. Sponsor and help if you can!<br />Could I interest you in a pet rock? 🪨</p>
+          <p className="settingsView__sectionDescription" style={{ textAlign: 'center' }}>CCCBib made with ♥. {APP_ID} {APP_VERSION}.<br />Powered by media.ccc.de. Sponsor and help if you can!<br />Ewige Blumenkraft! ✿</p>
         </div>
       </div>
     </div>

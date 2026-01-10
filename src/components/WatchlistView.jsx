@@ -58,42 +58,43 @@ export const WatchlistView = React.memo(function WatchlistView({ onClose, onFocu
     </>
   ), []);
 
-  if (playerIsOpen && selectedEvent) {
-    return (
-      <div className="player-fullscreen-container">
-        <Player
-          event={selectedEvent}
-          conferenceTitle={selectedEvent.conference_title || ''}
-          onClose={() => {
-            setPlayerIsOpen(false);
-            setSelectedEvent(null);
-            setIsPlayerFullscreen(false);
-          }}
+  return (
+    <>
+      {playerIsOpen && selectedEvent && (
+        <div className="player-fullscreen-container">
+          <Player
+            event={selectedEvent}
+            conferenceTitle={selectedEvent.conference_title || ''}
+            onClose={() => {
+              setPlayerIsOpen(false);
+              setSelectedEvent(null);
+              setIsPlayerFullscreen(false);
+            }}
+          />
+        </div>
+      )}
+      <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
+        <ListView
+          title="Watchlist"
+          items={watchlist}
+          loading={false}
+          selectedIndex={selectedIndex}
+          setSelectedIndex={setSelectedIndex}
+          onClose={onClose}
+          onSelect={handleSelect}
+          onFocusSidebar={onFocusSidebar}
+          sidebarFocused={sidebarFocused}
+          disabled={playerIsOpen}
+          emptyIcon={<IconHeartOff size={120} stroke={1.5} color="#909296" />}
+          emptyMessage="Your watchlist is empty"
+          renderItem={renderItem}
+          className="watchlistView"
+          itemClassName="watchlistView__item"
+          selectedItemClassName="watchlistView__item--selected"
+          countLabel={watchlist.length > 0 ? `${watchlist.length} ${watchlist.length === 1 ? 'video' : 'videos'}` : null}
         />
       </div>
-    );
-  }
-
-  return (
-    <ListView
-      title="Watchlist"
-      items={watchlist}
-      loading={false}
-      selectedIndex={selectedIndex}
-      setSelectedIndex={setSelectedIndex}
-      onClose={onClose}
-      onSelect={handleSelect}
-      onFocusSidebar={onFocusSidebar}
-      sidebarFocused={sidebarFocused}
-      disabled={playerIsOpen}
-      emptyIcon={<IconHeartOff size={120} stroke={1.5} color="#909296" />}
-      emptyMessage="Your watchlist is empty"
-      renderItem={renderItem}
-      className="watchlistView"
-      itemClassName="watchlistView__item"
-      selectedItemClassName="watchlistView__item--selected"
-      countLabel={watchlist.length > 0 ? `${watchlist.length} ${watchlist.length === 1 ? 'video' : 'videos'}` : null}
-    />
+    </>
   );
 });
 

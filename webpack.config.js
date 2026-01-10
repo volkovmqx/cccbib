@@ -1,6 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
+// const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const appInfo = require('./assets/appinfo.json');
 
 module.exports = {
@@ -60,6 +61,7 @@ module.exports = {
         { context: 'src', from: 'index.html' },
       ],
     }),
+    // ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
   ],
   devServer: {
     static: path.resolve(__dirname, './dist'),

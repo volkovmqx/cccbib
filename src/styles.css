@@ -40,6 +40,46 @@
   --font-size-2xl: 3.5rem;
   --font-size-3xl: 4.5rem;
 }
+
+/* Scale up fonts slightly for Full HD+ (1920px width and up) */
+@media (min-width: 1920px) {
+  :root {
+    --font-size-xs: 1.65rem;
+    --font-size-sm: 1.9rem;
+    --font-size-base: 2.2rem;
+    --font-size-lg: 2.75rem;
+    --font-size-xl: 3.3rem;
+    --font-size-2xl: 3.85rem;
+    --font-size-3xl: 4.95rem;
+  }
+}
+
+/* Scale up fonts more for 1440p+ (2560px width and up) */
+@media (min-width: 2560px) {
+  :root {
+    --font-size-xs: 1.8rem;
+    --font-size-sm: 2.1rem;
+    --font-size-base: 2.4rem;
+    --font-size-lg: 3rem;
+    --font-size-xl: 3.6rem;
+    --font-size-2xl: 4.2rem;
+    --font-size-3xl: 5.4rem;
+  }
+}
+
+/* Scale up fonts more for 4K displays (3840px width and up) */
+@media (min-width: 3840px) {
+  :root {
+    --font-size-xs: 2rem;
+    --font-size-sm: 2.3rem;
+    --font-size-base: 2.6rem;
+    --font-size-lg: 3.25rem;
+    --font-size-xl: 3.9rem;
+    --font-size-2xl: 4.55rem;
+    --font-size-3xl: 5.85rem;
+  }
+}
+
 html {
   box-sizing: border-box;
   line-height: 1.15;
@@ -251,6 +291,7 @@ html {
   cursor: pointer;
   transition: all var(--transition-fast);
   border: var(--list-item-border) solid transparent;
+  scroll-margin: 10px;
 }
 .listItem:hover,
 .searchResultItem:hover,
@@ -272,6 +313,7 @@ html {
   background: var(--bg-hover);
   border-color: var(--ccc-green);
 }
+
 
 /* Shared thumbnail styles */
 .thumbnail,
@@ -358,7 +400,7 @@ html {
 .watchlistView__list {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 40px 20px 5px;
+  padding: 20px 40px 30px 5px;
 }
 
 /* ==========================================================================
@@ -614,6 +656,14 @@ html {
   transition: opacity 0.3s ease;
 }
 
+/* Disable icon animations when controls are hiding */
+.player-wrapper--controls-hidden svg,
+.player-wrapper--controls-hidden [class*="icon"],
+.player-wrapper--controls-hidden [class*="button"] * {
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Show controls when visible */
 .player-wrapper--controls-visible .tv-player-ui,
 .player-wrapper--controls-visible .controls,
@@ -689,7 +739,7 @@ html {
 .sidebarItem {
   width: 80px;
   height: 80px;
-  margin: 5px auto 5px 5px;
+  margin: 5px auto 5px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1155,35 +1205,36 @@ html {
 .settingsView__content {
   flex: 1;
   overflow-y: auto;
-  padding: 40px 40px 40px 5px;
+  padding: 2.5rem 2.5rem 2.5rem 0.3rem;
 }
 
 .settingsView__section {
-  margin-bottom: 40px;
+  margin-bottom: 2.5rem;
 }
 
 .settingsView__sectionTitle {
   font-size: var(--font-size-2xl);
   color: var(--text-white);
-  margin: 0 0 10px 0;
+  margin: 0 0 0.625rem 0;
   font-weight: bold;
 }
 
 .settingsView__sectionDescription {
   font-size: var(--font-size-lg);
   color: var(--text-gray);
-  margin: 0 0 20px 0;
+  margin: 0 0 1.25rem 0;
   line-height: 1.5;
 }
 
 .settingsView__languageList {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
   width: 100%;
 }
 
 .settingsView__languageItem {
+  display: flex;
   padding: 25px 30px;
   justify-content: space-between;
   align-items: center;
@@ -1198,6 +1249,7 @@ html {
   font-size: var(--font-size-xl);
   color: var(--text-white);
   font-weight: 500;
+  flex-shrink: 1;
 }
 
 .settingsView__languageItem--current .settingsView__languageName {
@@ -1209,9 +1261,11 @@ html {
   font-size: var(--font-size-base);
   color: var(--ccc-green);
   background: var(--ccc-green-alpha);
-  padding: 4px 12px;
-  border-radius: var(--border-radius-lg);
+  padding: 8px 16px;
+  border-radius: 12px;
   font-weight: bold;
+  flex-shrink: 0;
+  margin-left: 15px;
 }
 
 /* Watchlist View - uses shared viewContainer, viewHeader, viewList, listItem, thumbnail, itemInfo, itemTitle, itemMeta */
