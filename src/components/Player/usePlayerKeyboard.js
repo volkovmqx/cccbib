@@ -290,9 +290,9 @@ export function usePlayerKeyboard({
           return;
         }
 
-        if (e.keyCode === 799 && hasSubtitles) {
+        if ((e.keyCode === 799 || e.keyCode === 460) && hasSubtitles) {
           e.preventDefault();
-          setShowSubtitleSelector(true);
+          handleSubtitlePress();
           showSubtitleSelectorRef.current = true;
           return;
         }

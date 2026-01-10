@@ -154,6 +154,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   // Button handlers
   const handleLanguagePress = useCallback(() => {
+    setPlaying(false);
     const videoElement = videoElementRef.current;
     if (videoElement?.currentTime && event.guid) {
       localStorage.setItem(getStorageKey(event.guid), videoElement.currentTime.toString());
@@ -164,6 +165,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   }, [event.guid, setLanguageSwitchTime, setStartTime]);
 
   const handleSubtitlePress = useCallback(() => {
+    setPlaying(false);
     const idx = subtitleOptions.indexOf(subtitleLanguage);
     setSelectedSubtitleIndex(idx >= 0 ? idx : 0);
     setShowSubtitleSelector(true);
