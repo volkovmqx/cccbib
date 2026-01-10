@@ -356,6 +356,8 @@ export function usePlayerKeyboard({
         }
         if (e.key === 'Enter') {
           e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
           setSubtitleLanguage(subtitleOptions[selectedSubtitleIndex]);
           setShowSubtitleSelector(false);
           showSubtitleSelectorRef.current = false;
