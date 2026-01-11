@@ -415,7 +415,10 @@ body {
 
 .player-fullscreen-container {
   position: fixed !important;
-  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   margin: 0 !important;
@@ -556,6 +559,34 @@ body {
   align-items: center !important;
 }
 
+/* Fallback for gap property not supported in Chrome 68 (webOS TV) */
+.tv-player-ui .buttons__left,
+.tv-player-ui .buttons__center,
+.tv-player-ui .buttons__right {
+  display: flex !important;
+  align-items: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.tv-player-ui .buttons__left button,
+.tv-player-ui .buttons__center button,
+.tv-player-ui .buttons__right button {
+  margin: 0 8px !important;
+}
+
+.tv-player-ui .buttons__left button:first-child,
+.tv-player-ui .buttons__center button:first-child,
+.tv-player-ui .buttons__right button:first-child {
+  margin-left: 0 !important;
+}
+
+.tv-player-ui .buttons__left button:last-child,
+.tv-player-ui .buttons__center button:last-child,
+.tv-player-ui .buttons__right button:last-child {
+  margin-right: 0 !important;
+}
+
 .tv-player [class*="fill"],
 .tv-player div[style*="transition"][style*="width"] {
   background-color: var(--ccc-green) !important;
@@ -657,7 +688,7 @@ body {
 }
 
 .mantine-AppShell-main {
-  margin-left: var(--sidebar-width);
+  margin-left: calc(var(--sidebar-width) + 5px);
   overflow: hidden;
 }
 
@@ -851,7 +882,10 @@ body {
 /* === LANGUAGE SELECTOR MODAL === */
 .languageSelector {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 99999;
   display: flex;
   align-items: center;
@@ -860,7 +894,10 @@ body {
 
 .languageSelector__overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.8);
   z-index: 1;
 }
@@ -868,13 +905,12 @@ body {
 .languageSelector__content {
   position: relative;
   z-index: 2;
-  background: var(--bg-dark);
+  background: var(--bg-black);
   border-radius: var(--border-radius-lg);
   padding: 40px;
   min-width: 400px;
   max-width: 600px;
   border: var(--list-item-border) solid var(--ccc-green);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .languageSelector__title {
@@ -887,19 +923,30 @@ body {
 .languageSelector__list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .languageSelector__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 15px 20px;
-  background: var(--bg-darker);
+  background: var(--bg-black);
   color: var(--text-white);
   font-size: var(--font-size-xl);
+  border: var(--list-item-border) solid transparent;
+  margin-bottom: 10px;
 }
 
-.languageSelector__item--selected { box-shadow: var(--ccc-green-glow); }
-.languageSelector__item--current { color: var(--ccc-green); font-weight: bold; }
-.languageSelector__current { font-size: var(--font-size-lg); opacity: 0.8; color: var(--ccc-green); }
+.languageSelector__item:last-child { margin-bottom: 0; }
+.languageSelector__item--selected { border-color: var(--ccc-green); }
+.languageSelector__item--current { background: var(--bg-darker); color: var(--ccc-green); font-weight: bold; }
+.languageSelector__current {
+  font-size: var(--font-size-xl);
+  color: var(--ccc-green);
+  font-weight: bold;
+  margin-left: auto;
+  padding-left: 15px;
+}
 
 /* === SETTINGS VIEW === */
 .settingsView { overflow: hidden; }
@@ -939,9 +986,16 @@ body {
   justify-content: space-between;
   align-items: center;
   min-height: 80px;
+  border: var(--list-item-border) solid transparent;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
 }
 
 .settingsView__languageItem--current { background: var(--bg-darker); }
+
+.settingsView__languageItem--selected {
+  border-color: var(--ccc-green);
+  background: var(--bg-black);
+}
 
 .settingsView__languageName {
   font-size: var(--font-size-xl);
@@ -956,11 +1010,8 @@ body {
 }
 
 .settingsView__currentBadge {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-xl);
   color: var(--ccc-green);
-  background: var(--ccc-green-alpha);
-  padding: 8px 16px;
-  border-radius: 12px;
   font-weight: bold;
   flex-shrink: 0;
   margin-left: 15px;
@@ -984,8 +1035,8 @@ body[data-subtitle-size="large"] video::cue { font-size: 3.5vw !important; }
 
 body[data-subtitle-style="green"] video::cue,
 body:not([data-subtitle-style]) video::cue {
-  background-color: rgba(0, 0, 0, 0.6) !important;
-  color: #00ff00 !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  color: var(--ccc-green) !important;
 }
 
 body[data-subtitle-style="white"] video::cue {

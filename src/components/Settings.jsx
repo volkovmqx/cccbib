@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocalStorage, useWindowEvent } from '@mantine/hooks';
 import { Center, Text } from '@mantine/core';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck';
 import { LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_STYLES, PREVIEW_VIDEO_OPTIONS } from '../constants';
 import { useScrollIntoView } from '../helpers/scrollHelpers';
 
@@ -235,7 +237,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
               >
                 <span className="settingsView__languageName">{option.name}</span>
                 {option.code === language && (
-                  <span className="settingsView__currentBadge">Current</span>
+                  <span className="settingsView__currentBadge"><FontAwesomeIcon icon={faCheck} /></span>
                 )}
               </div>
             ))}
@@ -261,7 +263,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
               >
                 <span className="settingsView__languageName">{option.name}</span>
                 {option.code === subtitleLanguage && (
-                  <span className="settingsView__currentBadge">Current</span>
+                  <span className="settingsView__currentBadge"><FontAwesomeIcon icon={faCheck} /></span>
                 )}
               </div>
             ))}
@@ -287,7 +289,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
               >
                 <span className="settingsView__languageName">{option.name}</span>
                 {option.code === subtitleSize && (
-                  <span className="settingsView__currentBadge">Current</span>
+                  <span className="settingsView__currentBadge"><FontAwesomeIcon icon={faCheck} /></span>
                 )}
               </div>
             ))}
@@ -313,7 +315,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
               >
                 <span className="settingsView__languageName">{option.name}</span>
                 {option.code === subtitleStyle && (
-                  <span className="settingsView__currentBadge">Current</span>
+                  <span className="settingsView__currentBadge"><FontAwesomeIcon icon={faCheck} /></span>
                 )}
               </div>
             ))}
@@ -339,7 +341,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
               >
                 <span className="settingsView__languageName">{option.name}</span>
                 {option.code === previewVideo && (
-                  <span className="settingsView__currentBadge">Current</span>
+                  <span className="settingsView__currentBadge"><FontAwesomeIcon icon={faCheck} /></span>
                 )}
               </div>
             ))}
