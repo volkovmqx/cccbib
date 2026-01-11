@@ -1,6 +1,6 @@
 {
   "name": "org.webosbrew.cccbib",
-  "version": "1.0.2",
+  "version": "1.0.44",
   "description": "media.ccc.de library application (EXPERIMENTAL)",
   "main": "index.js",
   "scripts": {

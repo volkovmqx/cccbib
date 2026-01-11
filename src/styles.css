@@ -460,14 +460,28 @@ body {
 /* TV Player buttons */
 .tv-player button,
 .tv-player-ui .buttons button {
-  border-radius: var(--border-radius-sm) !important;
+  border-radius: 4px !important;
   border: 2px solid transparent !important;
   background: transparent !important;
-  min-width: 60px !important;
-  min-height: 60px !important;
+  width: 54px !important;
+  height: 54px !important;
+  min-width: 54px !important;
+  min-height: 54px !important;
+  max-width: 54px !important;
+  max-height: 54px !important;
+  padding: 0 !important;
   cursor: pointer !important;
   pointer-events: auto !important;
   position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Ensure progress bar doesn't overlap buttons */
+.tv-player-ui .progress-bar {
+  z-index: 1 !important;
+  margin-top: 10px !important;
 }
 
 .tv-player button.focused,
@@ -478,8 +492,6 @@ body {
 .tv-player-ui .buttons button:hover {
   background: var(--ccc-green) !important;
   border-color: var(--ccc-green) !important;
-  box-shadow: none !important;
-  outline: none !important;
 }
 
 .tv-player button:disabled,
@@ -517,17 +529,31 @@ body {
 .tv-player button span:not(small) { background: transparent !important; }
 .tv-player button small { display: none !important; }
 
-.tv-player, .tv-player-ui { --controls-opacity: 1 !important; }
+.tv-player, .tv-player-ui {
+  --controls-opacity: 1 !important;
+}
+
+.tv-player-ui {
+  padding-bottom: 30px !important;
+  overflow: visible !important;
+}
 
 .tv-player .controls,
 .tv-player-ui .controls,
-.tv-player .buttons,
-.tv-player-ui .buttons,
 .tv-player [class*="control"] {
   pointer-events: auto !important;
   display: flex !important;
   visibility: visible !important;
   opacity: 1 !important;
+}
+
+/* Fix buttons container height to fit button backgrounds */
+.tv-player-ui .buttons {
+  height: auto !important;
+  min-height: 80px !important;
+  padding-top: 10px !important;
+  padding-bottom: 15px !important;
+  align-items: center !important;
 }
 
 .tv-player [class*="fill"],

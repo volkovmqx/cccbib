@@ -67,7 +67,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     controlsFocusAreaRef,
     focusedButtonIndexRef,
     lastActivityRef,
-  } = useControlsVisibility({ showLanguageSelector, showSubtitleSelector });
+  } = useControlsVisibility({ showLanguageSelector, showSubtitleSelector, playing });
 
   // Playback position hook
   const {
