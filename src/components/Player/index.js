@@ -300,6 +300,15 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
           }
         }}
         onTimeUpdate={handleTimeUpdate}
+        onEnded={() => {
+          // Clear saved position when video completes
+          localStorage.removeItem(getStorageKey(event.guid));
+          // Remove from watchlist if it was there
+          if (isInWatchlist) {
+            toggleWatchlist();
+          }
+          onClose();
+        }}
       />
 
       {showLanguageSelector && (

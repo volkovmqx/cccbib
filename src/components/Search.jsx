@@ -185,7 +185,7 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
           styles={inputStyles}
         />
 
-        <div className="searchResults" ref={resultsContainerRef}>
+        <div className="searchResults scrollable" ref={resultsContainerRef}>
           {loading && (
             <Center h={200}>
               <Loader color="#AAF40D" type="dots" size="xl" />

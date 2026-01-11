@@ -215,7 +215,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
       <div className="settingsView__header">
         <h2>Settings</h2>
       </div>
-      <div className="settingsView__content">
+      <div className="settingsView__content scrollable">
         <div className="settingsView__section">
           <h3 className="settingsView__sectionTitle">Preferred Audio Language</h3>
           <p className="settingsView__sectionDescription">

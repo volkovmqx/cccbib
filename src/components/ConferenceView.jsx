@@ -194,7 +194,7 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
           conferenceTitle={conference.title}
           disableVideo={playerIsOpen}
         />
-        <div className="conferenceView__container" ref={containerRef} onScroll={handleScroll}>
+        <div className="conferenceView__container scrollable" ref={containerRef} onScroll={handleScroll}>
           <div className="conferenceView__header">
             <h2 className="conferenceView__title">{conference.title}</h2>
           </div>

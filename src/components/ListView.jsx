@@ -176,7 +176,7 @@ export const ListView = React.memo(function ListView({
           <p className={`${className}__count`}>{countLabel}</p>
         )}
       </div>
-      <div className={`${className}__list`} ref={containerRef}>
+      <div className={`${className}__list scrollable`} ref={containerRef}>
         {topSpacerHeight > 0 && (
           <div style={{ height: topSpacerHeight }} aria-hidden="true" />
         )}
@@ -186,7 +186,7 @@ export const ListView = React.memo(function ListView({
             <div
               key={item.guid || item.slug || item.acronym || actualIndex}
               ref={actualIndex === selectedIndex ? selectedItemRef : null}
-              className={`${itemClassName} ${actualIndex === selectedIndex ? selectedItemClassName : ''}`}
+              className={`listItem ${itemClassName} ${actualIndex === selectedIndex ? `listItem--selected ${selectedItemClassName}` : ''}`}
               onClick={() => onSelect(item, actualIndex)}
             >
               {renderItem(item, actualIndex)}
