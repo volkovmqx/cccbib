@@ -1,14 +1,16 @@
-import React, { useRef, useCallback, useMemo, useEffect, useLayoutEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Loader, Center, Text } from '@mantine/core';
 import { useListNavigation } from '../hooks/useListNavigation';
 
-// Windowing configuration
-const VISIBLE_BUFFER = 25; // Render ±25 items around selected
-const ESTIMATED_ITEM_HEIGHT = 110; // px - approximate height of list item
-const SCROLL_PADDING = 15; // Extra padding to ensure borders aren't clipped
+// Only virtualize if more than this many items
+const VIRTUALIZATION_THRESHOLD = 150;
+const WINDOW_SIZE = 150;
+const SHIFT_THRESHOLD = 30;
+const ESTIMATED_ITEM_HEIGHT = 120;
+const SCROLL_PADDING = 15;
 
 // Custom scroll function that adds padding to avoid border clipping
-const scrollItemIntoView = (itemRef, containerRef, instant = false) => {
+const scrollItemIntoView = (itemRef, containerRef) => {
   const item = itemRef.current;
   const container = containerRef.current;
   if (!item || !container) return;
@@ -18,19 +20,11 @@ const scrollItemIntoView = (itemRef, containerRef, instant = false) => {
 
   if (itemRect.top < containerRect.top + SCROLL_PADDING) {
     const scrollOffset = itemRect.top - containerRect.top - SCROLL_PADDING;
-    if (instant) {
-      container.scrollTop += scrollOffset;
-    } else {
-      container.scrollBy({ top: scrollOffset, behavior: 'smooth' });
-    }
+    container.scrollTop += scrollOffset;
   }
   else if (itemRect.bottom > containerRect.bottom - SCROLL_PADDING) {
     const scrollOffset = itemRect.bottom - containerRect.bottom + SCROLL_PADDING;
-    if (instant) {
-      container.scrollTop += scrollOffset;
-    } else {
-      container.scrollBy({ top: scrollOffset, behavior: 'smooth' });
-    }
+    container.scrollTop += scrollOffset;
   }
 };
 
@@ -58,6 +52,40 @@ export const ListView = React.memo(function ListView({
   const containerRef = useRef(null);
   const isInitialMount = useRef(true);
 
+  const shouldVirtualize = items.length > VIRTUALIZATION_THRESHOLD;
+
+  // Window state for virtualization
+  const [windowStart, setWindowStart] = useState(() =>
+    Math.max(0, selectedIndex - Math.floor(WINDOW_SIZE / 2))
+  );
+
+  // Shift window when selection approaches edges (only if virtualizing)
+  useEffect(() => {
+    if (!shouldVirtualize || items.length === 0) return;
+
+    const windowEnd = Math.min(windowStart + WINDOW_SIZE - 1, items.length - 1);
+    const distanceFromStart = selectedIndex - windowStart;
+    const distanceFromEnd = windowEnd - selectedIndex;
+
+    if (distanceFromStart < SHIFT_THRESHOLD && windowStart > 0) {
+      const newStart = Math.max(0, selectedIndex - Math.floor(WINDOW_SIZE / 2));
+      setWindowStart(newStart);
+    } else if (distanceFromEnd < SHIFT_THRESHOLD && windowEnd < items.length - 1) {
+      const newStart = Math.max(0, Math.min(
+        selectedIndex - Math.floor(WINDOW_SIZE / 2),
+        items.length - WINDOW_SIZE
+      ));
+      setWindowStart(newStart);
+    }
+  }, [selectedIndex, windowStart, items.length, shouldVirtualize]);
+
+  // Reset window when items change
+  useEffect(() => {
+    if (shouldVirtualize) {
+      setWindowStart(Math.max(0, selectedIndex - Math.floor(WINDOW_SIZE / 2)));
+    }
+  }, [items, shouldVirtualize]);
+
   // On initial mount, only scroll if item is not visible
   useLayoutEffect(() => {
     if (isInitialMount.current && selectedItemRef.current && containerRef.current) {
@@ -70,7 +98,7 @@ export const ListView = React.memo(function ListView({
                         itemRect.bottom <= containerRect.bottom;
 
       if (!isVisible) {
-        scrollItemIntoView(selectedItemRef, containerRef, true);
+        scrollItemIntoView(selectedItemRef, containerRef);
       }
       isInitialMount.current = false;
     }
@@ -78,25 +106,22 @@ export const ListView = React.memo(function ListView({
 
   useEffect(() => {
     if (!isInitialMount.current) {
-      scrollItemIntoView(selectedItemRef, containerRef, false);
+      scrollItemIntoView(selectedItemRef, containerRef);
     }
   }, [selectedIndex]);
 
-  const { visibleItems, topSpacerHeight, bottomSpacerHeight, startIndex } = useMemo(() => {
-    if (items.length === 0) {
-      return { visibleItems: [], topSpacerHeight: 0, bottomSpacerHeight: 0, startIndex: 0 };
-    }
-
-    const start = Math.max(0, selectedIndex - VISIBLE_BUFFER);
-    const end = Math.min(items.length - 1, selectedIndex + VISIBLE_BUFFER);
-
-    return {
-      visibleItems: items.slice(start, end + 1),
-      topSpacerHeight: start * ESTIMATED_ITEM_HEIGHT,
-      bottomSpacerHeight: (items.length - 1 - end) * ESTIMATED_ITEM_HEIGHT,
-      startIndex: start,
-    };
-  }, [items, selectedIndex]);
+  // Calculate visible items
+  const windowEnd = shouldVirtualize
+    ? Math.min(windowStart + WINDOW_SIZE - 1, items.length - 1)
+    : items.length - 1;
+  const startIndex = shouldVirtualize ? windowStart : 0;
+  const visibleItems = shouldVirtualize
+    ? items.slice(windowStart, windowEnd + 1)
+    : items;
+  const topSpacerHeight = shouldVirtualize ? windowStart * ESTIMATED_ITEM_HEIGHT : 0;
+  const bottomSpacerHeight = shouldVirtualize
+    ? Math.max(0, (items.length - 1 - windowEnd)) * ESTIMATED_ITEM_HEIGHT
+    : 0;
 
   const handleSelect = useCallback((index) => {
     onSelect(items[index], index);
@@ -153,9 +178,7 @@ export const ListView = React.memo(function ListView({
       </div>
       <div className={`${className}__list`} ref={containerRef}>
         {topSpacerHeight > 0 && (
-          <div style={{ height: topSpacerHeight, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 20 }}>
-            <Loader color="#AAF40D" type="dots" size="md" />
-          </div>
+          <div style={{ height: topSpacerHeight }} aria-hidden="true" />
         )}
         {visibleItems.map((item, i) => {
           const actualIndex = startIndex + i;
@@ -171,9 +194,7 @@ export const ListView = React.memo(function ListView({
           );
         })}
         {bottomSpacerHeight > 0 && (
-          <div style={{ height: bottomSpacerHeight, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 20 }}>
-            <Loader color="#AAF40D" type="dots" size="md" />
-          </div>
+          <div style={{ height: bottomSpacerHeight }} aria-hidden="true" />
         )}
       </div>
     </div>
