@@ -206,20 +206,20 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
                 <div
                   key={event.guid}
                   ref={index === selectedIndex ? selectedItemRef : null}
-                  className={`searchResultItem ${index === selectedIndex ? 'selected' : ''}`}
+                  className={`listItem ${index === selectedIndex ? 'listItem--selected' : ''}`}
                   onClick={() => onSelectEvent(event)}
                 >
                   {event.images.thumbUrl && (
                     <img
                       src={event.images.thumbUrl}
                       alt={event.title}
-                      className="searchResultThumbnail"
+                      className="thumbnail"
                       loading="lazy"
                     />
                   )}
-                  <div className="searchResultInfo">
-                    <div className="searchResultTitle">{event.title}</div>
-                    <div className="searchResultMeta">
+                  <div className="itemInfo">
+                    <div className="itemTitle">{event.title}</div>
+                    <div className="itemMeta">
                       {event.conference_title && (
                         <span>{event.conference_title}</span>
                       )}

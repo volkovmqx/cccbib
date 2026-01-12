@@ -280,8 +280,8 @@ body {
   width: 100%;
   object-fit: cover;
   opacity: 0.5;
-  border-radius: 1rem;
-  border: 3px solid #fff;
+  border-radius: var(--border-radius-md);
+  border: var(--list-item-border) solid var(--border-color);
 }
 
 .embla__slide__icons {
@@ -934,6 +934,7 @@ body {
   color: var(--text-white);
   font-size: var(--font-size-xl);
   border: var(--list-item-border) solid transparent;
+  border-radius: var(--border-radius-md);
   margin-bottom: 10px;
 }
 
@@ -987,6 +988,7 @@ body {
   align-items: center;
   min-height: 80px;
   border: var(--list-item-border) solid transparent;
+  border-radius: var(--border-radius-md);
   transition: border-color 0.1s ease, background-color 0.1s ease;
 }
 
