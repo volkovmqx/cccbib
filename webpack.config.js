@@ -83,7 +83,7 @@ module.exports = {
   ],
   devServer: {
     static: path.resolve(__dirname, './dist'),
-    port: 3334,
+    port: 3333,
     proxy: [
       {
         context: ['/api'],
