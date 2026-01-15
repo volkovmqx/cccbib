@@ -5,8 +5,8 @@ module.exports = {
       '@babel/preset-env',
       {
         targets: {
-          // webOS 3.0+ uses Chrome 53
-          chrome: '53',
+          // webOS 2.0+ uses Chrome 38
+          chrome: '38',
         },
         useBuiltIns: 'entry',
         corejs: '3.0',
