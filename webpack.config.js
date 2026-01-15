@@ -8,6 +8,7 @@ const appInfo = require('./assets/appinfo.json');
 module.exports = {
   entry: {
     app: [
+      // Full polyfills needed for Chrome 68 (webOS 4.0+). Yes don't remove or I run into a black screen and scratch my head for 30min
       'core-js/stable',
       'regenerator-runtime/runtime',
       './src/index.jsx'
@@ -49,7 +50,23 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, './dist'),
-    filename: 'bundle.js',
+    filename: '[name].bundle.js',
+    chunkFilename: '[name].chunk.js',
+    clean: true,
+  },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        // Separate vendor bundle for better caching
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendor',
+          chunks: 'initial',
+          priority: 10,
+        },
+      },
+    },
   },
   plugins: [
     new webpack.DefinePlugin({
@@ -66,7 +83,7 @@ module.exports = {
   ],
   devServer: {
     static: path.resolve(__dirname, './dist'),
-    port: 3333,
+    port: 3334,
     proxy: [
       {
         context: ['/api'],

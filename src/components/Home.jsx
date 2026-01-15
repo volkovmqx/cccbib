@@ -78,6 +78,7 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
   const eventRefs = useRef([]);
   const eventApis = useRef([]);
   const lastViewChangeRef = useRef(0);
+  const lastVerticalNavRef = useRef(0);
 
   useEffect(() => {
     lastViewChangeRef.current = Date.now();
@@ -121,8 +122,14 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
         handleArrowLeft(eventApis, activeEvents, activeSlice, setActiveEvents);
       }
     } else if (e.key === 'ArrowDown' && !playerIsOpen && selectedItem === 'recent') {
+      const now = Date.now();
+      if (now - lastVerticalNavRef.current < 150) return;
+      lastVerticalNavRef.current = now;
       handleArrowDown(setActiveSlice, dataSlice, dataSliceHandlers, data, setIsLoading, fetchMore)
     } else if (e.key === 'ArrowUp' && !playerIsOpen && selectedItem === 'recent') {
+      const now = Date.now();
+      if (now - lastVerticalNavRef.current < 150) return;
+      lastVerticalNavRef.current = now;
       handleArrowUp(setActiveSlice, dataSliceHandlers, data)
     }
   })
@@ -163,59 +170,63 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
   if (selectedItem === 'recent') {
     if (loading || dataSlice.length === 0) return <LoadingFallback />;
     if (error) return <p>Error : {error.message}</p>;
-    if (playerIsOpen) return (
-      <div className="player-fullscreen-container">
-        <Player
-          event={dataSlice[0].lectures.nodes[activeEvents[activeSlice] || 0]}
-          conferenceTitle={dataSlice[0].title}
-          onClose={() => {
-            setPlayerIsOpen(false);
-            setIsPlayerFullscreen(false);
-          }}
-        />
-      </div>
-    );
-  }
 
-  const showRecent = selectedItem === 'recent' && !loading && dataSlice.length > 0 && !error && !playerIsOpen;
-  if (showRecent) {
+    // Keep carousel in DOM when player is open to preserve scroll position
     return (
-    <Container fluid>
-      <Preview
-        event={dataSlice[0].lectures.nodes[activeEvents[activeSlice] || 0]}
-        conferenceTitle={dataSlice[0].title}
-      />
-      <div className="container">
-        <div className="embla_vertical">
-          <div className="embla__viewport">
-            <div className="embla__container embla__container_vertical">
-              {dataSlice.map((c, ci) => (
-                <div className="embla__slide" key={ci}>
-                  <EventCarousel
-                    eventRefs={eventRefs}
-                    eventApis={eventApis}
-                    events={c}
-                    activeEvent={activeEvents[ci + activeSlice]}
-                    ci={ci}
-                    conferenceTitle={c.title}
-
-                  />
-                </div>
-              ))}
-              {isLoading && (
-                <div className="embla__slide">
-                  <Box className='skeleton'>
-                    <div className='loaderContainer'>
-                      <Loader color="#AAF40D" type="dots" size="xl" />
-                    </div>
-                  </Box>
-                </div>
-              )}
-            </div>
+      <>
+        {playerIsOpen && (
+          <div className="player-fullscreen-container">
+            <Player
+              event={dataSlice[0].lectures.nodes[activeEvents[activeSlice] || 0]}
+              conferenceTitle={dataSlice[0].title}
+              onClose={() => {
+                setPlayerIsOpen(false);
+                setIsPlayerFullscreen(false);
+              }}
+            />
           </div>
+        )}
+        <div style={{
+          visibility: playerIsOpen ? 'hidden' : 'visible',
+          pointerEvents: playerIsOpen ? 'none' : 'auto'
+        }}>
+          <Container fluid>
+            <Preview
+              event={dataSlice[0].lectures.nodes[activeEvents[activeSlice] || 0]}
+              conferenceTitle={dataSlice[0].title}
+            />
+            <div className="container">
+              <div className="embla_vertical">
+                <div className="embla__viewport">
+                  <div className="embla__container embla__container_vertical">
+                    {dataSlice.map((c, ci) => (
+                      <div className="embla__slide" key={ci}>
+                        <EventCarousel
+                          eventRefs={eventRefs}
+                          eventApis={eventApis}
+                          events={c}
+                          activeEvent={activeEvents[ci + activeSlice]}
+                          ci={ci}
+                          conferenceTitle={c.title}
+                        />
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="embla__slide">
+                        <Box className='skeleton'>
+                          <div className='loaderContainer'>
+                            <Loader color="#AAF40D" type="dots" size="xl" />
+                          </div>
+                        </Box>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Container>
         </div>
-      </div>
-    </Container>
+      </>
     );
   }
 

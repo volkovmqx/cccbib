@@ -3,9 +3,15 @@
   <head>
     <title>CCCBib</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1" />
+    <!-- Preconnect to API for faster first request because of speeeeeed -->
+    <link rel="preconnect" href="https://media.ccc.de" />
+    <link rel="dns-prefetch" href="https://media.ccc.de" />
+    <link rel="preconnect" href="https://static.media.ccc.de" crossorigin />
+    <link rel="dns-prefetch" href="https://static.media.ccc.de" />
   </head>
   <body>
     <div id="app"></div>
-    <script src="./bundle.js"></script>
+    <script src="./vendor.bundle.js"></script>
+    <script src="./app.bundle.js"></script>
   </body>
 </html>

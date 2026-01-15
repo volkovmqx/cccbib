@@ -1,14 +1,14 @@
 {
-    "id": "org.webosbrew.cccbib",
-    "version": "1.0.44",
-    "vendor": "volkovmqx",
-    "type": "web",
-    "main": "index.html",
-    "title": "CCCBib",
-    "iconColor": "#000000",
-    "appDescription": "media.ccc.de library application (EXPERIMENTAL)",
-    "icon": "icon80.png",
-    "splashBackground": "splash.png",
-    "largeIcon": "icon130.png",
-    "disableBackHistoryAPI": true
+  "id": "org.webosbrew.cccbib",
+  "version": "1.0.2",
+  "vendor": "volkovmqx",
+  "type": "web",
+  "main": "index.html",
+  "title": "CCCBib",
+  "iconColor": "#000000",
+  "appDescription": "media.ccc.de library application (EXPERIMENTAL)",
+  "icon": "icon80.png",
+  "splashBackground": "splash.png",
+  "largeIcon": "icon130.png",
+  "disableBackHistoryAPI": true
 }

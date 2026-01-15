@@ -196,12 +196,9 @@ export function usePlayerKeyboard({
         e.stopPropagation();
         e.stopImmediatePropagation();
 
+        // Only require double-press if actively focused on a button/progressbar
         const inNavigationMode = controlsFocusAreaRef.current !== 'none';
-        const timeSinceActivity = Date.now() - lastActivityRef.current;
-        const userHasInteracted = timeSinceActivity < 4000;
-
-        // Hide controls if: in navigation mode, OR controls visible and user recently interacted
-        if (inNavigationMode || (controlsVisibleRef.current && userHasInteracted)) {
+        if (inNavigationMode) {
           hideControls();
           return;
         }
