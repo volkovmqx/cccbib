@@ -8,8 +8,6 @@ export const GET_RECENT_CONFERENCES = gql`
           title
           slug
           logoUrl
-          aspectRatio
-          scheduleUrl
           updatedAt
           eventLastReleasedAt
           lectures {
@@ -65,8 +63,6 @@ export const GET_CONFERENCE = gql`
       title
       slug
       logoUrl
-      aspectRatio
-      scheduleUrl
       updatedAt
       eventLastReleasedAt
       lectures {

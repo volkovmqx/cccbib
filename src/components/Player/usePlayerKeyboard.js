@@ -196,11 +196,9 @@ export function usePlayerKeyboard({
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        const timeSinceActivity = Date.now() - lastActivityRef.current;
+        // Only require double-press if actively focused on a button/progressbar
         const inNavigationMode = controlsFocusAreaRef.current !== 'none';
-        const controlsRecentlyShown = timeSinceActivity < 4500;
-
-        if (controlsVisibleRef.current && (inNavigationMode || controlsRecentlyShown)) {
+        if (inNavigationMode) {
           hideControls();
           return;
         }
@@ -223,8 +221,8 @@ export function usePlayerKeyboard({
 
         if (isPlayKey) {
           e.preventDefault();
-          setPlaying(true);
           hideControls();
+          requestAnimationFrame(() => setPlaying(true));
           return;
         }
 
@@ -289,9 +287,9 @@ export function usePlayerKeyboard({
           return;
         }
 
-        if (e.keyCode === 799 && hasSubtitles) {
+        if ((e.keyCode === 799 || e.keyCode === 460) && hasSubtitles) {
           e.preventDefault();
-          setShowSubtitleSelector(true);
+          handleSubtitlePress();
           showSubtitleSelectorRef.current = true;
           return;
         }
@@ -355,6 +353,8 @@ export function usePlayerKeyboard({
         }
         if (e.key === 'Enter') {
           e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
           setSubtitleLanguage(subtitleOptions[selectedSubtitleIndex]);
           setShowSubtitleSelector(false);
           showSubtitleSelectorRef.current = false;

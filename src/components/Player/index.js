@@ -67,7 +67,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     controlsFocusAreaRef,
     focusedButtonIndexRef,
     lastActivityRef,
-  } = useControlsVisibility({ showLanguageSelector, showSubtitleSelector });
+  } = useControlsVisibility({ showLanguageSelector, showSubtitleSelector, playing });
 
   // Playback position hook
   const {
@@ -154,6 +154,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   // Button handlers
   const handleLanguagePress = useCallback(() => {
+    setPlaying(false);
     const videoElement = videoElementRef.current;
     if (videoElement?.currentTime && event.guid) {
       localStorage.setItem(getStorageKey(event.guid), videoElement.currentTime.toString());
@@ -164,6 +165,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   }, [event.guid, setLanguageSwitchTime, setStartTime]);
 
   const handleSubtitlePress = useCallback(() => {
+    setPlaying(false);
     const idx = subtitleOptions.indexOf(subtitleLanguage);
     setSelectedSubtitleIndex(idx >= 0 ? idx : 0);
     setShowSubtitleSelector(true);
@@ -298,6 +300,15 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
           }
         }}
         onTimeUpdate={handleTimeUpdate}
+        onEnded={() => {
+          // Clear saved position when video completes
+          localStorage.removeItem(getStorageKey(event.guid));
+          // Remove from watchlist if it was there
+          if (isInWatchlist) {
+            toggleWatchlist();
+          }
+          onClose();
+        }}
       />
 
       {showLanguageSelector && (

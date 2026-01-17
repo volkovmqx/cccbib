@@ -1,4 +1,6 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck';
 import { LANGUAGE_NAMES } from '../../constants';
 
 export const SelectorModal = React.memo(function SelectorModal({
@@ -11,7 +13,7 @@ export const SelectorModal = React.memo(function SelectorModal({
   getLabel,
 }) {
   const defaultGetLabel = (opt) => {
-    if (opt === 'none') return 'None (Off)';
+    if (opt === 'none') return 'None';
     return LANGUAGE_NAMES[opt] || opt;
   };
 
@@ -30,7 +32,7 @@ export const SelectorModal = React.memo(function SelectorModal({
               onClick={() => onSelect(option)}
             >
               {labelFn(option)}
-              {option === currentValue && <span className="languageSelector__current"> (Current)</span>}
+              {option === currentValue && <span className="languageSelector__current"><FontAwesomeIcon icon={faCheck} /></span>}
             </div>
           ))}
         </div>

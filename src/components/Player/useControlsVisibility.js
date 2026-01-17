@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-export function useControlsVisibility({ showLanguageSelector, showSubtitleSelector }) {
+export function useControlsVisibility({ showLanguageSelector, showSubtitleSelector, playing }) {
   const [controlsVisible, setControlsVisible] = useState(true);
   const [controlsFocusArea, setControlsFocusArea] = useState('none');
   const [focusedButtonIndex, setFocusedButtonIndex] = useState(0);
@@ -10,6 +10,20 @@ export function useControlsVisibility({ showLanguageSelector, showSubtitleSelect
   const controlsVisibleRef = useRef(true);
   const controlsFocusAreaRef = useRef('none');
   const focusedButtonIndexRef = useRef(0);
+  const playingRef = useRef(playing);
+
+  // Keep playingRef in sync
+  useEffect(() => {
+    playingRef.current = playing;
+    // If video is paused, show controls and keep them visible
+    if (!playing) {
+      setControlsVisible(true);
+      controlsVisibleRef.current = true;
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    }
+  }, [playing]);
 
   const showControls = useCallback(() => {
     setControlsVisible(true);
@@ -23,7 +37,8 @@ export function useControlsVisibility({ showLanguageSelector, showSubtitleSelect
     }
 
     controlsTimeoutRef.current = setTimeout(() => {
-      if (!showLanguageSelector && !showSubtitleSelector && controlsFocusAreaRef.current === 'none') {
+      // Don't hide controls if paused, selector is open, or buttons are focused
+      if (!showLanguageSelector && !showSubtitleSelector && controlsFocusAreaRef.current === 'none' && playingRef.current) {
         setControlsVisible(false);
         controlsVisibleRef.current = false;
       }

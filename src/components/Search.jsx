@@ -47,6 +47,8 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
       return;
     }
 
+    const abortController = new AbortController();
+
     const fetchResults = async () => {
       setLoading(true);
       setError(null);
@@ -58,6 +60,7 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
           : `https://api.media.ccc.de/public/events/search?q=${encodeURIComponent(debouncedQuery)}`;
 
         const response = await fetch(apiUrl, {
+          signal: abortController.signal,
           headers: {
             'Accept': 'application/json',
           }
@@ -107,6 +110,10 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
         setResults(transformedResults);
         setSelectedIndex(0);
       } catch (err) {
+        // Ignore abort errors - they're expected when query changes
+        if (err.name === 'AbortError') {
+          return;
+        }
         console.error('Search error details:', err);
         if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
           setError('Network error. Please check your internet connection or try again later.');
@@ -114,11 +121,15 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
           setError(err.message || 'An error occurred while searching');
         }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchResults();
+
+    return () => abortController.abort();
   }, [debouncedQuery]);
 
   useScrollIntoView(selectedItemRef, resultsContainerRef, selectedIndex);
@@ -174,7 +185,7 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
           styles={inputStyles}
         />
 
-        <div className="searchResults" ref={resultsContainerRef}>
+        <div className="searchResults scrollable" ref={resultsContainerRef}>
           {loading && (
             <Center h={200}>
               <Loader color="#AAF40D" type="dots" size="xl" />
@@ -195,20 +206,20 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
                 <div
                   key={event.guid}
                   ref={index === selectedIndex ? selectedItemRef : null}
-                  className={`searchResultItem ${index === selectedIndex ? 'selected' : ''}`}
+                  className={`listItem ${index === selectedIndex ? 'listItem--selected' : ''}`}
                   onClick={() => onSelectEvent(event)}
                 >
                   {event.images.thumbUrl && (
                     <img
                       src={event.images.thumbUrl}
                       alt={event.title}
-                      className="searchResultThumbnail"
+                      className="thumbnail"
                       loading="lazy"
                     />
                   )}
-                  <div className="searchResultInfo">
-                    <div className="searchResultTitle">{event.title}</div>
-                    <div className="searchResultMeta">
+                  <div className="itemInfo">
+                    <div className="itemTitle">{event.title}</div>
+                    <div className="itemMeta">
                       {event.conference_title && (
                         <span>{event.conference_title}</span>
                       )}

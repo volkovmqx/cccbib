@@ -19,14 +19,16 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Smart TV Navigation with React! (Thanks to [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1).)
 - Search functionnality.
 - Watchlist.
-- Quality of Life remote button usage.
+- Quality of Life Remote Controller Button Mapping (Thanks to [Simon34545](https://github.com/Simon34545) LG Input Keymapping overview!) inspired by Youtube/Jellyfin.
 - Configuration page for preferred languages and subtitles.
 - Substitles functionnality.
+- About Info page (in Settings on the bottom).
 
 ## Roadmap
 
 - &#9744; Add Speaker page.
-- &#9744; Add Info page.
+- &#9744; Trigger for remote control/Home Assistant integration (Watching now/Edit Watchlist).
+- ~~&#9744; Jeopardy Theme song when waiting for too long.~~
 
 ##  Contributions
 
