@@ -62,12 +62,12 @@ yarn launch
 
 #### Build image locally: 
 ```sh
-docker build -t ghcr.io/vimaster/cccbib:dev .
+docker build -t ghcr.io/volkovmqx/cccbib:dev .
 ```
 
 #### Run the container:
 ```sh
-docker run --rm -p 8080:80 ghcr.io/vimaster/cccbib:dev
+docker run --rm -p 8080:80 ghcr.io/volkovmqx/cccbib:dev
 ```
 
 This image is built in CI on pushes to `main` (tagged `latest`) and on version tags like `v1.0.2` (tagged `1.0.2`).
