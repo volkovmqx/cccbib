@@ -19,10 +19,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Use Node.js 20.x
+      - name: Use Node.js 25.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 25.x
 
       - run: yarn install --frozen-lockfile
       - run: yarn run build

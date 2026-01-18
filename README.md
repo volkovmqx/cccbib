@@ -37,8 +37,10 @@ Either you found a bug, optimisation strategy or want something implemented, go 
 
 ## Development
 
+### Local deployment
+
 ```sh
-yarm install
+yarn install
 
 # Serve development build on http://127.0.0.1:3333
 yarn start
@@ -55,6 +57,21 @@ yarn deploy
 # Launch
 yarn launch
 ```
+
+### Docker
+
+#### Build image locally: 
+```sh
+docker build -t ghcr.io/volkovmqx/cccbib:dev .
+```
+
+#### Run the container:
+```sh
+docker run --rm -p 8080:80 ghcr.io/volkovmqx/cccbib:dev
+```
+
+This image is built in CI on pushes to `main` (tagged `latest`) and on version tags like `v1.0.2` (tagged `1.0.2`).
+
 
 ## Credit
 
