@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck';
 import { LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_STYLES, PREVIEW_VIDEO_OPTIONS } from '../constants';
 import { useScrollIntoView } from '../helpers/scrollHelpers';
+import { PLAYBACK_HISTORY_KEY } from '../helpers/playbackHistory';
 
 const ACTION_OPTIONS = [
   { code: 'clearCache', name: 'Clear Cache' },
@@ -42,6 +43,7 @@ export const Settings = React.memo(function Settings({ onClose, onFocusSidebar, 
   const handleAction = (actionCode) => {
     if (actionCode === 'clearCache') {
       localStorage.removeItem('apollo_schema_version');
+      localStorage.removeItem(PLAYBACK_HISTORY_KEY);
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);

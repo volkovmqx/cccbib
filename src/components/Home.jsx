@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, useMemo, Suspense, lazy } from 'react';
 import { GET_RECENT_CONFERENCES } from '../data';
 import { Center, Loader, Container, Box } from '@mantine/core';
 import { useWindowEvent, useListState } from '@mantine/hooks';
@@ -9,6 +9,7 @@ import { EventCarousel } from './EventCarousel';
 import { Player } from './Player';
 import { preloadImages } from '../hooks/useImagePreload';
 import { ErrorBoundary } from './ErrorBoundary';
+import { usePlaybackHistory } from '../hooks/usePlaybackHistory';
 import '../styles.css';
 
 const Search = lazy(() => import('./Search'));
@@ -35,12 +36,15 @@ const LazyView = ({ children }) => (
 );
 
 export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onSelectItem, sidebarFocused, isPlayerFullscreen, setIsPlayerFullscreen }) {
+  const playbackHistory = usePlaybackHistory();
   const [playerIsOpen, setPlayerIsOpen] = useState(false)
+  const [selectedPlayerItem, setSelectedPlayerItem] = useState(null)
   const [selectedSearchEvent, setSelectedSearchEvent] = useState(null)
   const [activeSlice, setActiveSlice] = useState(0)
   const [dataSlice, dataSliceHandlers] = useListState([]);
   const [isLoading, setIsLoading] = useState(false)
-  const [activeEvents, setActiveEvents] = useState({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+  const [activeEvents, setActiveEvents] = useState({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, continueWatching: 0 });
+  const [continueWatchingActive, setContinueWatchingActive] = useState(() => playbackHistory.length > 0);
   const [previousView, setPreviousView] = useState('recent');
   const [eventsSelectedIndex, setEventsSelectedIndex] = useState(0);
 
@@ -75,10 +79,60 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
     }
   }, [activeSlice, data])
 
-  const eventRefs = useRef([]);
   const eventApis = useRef([]);
   const lastViewChangeRef = useRef(0);
   const lastVerticalNavRef = useRef(0);
+  const previousPlaybackHistoryRef = useRef(playbackHistory);
+
+  const continueWatchingEvents = useMemo(() => ({
+    lectures: {
+      nodes: playbackHistory.map(item => item.event),
+    },
+  }), [playbackHistory]);
+
+  const playbackProgressByGuid = useMemo(() => new Map(
+    playbackHistory.map(item => [
+      item.event.guid,
+      Math.min(100, Math.max(0, (item.positionSeconds / item.durationSeconds) * 100)),
+    ])
+  ), [playbackHistory]);
+
+  const activeBrowseSelection = useMemo(() => {
+    const continueWatchingItem = playbackHistory[activeEvents.continueWatching || 0];
+    if (continueWatchingActive && continueWatchingItem) {
+      return {
+        event: continueWatchingItem.event,
+        conferenceTitle: continueWatchingItem.conferenceTitle,
+      };
+    }
+
+    const conference = dataSlice[0];
+    return {
+      event: conference?.lectures.nodes[activeEvents[activeSlice] || 0] || null,
+      conferenceTitle: conference?.title || '',
+    };
+  }, [activeEvents, activeSlice, continueWatchingActive, dataSlice, playbackHistory]);
+
+  useEffect(() => {
+    const previousHistory = previousPlaybackHistoryRef.current;
+
+    setActiveEvents(current => {
+      const previousIndex = current.continueWatching || 0;
+      const previousGuid = previousHistory[previousIndex]?.event.guid;
+      const matchingIndex = previousGuid
+        ? playbackHistory.findIndex(item => item.event.guid === previousGuid)
+        : -1;
+      const nextIndex = matchingIndex >= 0
+        ? matchingIndex
+        : Math.min(previousIndex, Math.max(0, playbackHistory.length - 1));
+
+      if (nextIndex === previousIndex) return current;
+      return { ...current, continueWatching: nextIndex };
+    });
+
+    if (playbackHistory.length === 0) setContinueWatchingActive(false);
+    previousPlaybackHistoryRef.current = playbackHistory;
+  }, [playbackHistory]);
 
   useEffect(() => {
     lastViewChangeRef.current = Date.now();
@@ -107,30 +161,42 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
       }
 
     } else if (e.key === 'Enter' && !playerIsOpen && selectedItem === 'recent') {
+      if (!activeBrowseSelection.event) return;
+      setSelectedPlayerItem(activeBrowseSelection);
       setPlayerIsOpen(true)
       setIsPlayerFullscreen(true)
     } else if (e.key === 'ArrowRight' && !playerIsOpen && selectedItem === 'recent') {
-      handleArrowRight(eventApis, activeEvents, activeSlice, setActiveEvents)
+      const activeRow = continueWatchingActive ? 'continueWatching' : activeSlice;
+      handleArrowRight(eventApis, activeEvents, activeRow, setActiveEvents)
     } else if (e.key === 'ArrowLeft' && !playerIsOpen && selectedItem === 'recent') {
-      const currentEventIndex = activeEvents[activeSlice] || 0;
+      const activeRow = continueWatchingActive ? 'continueWatching' : activeSlice;
+      const currentEventIndex = activeEvents[activeRow] || 0;
       const canScrollPrev = eventApis.current[0] && eventApis.current[0].canScrollPrev();
 
       if (currentEventIndex === 0 && !canScrollPrev) {
         e.preventDefault();
         onFocusSidebar();
       } else {
-        handleArrowLeft(eventApis, activeEvents, activeSlice, setActiveEvents);
+        handleArrowLeft(eventApis, activeEvents, activeRow, setActiveEvents);
       }
     } else if (e.key === 'ArrowDown' && !playerIsOpen && selectedItem === 'recent') {
       const now = Date.now();
       if (now - lastVerticalNavRef.current < 150) return;
       lastVerticalNavRef.current = now;
-      handleArrowDown(setActiveSlice, dataSlice, dataSliceHandlers, data, setIsLoading, fetchMore)
+      if (continueWatchingActive) {
+        setContinueWatchingActive(false);
+      } else {
+        handleArrowDown(setActiveSlice, dataSlice, dataSliceHandlers, data, setIsLoading, fetchMore)
+      }
     } else if (e.key === 'ArrowUp' && !playerIsOpen && selectedItem === 'recent') {
       const now = Date.now();
       if (now - lastVerticalNavRef.current < 150) return;
       lastVerticalNavRef.current = now;
-      handleArrowUp(setActiveSlice, dataSliceHandlers, data)
+      if (activeSlice === 0 && playbackHistory.length > 0 && !continueWatchingActive) {
+        setContinueWatchingActive(true);
+      } else if (!continueWatchingActive) {
+        handleArrowUp(setActiveSlice, dataSliceHandlers, data)
+      }
     }
   })
 
@@ -174,13 +240,14 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
     // Keep carousel in DOM when player is open to preserve scroll position
     return (
       <>
-        {playerIsOpen && (
+        {playerIsOpen && selectedPlayerItem && (
           <div className="player-fullscreen-container">
             <Player
-              event={dataSlice[0].lectures.nodes[activeEvents[activeSlice] || 0]}
-              conferenceTitle={dataSlice[0].title}
+              event={selectedPlayerItem.event}
+              conferenceTitle={selectedPlayerItem.conferenceTitle}
               onClose={() => {
                 setPlayerIsOpen(false);
+                setSelectedPlayerItem(null);
                 setIsPlayerFullscreen(false);
               }}
             />
@@ -192,22 +259,34 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
         }}>
           <Container fluid>
             <Preview
-              event={dataSlice[0].lectures.nodes[activeEvents[activeSlice] || 0]}
-              conferenceTitle={dataSlice[0].title}
+              event={activeBrowseSelection.event}
+              conferenceTitle={activeBrowseSelection.conferenceTitle}
             />
             <div className="container">
               <div className="embla_vertical">
                 <div className="embla__viewport">
                   <div className="embla__container embla__container_vertical">
-                    {dataSlice.map((c, ci) => (
-                      <div className="embla__slide" key={ci}>
+                    {continueWatchingActive && playbackHistory.length > 0 && (
+                      <div className="embla__slide" key="continue-watching">
                         <EventCarousel
-                          eventRefs={eventRefs}
+                          eventApis={eventApis}
+                          events={continueWatchingEvents}
+                          activeEvent={activeEvents.continueWatching || 0}
+                          ci={0}
+                          conferenceTitle="Continue Watching"
+                          playbackProgressByGuid={playbackProgressByGuid}
+                        />
+                      </div>
+                    )}
+                    {dataSlice.map((c, ci) => (
+                      <div className="embla__slide" key={c.id || ci}>
+                        <EventCarousel
                           eventApis={eventApis}
                           events={c}
                           activeEvent={activeEvents[ci + activeSlice]}
-                          ci={ci}
+                          ci={ci + (continueWatchingActive ? 1 : 0)}
                           conferenceTitle={c.title}
+                          playbackProgressByGuid={playbackProgressByGuid}
                         />
                       </div>
                     ))}
