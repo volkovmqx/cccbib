@@ -1,99 +1,74 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  getSavedPlaybackPosition,
+  savePlaybackHistoryItem,
+} from '../../helpers/playbackHistory';
 
-const getStorageKey = (videoGuid) => `playback_position_${videoGuid}`;
-
-export function usePlaybackPosition({ eventGuid, recording, videoElementRef, isInWatchlist }) {
+export function usePlaybackPosition({
+  event,
+  conferenceTitle,
+  recording,
+  videoElementRef,
+  isInWatchlist,
+  removeFromWatchlist,
+  playing,
+}) {
+  const eventGuid = event.guid;
   const [startTime, setStartTime] = useState(0);
   const [languageSwitchTime, setLanguageSwitchTime] = useState(null);
-  const saveIntervalRef = useRef(null);
-  const lastWatchlistCheckRef = useRef(0);
 
   // Load saved position
   useEffect(() => {
-    if (recording && eventGuid && startTime === 0 && !languageSwitchTime) {
-      const savedPosition = localStorage.getItem(getStorageKey(eventGuid));
-      if (savedPosition && parseFloat(savedPosition) > 0) {
-        setStartTime(parseFloat(savedPosition));
-      }
+    if (recording && eventGuid && !languageSwitchTime) {
+      setStartTime(getSavedPlaybackPosition(eventGuid));
     }
-  }, [recording?.url, eventGuid, startTime, languageSwitchTime]);
+  }, [recording?.url, eventGuid, languageSwitchTime]);
 
-  // Save position periodically and on unmount
+  const saveCurrentPosition = useCallback(() => {
+    const videoElement = videoElementRef.current;
+    if (!videoElement?.currentTime || !eventGuid) return false;
+
+    const duration = videoElement.duration || event.duration;
+    if (duration - videoElement.currentTime <= 300 && isInWatchlist) {
+      removeFromWatchlist(eventGuid);
+    }
+
+    return savePlaybackHistoryItem({
+      event,
+      conferenceTitle,
+      positionSeconds: videoElement.currentTime,
+      durationSeconds: duration,
+    });
+  }, [conferenceTitle, event, eventGuid, isInWatchlist, removeFromWatchlist, videoElementRef]);
+
+  // Save position every 10 seconds only during active playback.
   useEffect(() => {
-    const checkAndRemoveFromWatchlist = (currentTime, duration) => {
-      if (duration - currentTime <= 300 && isInWatchlist) {
-        const stored = localStorage.getItem('watchlist');
-        if (stored) {
-          let watchlist = JSON.parse(stored);
-          const initialLength = watchlist.length;
-          watchlist = watchlist.filter(item => item.guid !== eventGuid);
-          if (watchlist.length < initialLength) {
-            localStorage.setItem('watchlist', JSON.stringify(watchlist));
-            window.dispatchEvent(new Event('watchlistUpdate'));
-          }
-        }
-      }
-    };
+    if (!playing) return undefined;
 
-    saveIntervalRef.current = setInterval(() => {
+    const interval = setInterval(() => {
       const videoElement = videoElementRef.current;
-      if (videoElement?.currentTime && eventGuid) {
-        const { currentTime, duration } = videoElement;
-        checkAndRemoveFromWatchlist(currentTime, duration);
-
-        if (duration - currentTime > 300) {
-          localStorage.setItem(getStorageKey(eventGuid), currentTime.toString());
-        } else {
-          localStorage.removeItem(getStorageKey(eventGuid));
-        }
+      if (videoElement && !videoElement.paused && !videoElement.ended) {
+        saveCurrentPosition();
       }
-    }, 300000);
+    }, 10000);
 
-    return () => {
-      if (saveIntervalRef.current) clearInterval(saveIntervalRef.current);
+    return () => clearInterval(interval);
+  }, [playing, saveCurrentPosition, videoElementRef]);
 
-      const videoElement = videoElementRef.current;
-      if (videoElement?.currentTime && eventGuid) {
-        const { currentTime, duration } = videoElement;
-        checkAndRemoveFromWatchlist(currentTime, duration);
+  // Save the final position when the player closes or changes event.
+  const saveCurrentPositionRef = useRef(saveCurrentPosition);
+  useEffect(() => {
+    saveCurrentPositionRef.current = saveCurrentPosition;
+  }, [saveCurrentPosition]);
+  useEffect(() => () => saveCurrentPositionRef.current(), [eventGuid]);
 
-        if (duration - currentTime > 300) {
-          localStorage.setItem(getStorageKey(eventGuid), currentTime.toString());
-        } else {
-          localStorage.removeItem(getStorageKey(eventGuid));
-        }
-      }
-    };
-  }, [eventGuid, isInWatchlist, videoElementRef]);
-
-  // Handle time update for watchlist check
+  // Reset the temporary language-switch position after playback starts.
   const handleTimeUpdate = () => {
     if (languageSwitchTime !== null) {
       setTimeout(() => {
         setLanguageSwitchTime(null);
         setStartTime(0);
       }, 1000);
-    }
-
-    const now = Date.now();
-    if (now - lastWatchlistCheckRef.current > 30000) {
-      lastWatchlistCheckRef.current = now;
-      const videoElement = videoElementRef.current;
-      if (videoElement?.currentTime && videoElement?.duration) {
-        const timeRemaining = videoElement.duration - videoElement.currentTime;
-        if (timeRemaining <= 300 && isInWatchlist) {
-          const stored = localStorage.getItem('watchlist');
-          if (stored) {
-            let watchlist = JSON.parse(stored);
-            const initialLength = watchlist.length;
-            watchlist = watchlist.filter(item => item.guid !== eventGuid);
-            if (watchlist.length < initialLength) {
-              localStorage.setItem('watchlist', JSON.stringify(watchlist));
-              window.dispatchEvent(new Event('watchlistUpdate'));
-            }
-          }
-        }
-      }
     }
   };
 
@@ -103,9 +78,6 @@ export function usePlaybackPosition({ eventGuid, recording, videoElementRef, isI
     languageSwitchTime,
     setLanguageSwitchTime,
     handleTimeUpdate,
-    getStorageKey,
+    saveCurrentPosition,
   };
 }
-
-export { getStorageKey };
-export default usePlaybackPosition;

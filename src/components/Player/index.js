@@ -13,9 +13,10 @@ import { LANGUAGE_NAMES, LANG_CODE_MAP } from '../../constants';
 import { useWatchlist } from '../../hooks/useWatchlist';
 import { usePlayerKeyboard } from './usePlayerKeyboard';
 import { useControlsVisibility } from './useControlsVisibility';
-import { usePlaybackPosition, getStorageKey } from './usePlaybackPosition';
+import { usePlaybackPosition } from './usePlaybackPosition';
 import { useSubtitleManagement } from './useSubtitleManagement';
 import { SelectorModal } from './SelectorModal';
+import { removePlaybackHistoryItem } from '../../helpers/playbackHistory';
 
 export const Player = React.memo(function Player({ event, conferenceTitle, onClose }) {
   const [preferredAudioLanguage] = useLocalStorage({ key: 'language', defaultValue: 'deu' });
@@ -30,14 +31,17 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(0);
   const [recording, setRecording] = useState(null);
   const [recordingLanguage, setRecordingLanguage] = useState(null);
-  const [isVideoReady, setIsVideoReady] = useState(false);
   const [playing, setPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
 
   const playerRef = useRef(null);
   const videoElementRef = useRef(null);
 
-  const { isInWatchlist, toggleWatchlist: toggleWatchlistBase } = useWatchlist(event.guid);
+  const {
+    isInWatchlist,
+    toggleWatchlist: toggleWatchlistBase,
+    removeFromWatchlist,
+  } = useWatchlist(event.guid);
 
   const toggleWatchlist = useCallback(() => {
     toggleWatchlistBase({
@@ -76,11 +80,15 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     languageSwitchTime,
     setLanguageSwitchTime,
     handleTimeUpdate,
+    saveCurrentPosition,
   } = usePlaybackPosition({
-    eventGuid: event.guid,
+    event,
+    conferenceTitle,
     recording,
     videoElementRef,
     isInWatchlist,
+    removeFromWatchlist,
+    playing,
   });
 
   // Subtitle management hook
@@ -132,11 +140,6 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     }
   }, [event.guid, availableLanguages, preferredAudioLanguage]);
 
-  // Reset video ready state
-  useEffect(() => {
-    setIsVideoReady(false);
-  }, [event.guid, recording?.url]);
-
   // Update selector indices
   useEffect(() => {
     if (showLanguageSelector) {
@@ -157,7 +160,6 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     setPlaying(false);
     const videoElement = videoElementRef.current;
     if (videoElement?.currentTime && event.guid) {
-      localStorage.setItem(getStorageKey(event.guid), videoElement.currentTime.toString());
       setLanguageSwitchTime(videoElement.currentTime);
       setStartTime(videoElement.currentTime);
     }
@@ -296,13 +298,13 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
           const videoElement = player?.getInternalPlayer?.();
           if (videoElement) {
             videoElementRef.current = videoElement;
-            setIsVideoReady(true);
           }
         }}
+        onPause={saveCurrentPosition}
         onTimeUpdate={handleTimeUpdate}
         onEnded={() => {
           // Clear saved position when video completes
-          localStorage.removeItem(getStorageKey(event.guid));
+          removePlaybackHistoryItem(event.guid);
           // Remove from watchlist if it was there
           if (isInWatchlist) {
             toggleWatchlist();

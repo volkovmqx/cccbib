@@ -4,15 +4,27 @@ import { Title } from '@mantine/core';
 import { IconWorld, IconBadgeCc } from '@tabler/icons-react';
 import { useImagePreload } from '../hooks/useImagePreload';
 
-export const EventCarousel = React.memo(function EventCarousel({ eventApis, eventRefs, events, activeEvent, ci, conferenceTitle }) {
+export const EventCarousel = React.memo(function EventCarousel({
+  eventApis,
+  events,
+  activeEvent,
+  ci,
+  conferenceTitle,
+  playbackProgressByGuid,
+}) {
     const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', startIndex: activeEvent || 0, duration: 15 });
 
     useEffect(() => {
-      if (emblaRef && emblaApi) {
-        eventRefs.current[ci] = emblaRef;
+      if (emblaApi) {
         eventApis.current[ci] = emblaApi;
       }
-    }, [emblaRef, emblaApi, ci, eventRefs, eventApis]);
+    }, [emblaApi, ci, eventApis]);
+
+    useEffect(() => {
+      if (emblaApi && emblaApi.selectedScrollSnap() !== (activeEvent || 0)) {
+        emblaApi.scrollTo(activeEvent || 0, true);
+      }
+    }, [activeEvent, emblaApi, events.lectures.nodes]);
 
     // Preload adjacent carousel images for smoother navigation
     const imageUrls = useMemo(() =>
@@ -44,21 +56,32 @@ export const EventCarousel = React.memo(function EventCarousel({ eventApis, even
               {events.lectures.nodes.map((e, ei) => {
                 const { hasMultipleLanguages, hasSubtitles } = eventMetadata[ei];
                 const isActive = ci === 0 && (activeEvent || 0) === ei;
+                const playbackProgress = playbackProgressByGuid?.get(e.guid) || 0;
 
                 return (
                   <div className={isActive ? 'embla__slide active' : 'embla__slide'} key={ei}>
-                    <img
-                      className="embla__slide__img"
-                      src={e.images.thumbUrl}
-                      loading="lazy"
-                      alt={e.title}
-                    />
-                    {(hasMultipleLanguages || hasSubtitles) && (
-                      <div className="embla__slide__icons">
-                        {hasMultipleLanguages && <IconWorld className="slide-icon slide-icon--mr" stroke={1.5} />}
-                        {hasSubtitles && <IconBadgeCc className="slide-icon" stroke={1.5} />}
-                      </div>
-                    )}
+                    <div className="embla__slide__media">
+                      <img
+                        className="embla__slide__img"
+                        src={e.images.thumbUrl}
+                        loading="lazy"
+                        alt={e.title}
+                      />
+                      {(hasMultipleLanguages || hasSubtitles) && (
+                        <div className="embla__slide__icons">
+                          {hasMultipleLanguages && <IconWorld className="slide-icon slide-icon--mr" stroke={1.5} />}
+                          {hasSubtitles && <IconBadgeCc className="slide-icon" stroke={1.5} />}
+                        </div>
+                      )}
+                      {playbackProgress > 0 && (
+                        <div className="embla__slide__progress" aria-label={`${Math.round(playbackProgress)}% watched`}>
+                          <div
+                            className="embla__slide__progressFill"
+                            style={{ width: `${playbackProgress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
