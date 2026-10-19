@@ -1,4 +1,4 @@
-import { useWindowEvent } from '@mantine/hooks';
+import { useWindowEvent } from './utils';
 
 export function useListNavigation({
   itemCount,

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { Title } from '@mantine/core';
-import { IconWorld, IconBadgeCc } from '@tabler/icons-react';
+import { IconWorld, IconBadgeCc, IconAspectRatio } from '@tabler/icons-react';
 import { useImagePreload } from '../hooks/useImagePreload';
+import { formatDuration, isOddAspect } from '../helpers/helpers';
+import { useSetting } from '../settings';
+import { useTranslation } from '../i18n';
 
 export const EventCarousel = React.memo(function EventCarousel({
   eventApis,
@@ -12,6 +14,8 @@ export const EventCarousel = React.memo(function EventCarousel({
   conferenceTitle,
   playbackProgressByGuid,
 }) {
+    const t = useTranslation();
+    const [language] = useSetting('language');
     const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', startIndex: activeEvent || 0, duration: 15 });
 
     useEffect(() => {
@@ -31,7 +35,7 @@ export const EventCarousel = React.memo(function EventCarousel({
       events.lectures.nodes.map(e => e.images?.thumbUrl).filter(Boolean),
       [events.lectures.nodes]
     );
-    useImagePreload(imageUrls, activeEvent || 0, 3);
+    useImagePreload(imageUrls, activeEvent || 0, 5);
 
     const eventMetadata = useMemo(() => {
       return events.lectures.nodes.map(e => {
@@ -42,19 +46,20 @@ export const EventCarousel = React.memo(function EventCarousel({
         )];
         return {
           hasMultipleLanguages: availableLanguages.length > 1,
-          hasSubtitles: e.subtitles && e.subtitles.length > 0
+          hasSubtitles: e.subtitles && e.subtitles.length > 0,
+          oddAspect: isOddAspect(e.videos, language)
         };
       });
-    }, [events.lectures.nodes]);
+    }, [events.lectures.nodes, language]);
 
     return (
       <>
-        <Title size="48px" mb={20}>{conferenceTitle}</Title>
+        <h2 className="carouselTitle">{conferenceTitle}</h2>
         <div className="embla">
           <div className="embla__viewport" ref={emblaRef}>
             <div className="embla__container">
               {events.lectures.nodes.map((e, ei) => {
-                const { hasMultipleLanguages, hasSubtitles } = eventMetadata[ei];
+                const { hasMultipleLanguages, hasSubtitles, oddAspect } = eventMetadata[ei];
                 const isActive = ci === 0 && (activeEvent || 0) === ei;
                 const playbackProgress = playbackProgressByGuid?.get(e.guid) || 0;
 
@@ -65,22 +70,31 @@ export const EventCarousel = React.memo(function EventCarousel({
                         className="embla__slide__img"
                         src={e.images.thumbUrl}
                         loading="lazy"
+                        decoding="async"
                         alt={e.title}
                       />
-                      {(hasMultipleLanguages || hasSubtitles) && (
+                      {(hasMultipleLanguages || hasSubtitles || oddAspect) && (
                         <div className="embla__slide__icons">
-                          {hasMultipleLanguages && <IconWorld className="slide-icon slide-icon--mr" stroke={1.5} />}
-                          {hasSubtitles && <IconBadgeCc className="slide-icon" stroke={1.5} />}
+                          {oddAspect && <IconAspectRatio className={`slide-icon${hasMultipleLanguages || hasSubtitles ? ' slide-icon--mr' : ''}`} stroke={1.75} />}
+                          {hasMultipleLanguages && <IconWorld className={`slide-icon${hasSubtitles ? ' slide-icon--mr' : ''}`} stroke={1.75} />}
+                          {hasSubtitles && <IconBadgeCc className="slide-icon" stroke={1.75} />}
                         </div>
                       )}
                       {playbackProgress > 0 && (
-                        <div className="embla__slide__progress" aria-label={`${Math.round(playbackProgress)}% watched`}>
+                        <div className="embla__slide__progress" aria-label={t('{percent}% watched', { percent: Math.round(playbackProgress) })}>
                           <div
                             className="embla__slide__progressFill"
                             style={{ width: `${playbackProgress}%` }}
                           />
                         </div>
                       )}
+                    </div>
+                    <div className="embla__slide__text">
+                      <div className="embla__slide__title">{e.title}</div>
+                      <div className="embla__slide__meta">
+                        {formatDuration(e.duration)}
+                        {e.persons && e.persons.length > 0 ? ` \u2022 ${e.persons.join(', ')}` : ''}
+                      </div>
                     </div>
                   </div>
                 );

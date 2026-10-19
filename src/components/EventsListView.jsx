@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { isDevelopment } from '../helpers/scrollHelpers';
+import { API_BASE } from '../api';
 import { ListView } from './ListView';
-
-import '../styles.css';
+import { useTranslation } from '../i18n';
 
 export const EventsListView = React.memo(function EventsListView({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused, selectedIndex, setSelectedIndex }) {
+  const t = useTranslation();
   const [conferences, setConferences] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,11 +12,7 @@ export const EventsListView = React.memo(function EventsListView({ onClose, onSe
   useEffect(() => {
     const fetchConferences = async () => {
       try {
-        const apiUrl = isDevelopment()
-          ? '/api/public/conferences'
-          : 'https://api.media.ccc.de/public/conferences';
-
-        const response = await fetch(apiUrl);
+        const response = await fetch(`${API_BASE}/conferences`);
         if (!response.ok) {
           throw new Error(`Failed to fetch conferences: ${response.statusText}`);
         }
@@ -67,7 +63,7 @@ export const EventsListView = React.memo(function EventsListView({ onClose, onSe
 
   return (
     <ListView
-      title="Events"
+      title={t('Events')}
       items={conferences}
       loading={loading}
       error={error}
@@ -77,7 +73,7 @@ export const EventsListView = React.memo(function EventsListView({ onClose, onSe
       onSelect={handleSelect}
       onFocusSidebar={onFocusSidebar}
       sidebarFocused={sidebarFocused}
-      emptyMessage="No events found"
+      emptyMessage={t('No events found')}
       renderItem={renderItem}
       className="eventsListView"
       itemClassName="eventsListView__item"

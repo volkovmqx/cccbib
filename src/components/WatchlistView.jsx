@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { IconHeartOff } from '@tabler/icons-react';
 import { Player } from './Player';
 import { ListView } from './ListView';
+import { useTranslation } from '../i18n';
 
 export const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }) {
+  const t = useTranslation();
   const [watchlist, setWatchlist] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [playerIsOpen, setPlayerIsOpen] = useState(false);
@@ -75,7 +77,7 @@ export const WatchlistView = React.memo(function WatchlistView({ onClose, onFocu
       )}
       <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
         <ListView
-          title="Watchlist"
+          title={t('Watchlist')}
           items={watchlist}
           loading={false}
           selectedIndex={selectedIndex}
@@ -85,13 +87,13 @@ export const WatchlistView = React.memo(function WatchlistView({ onClose, onFocu
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
           disabled={playerIsOpen}
-          emptyIcon={<IconHeartOff size={120} stroke={1.5} color="#909296" />}
-          emptyMessage="Your watchlist is empty"
+          emptyIcon={<IconHeartOff size={120} stroke={1.5} color="var(--text-muted)" />}
+          emptyMessage={t('Your watchlist is empty')}
           renderItem={renderItem}
           className="watchlistView"
           itemClassName="watchlistView__item"
           selectedItemClassName="watchlistView__item--selected"
-          countLabel={watchlist.length > 0 ? `${watchlist.length} ${watchlist.length === 1 ? 'video' : 'videos'}` : null}
+          countLabel={watchlist.length > 0 ? (watchlist.length === 1 ? t('{count} video', { count: 1 }) : t('{count} videos', { count: watchlist.length })) : null}
         />
       </div>
     </>

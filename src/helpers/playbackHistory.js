@@ -105,6 +105,14 @@ export function savePlaybackHistoryItem({ event, conferenceTitle, positionSecond
   return saved;
 }
 
+export function replacePlaybackHistory(entries) {
+  const now = Date.now();
+  const items = entries
+    .map((entry, index) => normalizeItem({ ...entry, updatedAt: now - index * 1000 }))
+    .filter(Boolean);
+  return writePlaybackHistory(items);
+}
+
 export function removePlaybackHistoryItem(eventGuid) {
   if (!eventGuid) return false;
 

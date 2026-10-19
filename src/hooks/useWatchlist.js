@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { readWatchlist, addToWatchlistStore, removeFromWatchlistStore } from '../helpers/watchlist';
 
 const WATCHLIST_KEY = 'watchlist';
 
@@ -40,49 +41,15 @@ export function useWatchlist(eventGuid) {
   }, [eventGuid]);
 
   const addToWatchlist = useCallback((eventData) => {
-    try {
-      const stored = localStorage.getItem(WATCHLIST_KEY);
-      const watchlist = stored ? JSON.parse(stored) : [];
-
-      if (watchlist.some(item => item.guid === eventData.guid)) {
-        return false;
-      }
-
-      watchlist.push({
-        ...eventData,
-        addedAt: Date.now()
-      });
-
-      localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist));
-      setIsInWatchlist(true);
-      window.dispatchEvent(new Event('watchlistUpdate'));
-      return true;
-    } catch (err) {
-      console.error('Error adding to watchlist:', err);
-      return false;
-    }
+    const added = addToWatchlistStore(eventData);
+    if (added) setIsInWatchlist(true);
+    return added;
   }, []);
 
   const removeFromWatchlist = useCallback((guid) => {
-    try {
-      const stored = localStorage.getItem(WATCHLIST_KEY);
-      if (!stored) return false;
-
-      let watchlist = JSON.parse(stored);
-      const initialLength = watchlist.length;
-      watchlist = watchlist.filter(item => item.guid !== guid);
-
-      if (watchlist.length < initialLength) {
-        localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist));
-        setIsInWatchlist(false);
-        window.dispatchEvent(new Event('watchlistUpdate'));
-        return true;
-      }
-      return false;
-    } catch (err) {
-      console.error('Error removing from watchlist:', err);
-      return false;
-    }
+    const removed = removeFromWatchlistStore(guid);
+    if (removed) setIsInWatchlist(false);
+    return removed;
   }, []);
 
   const toggleWatchlist = useCallback((eventData) => {
@@ -93,15 +60,7 @@ export function useWatchlist(eventGuid) {
     }
   }, [isInWatchlist, addToWatchlist, removeFromWatchlist]);
 
-  const getWatchlist = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(WATCHLIST_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (err) {
-      console.error('Error getting watchlist:', err);
-      return [];
-    }
-  }, []);
+  const getWatchlist = useCallback(() => readWatchlist(), []);
 
   return {
     isInWatchlist,

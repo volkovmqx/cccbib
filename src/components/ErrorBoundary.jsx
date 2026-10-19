@@ -1,59 +1,42 @@
 import React from 'react';
-import { Center, Text, Stack, Button } from '@mantine/core';
+import { t } from '../i18n';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
-    this.setState({
-      error,
-      errorInfo
-    });
+    this.setState({ error });
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
-    // Optionally clear cache and reload
     window.location.reload();
   };
 
   render() {
     if (this.state.hasError) {
       return (
-        <Center h="100vh" style={{ backgroundColor: '#000' }}>
-          <Stack spacing="md" align="center" style={{ maxWidth: '600px', padding: '20px' }}>
-            <Text size="xl" weight={700} color="#AAF40D">
-              Something went wrong
-            </Text>
-            <Text size="md" color="#909296" align="center">
-              The application encountered an unexpected error. Please try reloading the page.
-            </Text>
+        <div className="center errorBoundary">
+          <div className="errorBoundary__content">
+            <div className="errorBoundary__title">{t('Something went wrong')}</div>
+            <div className="errorBoundary__message">
+              {t('The application encountered an unexpected error. Please try reloading the page.')}
+            </div>
             {this.state.error && (
-              <Text size="sm" color="#666" style={{ fontFamily: 'monospace' }}>
-                {this.state.error.toString()}
-              </Text>
+              <div className="errorBoundary__details">{this.state.error.toString()}</div>
             )}
-            <Button
-              onClick={this.handleReset}
-              style={{
-                backgroundColor: '#AAF40D',
-                color: '#000',
-                fontWeight: 'bold',
-                marginTop: '20px'
-              }}
-            >
-              Reload Application
-            </Button>
-          </Stack>
-        </Center>
+            <button className="errorBoundary__button" onClick={this.handleReset}>
+              {t('Reload Application')}
+            </button>
+          </div>
+        </div>
       );
     }
 

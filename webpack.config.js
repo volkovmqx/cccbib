@@ -3,17 +3,16 @@ const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
 // needed to check webpack-bundle
 // const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const fs = require('fs');
 const appInfo = require('./assets/appinfo.json');
+
+const voctocat = fs.readFileSync(path.resolve(__dirname, 'src/assets/voctocat.html'), 'utf8').trim();
 
 module.exports = {
   entry: {
-    app: [
-      // Full polyfills needed for Chrome 68 (webOS 4.0+). Yes don't remove or I run into a black screen and scratch my head for 30min
-      'core-js/stable',
-      'regenerator-runtime/runtime',
-      './src/index.jsx'
-    ]
+    app: ['./src/index.jsx'],
   },
+  target: ['web', 'es2017'],
   devtool: false,
   module: {
     rules: [
@@ -31,16 +30,18 @@ module.exports = {
             options: {
               importLoaders: 1
             }
-          }
+          },
+          path.resolve(__dirname, 'tools/min-css-loader.js'),
         ],
       },
       {
-        test: /\.s[ac]ss$/i,
-        use: [
-          'style-loader',
-          'css-loader',
-          'sass-loader',
-        ],
+        test: /voctocat\.html$/i,
+        type: 'asset/source',
+      },
+      {
+        test: /\.woff2$/i,
+        type: 'asset/resource',
+        generator: { filename: 'fonts/[name][ext]' },
       },
     ],
   },
@@ -76,7 +77,12 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { context: 'assets', from: '**/*' },
-        { context: 'src', from: 'index.html' },
+        { context: 'src/assets/fonts', from: '*.{txt,md}', to: 'fonts' },
+        {
+          context: 'src',
+          from: 'index.html',
+          transform: (content) => content.toString().replace('<!--VOCTOCAT-->', voctocat),
+        },
       ],
     }),
     // ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
@@ -84,44 +90,5 @@ module.exports = {
   devServer: {
     static: path.resolve(__dirname, './dist'),
     port: 3333,
-    proxy: [
-      {
-        context: ['/api'],
-        target: 'https://api.media.ccc.de',
-        pathRewrite: { '^/api': '' },
-        changeOrigin: true,
-        secure: true,
-      },
-      {
-        context: ['/subtitles'],
-        target: 'https://cdn.media.ccc.de',
-        pathRewrite: { '^/subtitles': '' },
-        changeOrigin: true,
-        secure: true,
-        followRedirects: true,
-        onProxyRes: function(proxyRes, req, res) {
-          // Remove CORS headers from the proxied response
-          delete proxyRes.headers['access-control-allow-origin'];
-          delete proxyRes.headers['access-control-allow-credentials'];
-        },
-      },
-      {
-        context: ['/subtitles-static'],
-        target: 'https://static.media.ccc.de',
-        pathRewrite: { '^/subtitles-static': '' },
-        changeOrigin: true,
-        secure: true,
-        followRedirects: true,
-        logLevel: 'debug',
-        onProxyReq: function(proxyReq, req, res) {
-          console.log('Proxying to:', proxyReq.path);
-        },
-        onProxyRes: function(proxyRes, req, res) {
-          // Remove CORS headers from the proxied response
-          delete proxyRes.headers['access-control-allow-origin'];
-          delete proxyRes.headers['access-control-allow-credentials'];
-        },
-      },
-    ],
   },
 };

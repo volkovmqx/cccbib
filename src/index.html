@@ -1,17 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="black">
   <head>
+    <meta charset="utf-8" />
     <title>CCCBib</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1" />
-    <!-- Preconnect to API for faster first request because of speeeeeed -->
-    <link rel="preconnect" href="https://media.ccc.de" />
+    <link rel="preconnect" href="https://media.ccc.de" crossorigin />
     <link rel="dns-prefetch" href="https://media.ccc.de" />
-    <link rel="preconnect" href="https://static.media.ccc.de" crossorigin />
+    <link rel="preconnect" href="https://static.media.ccc.de" />
     <link rel="dns-prefetch" href="https://static.media.ccc.de" />
+    <script>
+      (function () {
+        try {
+          var cached = JSON.parse(localStorage.getItem('appearance_boot'));
+          if (!cached) return;
+          var root = document.documentElement;
+          for (var attr in cached.attrs) root.setAttribute(attr, cached.attrs[attr]);
+          for (var name in cached.vars) root.style.setProperty(name, cached.vars[name]);
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      :root { --bg: #000; --text: #fff; --accent: #AAF40D; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+      #boot {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2147483647;
+        background: var(--bg); transition: opacity 0.4s ease-out;
+      }
+      #boot.fade-out { opacity: 0; pointer-events: none; }
+      #boot pre {
+        margin: 0; padding: 40px 60px; white-space: pre-wrap; word-break: break-word;
+        font: 20px/1.5 monospace; color: var(--text);
+      }
+      .loading-spinner {
+        --s: 56px;
+        position: absolute; top: 50%; left: 50%; width: var(--s); height: var(--s);
+        margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+      }
+      .loading-spinner--inline { position: relative; top: auto; left: auto; margin: 0 auto; }
+      .loader-orbit { animation: spinner-rotate 1s linear infinite; will-change: transform; }
+      .loader-orbit::before, .loader-orbit::after {
+        content: ''; position: absolute; width: calc(var(--s) / 2); height: calc(var(--s) / 2);
+        border-radius: 50%; animation: spinner-pulse 1s ease-in-out infinite; will-change: transform;
+      }
+      .loader-orbit::before { top: 0; left: 0; background: var(--text); }
+      .loader-orbit::after { right: 0; bottom: 0; background: var(--accent); }
+      .loader-ring {
+        box-sizing: border-box; border-radius: 50%; border: calc(var(--s) / 9) solid rgba(128, 128, 128, 0.35);
+        border-top-color: var(--accent); animation: spinner-rotate 0.9s linear infinite; will-change: transform;
+      }
+      .loader-dots { width: calc(var(--s) / 4); height: calc(var(--s) / 4); margin: calc(var(--s) / -8) 0 0 calc(var(--s) / -8); }
+      .loader-dots, .loader-dots::before, .loader-dots::after {
+        border-radius: 50%; background: var(--accent); animation: spinner-bounce 1s ease-in-out infinite;
+      }
+      .loader-dots::before, .loader-dots::after { content: ''; position: absolute; top: 0; width: 100%; height: 100%; }
+      .loader-dots::before { left: calc(var(--s) / -2); animation-delay: -0.3s; }
+      .loader-dots::after { left: calc(var(--s) / 2); animation-delay: 0.3s; }
+      .loading-spinner--inline.loader-dots { margin: 0 auto; }
+      .loader-bars { display: flex; align-items: center; justify-content: space-between; }
+      .loader-bars i {
+        display: block; width: 14%; height: 100%; border-radius: 2px; background: var(--accent);
+        animation: loader-eq 1s ease-in-out infinite; will-change: transform;
+      }
+      .loader-bars i:nth-child(1) { animation-delay: -0.9s; }
+      .loader-bars i:nth-child(2) { animation-delay: -0.7s; }
+      .loader-bars i:nth-child(3) { animation-delay: -0.5s; }
+      .loader-bars i:nth-child(4) { animation-delay: -0.3s; }
+      .loader-bars i:nth-child(5) { animation-delay: -0.1s; }
+      .loader-pulse::before, .loader-pulse::after { content: ''; position: absolute; border-radius: 50%; will-change: transform; }
+      .loader-pulse::before {
+        top: 25%; left: 25%; width: 50%; height: 50%; background: var(--accent);
+        animation: loader-core 1.4s ease-in-out infinite;
+      }
+      .loader-pulse::after {
+        top: 0; left: 0; width: 100%; height: 100%; box-sizing: border-box; opacity: 0;
+        border: calc(var(--s) / 14) solid var(--accent); animation: loader-ring 1.4s ease-out infinite;
+      }
+      .loader-voctocat { --s: 240px; }
+      .voctocat, .voctocat svg, .voctocat div { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+      .voctocat__cat { fill: var(--bg); }
+      .voctocat__disc { fill: var(--text); }
+      .voctocat__play { fill: var(--accent); }
+      .voctocat div { will-change: transform; animation: voctocat-bob 0.55s ease-in-out infinite alternate; }
+      @keyframes voctocat-bob { from { transform: translateY(-0.567%); } to { transform: translateY(0.416%); } }
+      @keyframes loader-eq { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
+      @keyframes loader-core { 0%, 100% { transform: scale(0.8); } 50% { transform: scale(1); } }
+      @keyframes loader-ring { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(1.15); opacity: 0; } }
+      @keyframes spinner-rotate { to { transform: rotate(360deg); } }
+      @keyframes spinner-pulse { 0%, 100% { transform: scale(0.5); } 50% { transform: scale(1); } }
+      @keyframes spinner-bounce { 0%, 80%, 100% { transform: scale(0.4); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+    </style>
   </head>
   <body>
     <div id="app"></div>
-    <script src="./vendor.bundle.js"></script>
-    <script src="./app.bundle.js"></script>
+    <div id="boot"><div class="loading-spinner loader-voctocat"><!--VOCTOCAT--></div></div>
+    <script>
+      (function () {
+        var ready = false;
+        var boot = document.getElementById('boot');
+        var loader = document.documentElement.getAttribute('data-loader');
+        if (loader && loader !== 'voctocat') {
+          boot.firstChild.className = 'loading-spinner loader-' + loader;
+          boot.firstChild.innerHTML = loader === 'bars' ? '<i></i><i></i><i></i><i></i><i></i>' : '';
+        }
+
+        window.__cccbibReady = function () {
+          if (ready) return;
+          ready = true;
+          boot.className = 'fade-out';
+          setTimeout(function () { if (boot.parentNode) boot.parentNode.removeChild(boot); }, 500);
+        };
+
+        function fail(message) {
+          if (ready || document.getElementById('app').firstChild) return;
+          boot.innerHTML = '<pre></pre>';
+          boot.firstChild.textContent = 'CCCBib failed to start\n\n' + message + '\n\n' + navigator.userAgent;
+        }
+        window.onerror = function (message, source, line) { fail(message + '\n' + source + ':' + line); };
+        window.addEventListener('unhandledrejection', function (event) {
+          fail(String(event.reason && (event.reason.stack || event.reason.message || event.reason)));
+        });
+
+        function loadBundles() {
+          ['./vendor.bundle.js', './app.bundle.js'].forEach(function (src) {
+            var script = document.createElement('script');
+            script.async = false;
+            script.src = src;
+            script.onerror = function () { fail('Could not load ' + src); };
+            document.body.appendChild(script);
+          });
+        }
+
+        if (document.readyState === 'complete') loadBundles();
+        else window.addEventListener('load', loadBundles);
+      })();
+    </script>
   </body>
 </html>

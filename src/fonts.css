@@ -1,0 +1,18 @@
+@font-face { font-family: 'Inter'; src: url('./assets/fonts/Inter.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Poppins'; src: url('./assets/fonts/Poppins.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'OpenDyslexic'; src: url('./assets/fonts/OpenDyslexic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Space Grotesk'; src: url('./assets/fonts/SpaceGrotesk.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Merriweather'; src: url('./assets/fonts/Merriweather.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Courier Prime'; src: url('./assets/fonts/CourierPrime.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Inconsolata'; src: url('./assets/fonts/Inconsolata.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Silkscreen'; src: url('./assets/fonts/Silkscreen.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Andika'; src: url('./assets/fonts/Andika-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Andika'; src: url('./assets/fonts/Andika-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Comic Neue'; src: url('./assets/fonts/ComicNeue-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Comic Neue'; src: url('./assets/fonts/ComicNeue-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Lexend'; src: url('./assets/fonts/Lexend-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Lexend'; src: url('./assets/fonts/Lexend-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; src: url('./assets/fonts/AtkinsonHyperlegibleNext-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; src: url('./assets/fonts/AtkinsonHyperlegibleNext-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Open Sans'; src: url('./assets/fonts/OpenSans-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Open Sans'; src: url('./assets/fonts/OpenSans-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }

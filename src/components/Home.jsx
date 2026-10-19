@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo, Suspense, lazy } from 'react';
-import { GET_RECENT_CONFERENCES } from '../data';
-import { Center, Loader, Container, Box } from '@mantine/core';
-import { useWindowEvent, useListState } from '@mantine/hooks';
-import { useQuery } from '@apollo/client';
+import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
+import { GET_RECENT_CONFERENCES, RECENT_KEY, mergeRecent } from '../data';
+import { useWindowEvent, useListState } from '../hooks/utils';
+import { useQuery, graphqlRequest, updateQuery } from '../graphql';
 import { Preview } from './Preview';
 import { handleArrowDown, handleArrowUp, handleArrowLeft, handleArrowRight } from '../helpers/helpers';
 import { EventCarousel } from './EventCarousel';
@@ -10,48 +9,78 @@ import { Player } from './Player';
 import { preloadImages } from '../hooks/useImagePreload';
 import { ErrorBoundary } from './ErrorBoundary';
 import { usePlaybackHistory } from '../hooks/usePlaybackHistory';
-import '../styles.css';
+import { saveHomeCache } from '../helpers/homeCache';
+import { LoadingScreen, Spinner } from './Spinner';
+import { useTranslation } from '../i18n';
 
-const Search = lazy(() => import('./Search'));
-const ConferenceView = lazy(() => import('./ConferenceView'));
-const PopularView = lazy(() => import('./PopularView'));
-const EventsListView = lazy(() => import('./EventsListView'));
-const Settings = lazy(() => import('./Settings'));
-const WatchlistView = lazy(() => import('./WatchlistView'));
+const loadSearch = () => import('./Search');
+const loadConferenceView = () => import('./ConferenceView');
+const loadPopularView = () => import('./PopularView');
+const loadEventsListView = () => import('./EventsListView');
+const loadSettings = () => import('./Settings');
+const loadWatchlistView = () => import('./WatchlistView');
 
+const PRELOAD_DELAY_MS = 1500;
+const PRELOAD_GAP_MS = 400;
+const viewPreloaders = [];
+
+function lazyView(load) {
+  let Loaded = null;
+  const remember = (module) => {
+    Loaded = module.default;
+    return module;
+  };
+  const Lazy = lazy(() => load().then(remember));
+  const View = (props) => {
+    const [Component] = useState(() => Loaded || Lazy);
+    return <Component {...props} />;
+  };
+  viewPreloaders.push(() => load().then(remember));
+  return View;
+}
+
+const Search = lazyView(loadSearch);
+const ConferenceView = lazyView(loadConferenceView);
+const PopularView = lazyView(loadPopularView);
+const EventsListView = lazyView(loadEventsListView);
+const Settings = lazyView(loadSettings);
+const WatchlistView = lazyView(loadWatchlistView);
+
+function preloadViews() {
+  viewPreloaders.reduce((chain, preload) => chain
+    .then(() => new Promise((resolve) => setTimeout(resolve, PRELOAD_GAP_MS)))
+    .then(preload)
+    .catch(() => {}), Promise.resolve());
+}
+
+const CONFERENCES_PER_PAGE = 6;
 const RESERVED_VIEWS = ['search', 'popular', 'recent', 'events', 'settings', 'watchlist'];
-
-const LoadingFallback = () => (
-  <Center h="100vh">
-    <Loader color="#AAF40D" type="dots" size="xl" />
-  </Center>
-);
 
 const LazyView = ({ children }) => (
   <ErrorBoundary>
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<LoadingScreen />}>
       {children}
     </Suspense>
   </ErrorBoundary>
 );
 
 export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onSelectItem, sidebarFocused, isPlayerFullscreen, setIsPlayerFullscreen }) {
+  const t = useTranslation();
   const playbackHistory = usePlaybackHistory();
+  const { error, data } = useQuery(RECENT_KEY, GET_RECENT_CONFERENCES, { offset: 0 }, { merge: mergeRecent });
+  const fetchMore = useCallback((offset) => graphqlRequest(GET_RECENT_CONFERENCES, { offset }).then(
+    (result) => updateQuery(RECENT_KEY, (existing) => mergeRecent(existing, result, offset))
+  ), []);
   const [playerIsOpen, setPlayerIsOpen] = useState(false)
   const [selectedPlayerItem, setSelectedPlayerItem] = useState(null)
   const [selectedSearchEvent, setSelectedSearchEvent] = useState(null)
   const [activeSlice, setActiveSlice] = useState(0)
-  const [dataSlice, dataSliceHandlers] = useListState([]);
+  const [dataSlice, dataSliceHandlers] = useListState(data?.conferencesRecent || []);
   const [isLoading, setIsLoading] = useState(false)
   const [activeEvents, setActiveEvents] = useState({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, continueWatching: 0 });
   const [continueWatchingActive, setContinueWatchingActive] = useState(() => playbackHistory.length > 0);
   const [previousView, setPreviousView] = useState('recent');
   const [eventsSelectedIndex, setEventsSelectedIndex] = useState(0);
-
-  const { loading, error, data, fetchMore } = useQuery(GET_RECENT_CONFERENCES, {
-    variables: { offset: 0 },
-    fetchPolicy: 'cache-first',
-  });
 
   useEffect(() => {
     if (!data) return
@@ -64,6 +93,23 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
       setIsLoading(false)
     }
   }, [data])
+
+  useEffect(() => {
+    if (dataSlice.length > 0 || (error && !data)) window.__cccbibReady?.();
+  }, [dataSlice.length, error, data]);
+
+  const homeReady = dataSlice.length > 0;
+  useEffect(() => {
+    if (!homeReady) return undefined;
+    const timer = setTimeout(preloadViews, PRELOAD_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [homeReady]);
+
+  useEffect(() => {
+    if (!data?.conferencesRecent) return undefined;
+    const timer = setTimeout(() => saveHomeCache(data.conferencesRecent.slice(0, CONFERENCES_PER_PAGE)), 3000);
+    return () => clearTimeout(timer);
+  }, [data]);
 
   // Preload images from next conference row for smoother vertical navigation
   useEffect(() => {
@@ -234,8 +280,8 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
   }
 
   if (selectedItem === 'recent') {
-    if (loading || dataSlice.length === 0) return <LoadingFallback />;
-    if (error) return <p>Error : {error.message}</p>;
+    if (error && dataSlice.length === 0) return <p>{t('Error: {message}', { message: error.message })}</p>;
+    if (dataSlice.length === 0) return <LoadingScreen />;
 
     // Keep carousel in DOM when player is open to preserve scroll position
     return (
@@ -257,10 +303,11 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
           visibility: playerIsOpen ? 'hidden' : 'visible',
           pointerEvents: playerIsOpen ? 'none' : 'auto'
         }}>
-          <Container fluid>
+          <div className="fluidContainer">
             <Preview
               event={activeBrowseSelection.event}
               conferenceTitle={activeBrowseSelection.conferenceTitle}
+              disableVideo={playerIsOpen}
             />
             <div className="container">
               <div className="embla_vertical">
@@ -273,7 +320,7 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
                           events={continueWatchingEvents}
                           activeEvent={activeEvents.continueWatching || 0}
                           ci={0}
-                          conferenceTitle="Continue Watching"
+                          conferenceTitle={t('Continue Watching')}
                           playbackProgressByGuid={playbackProgressByGuid}
                         />
                       </div>
@@ -292,18 +339,18 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
                     ))}
                     {isLoading && (
                       <div className="embla__slide">
-                        <Box className='skeleton'>
+                        <div className='skeleton'>
                           <div className='loaderContainer'>
-                            <Loader color="#AAF40D" type="dots" size="xl" />
+                            <Spinner />
                           </div>
-                        </Box>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             </div>
-          </Container>
+          </div>
         </div>
       </>
     );
@@ -379,5 +426,5 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
     );
   }
 
-  return <LoadingFallback />;
+  return <LoadingScreen />;
 });

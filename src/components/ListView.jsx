@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Loader, Center, Text } from '@mantine/core';
+import { LoadingScreen } from './Spinner';
 import { useListNavigation } from '../hooks/useListNavigation';
+import { useTranslation } from '../i18n';
 
 // Only virtualize if more than this many items
 const VIRTUALIZATION_THRESHOLD = 150;
@@ -48,6 +49,7 @@ export const ListView = React.memo(function ListView({
   selectedItemClassName,
   countLabel,
 }) {
+  const t = useTranslation();
   const selectedItemRef = useRef(null);
   const containerRef = useRef(null);
   const isInitialMount = useRef(true);
@@ -139,18 +141,14 @@ export const ListView = React.memo(function ListView({
   });
 
   if (loading) {
-    return (
-      <Center h="100vh">
-        <Loader color="#AAF40D" type="dots" size="xl" />
-      </Center>
-    );
+    return <LoadingScreen />;
   }
 
   if (error) {
     return (
-      <Center h="100vh">
-        <Text color="red" size="lg">Error: {error}</Text>
-      </Center>
+      <div className="center" style={{ height: '100vh' }}>
+        <p className="errorText">{t('Error: {message}', { message: error })}</p>
+      </div>
     );
   }
 
@@ -160,10 +158,10 @@ export const ListView = React.memo(function ListView({
         <div className={`${className}__header`}>
           <h2>{title}</h2>
         </div>
-        <Center h="calc(100vh - 200px)" style={{ flexDirection: 'column', gap: '20px' }}>
+        <div className="center emptyState">
           {emptyIcon}
-          <Text color="dimmed" size="lg">{emptyMessage}</Text>
-        </Center>
+          <p className="mutedText">{emptyMessage}</p>
+        </div>
       </div>
     );
   }
