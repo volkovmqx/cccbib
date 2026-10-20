@@ -121,7 +121,7 @@ xvfb-run -a yarn test:webos
 xvfb-run -a -s '-screen 0 1920x1080x24' yarn test:webos
 ```
 
-The fixture starts the extracted Simulator executable directly with `--ozone-platform=x11` and `--no-sandbox`. It connects the installed Playwright package through `chromium.connectOverCDP()`. It selects the exact `file://` application target. It installs fixture interception before the tested reload. DNS resolution stays disabled, and unexpected external requests fail the test.
+The fixture starts the extracted Simulator executable directly with `--ozone-platform=x11` and `--no-sandbox`. It connects the installed Playwright package through `chromium.connectOverCDP()`. It waits for the exact `file://` application target to initialize. Then it installs fixture interception before the tested reload. DNS resolution stays disabled, and unexpected external requests fail the test.
 
 Each test gets a separate Simulator storage directory. Restart tests reuse that directory. Navigation uses CDP input, including webOS Back keycode `461`. The reports contain application screenshots, Simulator output, console errors, target details, Chromium versions, launch arguments, HTML, and JUnit. CI retains them for 14 days. The fixture stops the Simulator process group after each test. CI also stops remaining Simulator processes after a failure.
 
