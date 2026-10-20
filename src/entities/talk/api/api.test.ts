@@ -26,6 +26,7 @@ test('remote talk links accept only the documented host and path', async () => {
   for (const link of [
     null, '', {}, 123, 'talk', '419d4f7e-7506-4d46-8700-e47e164a8e32',
     'https://example.com/v/talk', 'https://media.ccc.de.evil/v/talk', 'https://media.ccc.de@evil.example/v/talk',
+    'https://evilmedia.ccc.de/v/talk', 'https://api.media.ccc.de/v/talk',
     'https://api.media.ccc.de/public/events/talk', 'https://media.ccc.de/public/events/talk',
     'https://media.ccc.de/v/', 'https://media.ccc.de/v/-bad', 'https://media.ccc.de/v/../../etc',
     'javascript:alert(1)', 'file:///etc/passwd',
