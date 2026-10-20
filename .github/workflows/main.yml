@@ -18,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [25.x, latest]
+        node-version: [24.x, latest]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
@@ -37,7 +37,7 @@ jobs:
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: matrix.node-version == '25.x'
+        if: matrix.node-version == '24.x'
         with:
           name: cccbib_ipk
           path: |
