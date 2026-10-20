@@ -72,6 +72,30 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }) => {
     }
   });
 
+  const renderItem = (item) => {
+    const index = menuItems.indexOf(item);
+    const isSelected = selectedItem === item.id || (item.id === 'events' && selectedItem !== 'search' && selectedItem !== 'popular' && selectedItem !== 'recent' && selectedItem !== 'settings' && selectedItem !== 'watchlist');
+    const isHighlighted = selectedIndex === index && focused;
+
+    return (
+      <div
+        key={item.id}
+        ref={selectedIndex === index ? selectedItemRef : null}
+        className={`sidebarItem ${isSelected ? 'sidebarItem--selected' : ''} ${isHighlighted ? 'sidebarItem--highlighted' : ''} ${item.bottom ? 'sidebarItem--bottom' : ''} ${item.brand ? 'sidebarItem--brand' : ''}`}
+        onClick={() => onSelectItem(item.id)}
+      >
+        <div className={`sidebarItem__icon ${isSelected ? 'sidebarItem__icon--active' : ''}`}>
+          {item.brand ? <CatIcon /> : <NavIcon name={item.id} size={36} filled={isFilled(iconVariant, isSelected || isHighlighted)} />}
+        </div>
+        {item.brand ? (
+          <span className="sidebarItem__label sidebarItem__brandLabel" aria-label={item.label}><Logo /></span>
+        ) : (
+          <span className="sidebarItem__label">{item.label}</span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className={`sidebar ${focused ? 'sidebar--focused' : ''}`} ref={containerRef}>
       {!logoEntry && (
@@ -80,29 +104,11 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }) => {
           <span className="sidebar__wordmark"><Logo /></span>
         </div>
       )}
-      {/* Menu Items */}
-      {menuItems.map((item, index) => {
-        const isSelected = selectedItem === item.id || (item.id === 'events' && selectedItem !== 'search' && selectedItem !== 'popular' && selectedItem !== 'recent' && selectedItem !== 'settings' && selectedItem !== 'watchlist');
-        const isHighlighted = selectedIndex === index && focused;
-
-        return (
-          <div
-            key={item.id}
-            ref={selectedIndex === index ? selectedItemRef : null}
-            className={`sidebarItem ${isSelected ? 'sidebarItem--selected' : ''} ${isHighlighted ? 'sidebarItem--highlighted' : ''} ${item.bottom ? 'sidebarItem--bottom' : ''} ${item.brand ? 'sidebarItem--brand' : ''}`}
-            onClick={() => onSelectItem(item.id)}
-          >
-            <div className={`sidebarItem__icon ${isSelected ? 'sidebarItem__icon--active' : ''}`}>
-              {item.brand ? <CatIcon /> : <NavIcon name={item.id} size={36} filled={isFilled(iconVariant, isSelected || isHighlighted)} />}
-            </div>
-            {item.brand ? (
-              <span className="sidebarItem__label sidebarItem__brandLabel" aria-label={item.label}><Logo /></span>
-            ) : (
-              <span className="sidebarItem__label">{item.label}</span>
-            )}
-          </div>
-        );
-      })}
+      {menuItems.filter((item) => item.brand).map(renderItem)}
+      <div className="sidebar__main">
+        {menuItems.filter((item) => !item.brand && !item.bottom).map(renderItem)}
+      </div>
+      {menuItems.filter((item) => item.bottom).map(renderItem)}
     </div>
   );
 };
