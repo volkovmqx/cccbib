@@ -19,11 +19,11 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 
 ## Features
 
-- Browse every conference with lazy loading and video previews while you scroll (on, muted, still image or off).
-- Made for the TV remote with [spatial navigation](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) in React ([and this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1)) and a button mapping inspired by YouTube and Jellyfin (thanks to [Simon34545](https://github.com/Simon34545) for the LG input keymapping overview).
-- Watchlist and Continue Watching with your 20 most recent talks in progress.
-- Subtitles for old `.srt` and new `.vtt` files and your preferred audio and subtitle languages.
-- Available in 9 languages that you can switch any time.
+- Browse all conferences with video previews.
+- Made for the TV remote with a button mapping inspired by YouTube and Jellyfin.
+- Watchlist and Continue Watching.
+- Subtitles and your preferred audio language.
+- 9 app languages.
 - Black, Dark and Light themes with accent colors and custom fonts.
 - Aspect ratio fix for older videos (Auto, Zoom, Stretch).
 - Remote control over webOS launch parameters (see [Remote control](#remote-control)).
@@ -153,6 +153,8 @@ This image is built in CI on pushes to `main` (tagged `latest`) and on version t
 ## Credit
 
 The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/assets/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
+
+The TV navigation follows [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1). The LG input keymapping overview is by [Simon34545](https://github.com/Simon34545).
 
 WebOS Project architecture from ["Informatic"](https://github.com/informatic/streamkatze)
 
