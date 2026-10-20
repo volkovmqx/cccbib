@@ -23,7 +23,7 @@
     "verify": "yarn typecheck && yarn lint:fsd && yarn lint:unused && yarn test:coverage && yarn build && yarn test:e2e && yarn test:chrome68"
   },
   "keywords": [],
-  "author": "informatic",
+  "author": "volkovmqx",
   "license": "MIT",
   "devDependencies": {
     "@babel/core": "^8.0.7",

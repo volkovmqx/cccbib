@@ -115,6 +115,10 @@ Contributions are welcome. You can report bugs, add translations, improve docume
 
 The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the 95% coverage requirement, the coverage bot, and deployment.
 
+## Contributors
+
+[![Contributors to CCCBib](https://contrib.rocks/image?repo=volkovmqx/cccbib)](https://github.com/volkovmqx/cccbib/graphs/contributors)
+
 ## Credit
 
 The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/shared/branding/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
