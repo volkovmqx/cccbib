@@ -43,12 +43,12 @@ export class Simulator {
     const port = await freePort();
     const args = [path.resolve('dist'), '{}', '--ozone-platform=x11', '--no-sandbox',
       `--remote-debugging-port=${port}`, '--remote-debugging-address=127.0.0.1',
-      `--user-data-dir=${this.storage}`, '--autoplay-policy=no-user-gesture-required',
+      `--user-data-dir=${this.storage}`, '--autoplay-policy=no-user-gesture-required', '--enable-automation',
       // Block network access before CDP interception is installed.
       '--host-resolver-rules=MAP * ~NOTFOUND', '--disable-gpu', '--disable-dev-shm-usage'];
     this.launches++;
     await writeFile(this.info.outputPath(`launch-${this.launches}.json`), JSON.stringify({ pin, executable, args }, null, 2));
-    this.child = spawn('/missing/webos-simulator', args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+    this.child = spawn(executable, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, XDG_CONFIG_HOME: path.join(this.storage, 'config'), XDG_CACHE_HOME: path.join(this.storage, 'cache'),
         HTTP_PROXY: 'http://127.0.0.1:9', HTTPS_PROXY: 'http://127.0.0.1:9', ALL_PROXY: 'http://127.0.0.1:9', NO_PROXY: '',
         http_proxy: 'http://127.0.0.1:9', https_proxy: 'http://127.0.0.1:9', all_proxy: 'http://127.0.0.1:9', no_proxy: '' } });
@@ -62,7 +62,7 @@ export class Simulator {
       if (this.child?.exitCode !== null) throw new Error(`Simulator exited: ${this.child?.exitCode}`);
       return fetch(`${endpoint}/json/version`).then(r => r.ok).catch(() => false);
     }, { timeout: 30_000, message: 'Simulator must expose CDP.' }).toBe(true);
-    this.browser = await chromium.connectOverCDP(endpoint, { timeout: 15_000 });
+    this.browser = await chromium.connectOverCDP('http://127.0.0.1:65534', { timeout: 15_000 });
     const context = this.browser.contexts()[0];
     if (!context) throw new Error('Simulator has no default context.');
     await context.route('**/*', async route => {
@@ -113,8 +113,10 @@ export class Simulator {
     this.page.on('console', message => { if (message.type() === 'error') this.consoleErrors.push(message.text()); });
     this.input = await context.newCDPSession(this.page);
     const runtime = await this.input.send('Browser.getVersion');
+    const commandLine = await this.input.send('Browser.getBrowserCommandLine');
     const target = await this.input.send('Target.getTargetInfo');
     await writeFile(this.info.outputPath(`runtime-${this.launches}.json`), JSON.stringify({ runtime, target, args,
+      actualArguments: commandLine.arguments,
       node: process.version, playwright: require('@playwright/test/package.json').version,
       platform: `${os.platform()} ${os.release()} ${os.arch()}`, display: process.env.DISPLAY }, null, 2));
     // The tested navigation starts only after routing and error collection are ready.
