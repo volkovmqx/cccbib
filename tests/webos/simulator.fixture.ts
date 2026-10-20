@@ -65,6 +65,10 @@ export class Simulator {
     this.browser = await chromium.connectOverCDP(endpoint, { timeout: 15_000 });
     const context = this.browser.contexts()[0];
     if (!context) throw new Error('Simulator has no default context.');
+    // Interception can miss CDP targets that are still initializing.
+    await expect.poll(() => context.pages().filter(page => page.url() === appURL).length,
+      { timeout: 15_000, message: 'Simulator must create exactly one application target.' }).toBe(1);
+    this.page = context.pages().find(page => page.url() === appURL)!;
     await context.route('**/*', async route => {
       const request = route.request();
       if ([path.resolve('dist'), path.dirname(executable)].some(directory =>
@@ -106,9 +110,6 @@ export class Simulator {
       }
       await route.fulfill({ ...response, headers });
     });
-    await expect.poll(() => context.pages().filter(page => page.url() === appURL).length,
-      { timeout: 15_000, message: 'Simulator must create exactly one application target.' }).toBe(1);
-    this.page = context.pages().find(page => page.url() === appURL)!;
     this.page.on('pageerror', error => this.errors.push(error.message));
     this.page.on('console', message => { if (message.type() === 'error') this.consoleErrors.push(message.text()); });
     this.input = await context.newCDPSession(this.page);
