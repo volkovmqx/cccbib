@@ -1,129 +1,126 @@
-// Subtitle helpers are AI generated. Do not touch. No one knows how this works!
-
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery, gql } from '@apollo/client';
-import { fetchAndConvertSubtitle } from '../../helpers/subtitleConverter';
+import { useQuery } from '../../graphql';
+import { GET_LECTURE_SUBTITLES } from '../../data';
+import { getSubtitleLanguages, getSubtitleSources, loadSubtitleCues } from '../../helpers/subtitles';
+import { getSavedSubtitleLanguage, saveSubtitleLanguage } from '../../helpers/subtitleChoice';
 import { LANGUAGE_NAMES, LANG_CODE_MAP } from '../../constants';
 
-const GET_LECTURE_SUBTITLES = gql`
-  query lecture($guid: ID!) {
-    lecture(guid: $guid) {
-      guid
-      subtitles {
-        mimeType
-        language
-        url
-      }
-    }
-  }
-`;
+const NO_SUBTITLES = [];
+const NONE_UNAVAILABLE = [];
 
-export function useSubtitleManagement({ eventGuid, eventSubtitles, videoElementRef, preferredSubtitleLanguage }) {
-  const [subtitleLanguage, setSubtitleLanguage] = useState(preferredSubtitleLanguage);
-  const [activeSubtitle, setActiveSubtitle] = useState(null);
+function clearTrack(track) {
+  track.mode = 'disabled';
+  while (track.cues && track.cues.length > 0) track.removeCue(track.cues[0]);
+}
 
-  const { data: lectureData } = useQuery(GET_LECTURE_SUBTITLES, {
-    variables: { guid: eventGuid },
-    skip: !eventGuid,
+export function useSubtitleManagement({ eventGuid, eventSubtitles, videoElement, preferredSubtitleLanguage }) {
+  const needsLookup = Boolean(eventGuid) && !Array.isArray(eventSubtitles);
+  const { data } = useQuery(`subtitles:${eventGuid}`, GET_LECTURE_SUBTITLES, { guid: eventGuid }, { skip: !needsLookup, revalidate: false });
+
+  const subtitles = (needsLookup ? data?.lecture?.subtitles : eventSubtitles) || NO_SUBTITLES;
+  const listedSubtitles = useMemo(() => getSubtitleLanguages(subtitles), [subtitles]);
+
+  // The catalog lists dead (404) and placeholder files, so unusable languages are dropped
+  const [unavailable, setUnavailable] = useState({ guid: null, languages: NONE_UNAVAILABLE });
+  const unavailableLanguages = unavailable.guid === eventGuid ? unavailable.languages : NONE_UNAVAILABLE;
+  const markUnavailable = (language) => setUnavailable((prev) => {
+    const languages = prev.guid === eventGuid ? prev.languages : NONE_UNAVAILABLE;
+    return languages.includes(language) ? prev : { guid: eventGuid, languages: [...languages, language] };
   });
-
-  const allSubtitles = useMemo(() => [
-    ...(eventSubtitles || []),
-    ...(lectureData?.lecture?.subtitles || [])
-  ], [eventSubtitles, lectureData?.lecture?.subtitles]);
-
-  const availableSubtitles = useMemo(() => [...new Set(
-    allSubtitles.filter(s => s.url && s.language).map(s => s.language)
-  )], [allSubtitles]);
-
+  const availableSubtitles = useMemo(
+    () => listedSubtitles.filter((language) => !unavailableLanguages.includes(language)),
+    [listedSubtitles, unavailableLanguages]
+  );
   const subtitleOptions = useMemo(() => ['none', ...availableSubtitles], [availableSubtitles]);
   const hasSubtitles = availableSubtitles.length > 0;
 
-  // Initialize subtitle language based on preference and availability
+  const [choice, setChoice] = useState({ guid: null, language: null });
+  const defaultLanguage = availableSubtitles.includes(preferredSubtitleLanguage) ? preferredSubtitleLanguage : 'none';
+  const savedLanguage = useMemo(() => getSavedSubtitleLanguage(eventGuid), [eventGuid]);
+  const wantedLanguage = choice.guid === eventGuid ? choice.language : savedLanguage;
+  const chosen = subtitleOptions.includes(wantedLanguage) ? wantedLanguage : null;
+  const subtitleLanguage = chosen || defaultLanguage;
+  const setSubtitleLanguage = (language) => {
+    setChoice({ guid: eventGuid, language });
+    saveSubtitleLanguage(eventGuid, language);
+  };
+
+  const [status, setStatus] = useState('idle');
+
   useEffect(() => {
-    if (preferredSubtitleLanguage === 'none') {
-      setSubtitleLanguage('none');
-    } else if (availableSubtitles.length > 0) {
-      if (availableSubtitles.includes(preferredSubtitleLanguage)) {
-        setSubtitleLanguage(preferredSubtitleLanguage);
-      } else {
-        setSubtitleLanguage('none');
-      }
-    }
-  }, [eventGuid, availableSubtitles, preferredSubtitleLanguage]);
+    if (!videoElement) return undefined;
 
-  // Fetch and convert subtitles
-  useEffect(() => {
-    if (activeSubtitle && activeSubtitle.startsWith('blob:')) {
-      URL.revokeObjectURL(activeSubtitle);
-    }
-    setActiveSubtitle(null);
+    Array.from(videoElement.textTracks || []).forEach(clearTrack);
 
-    if (subtitleLanguage === 'none') return;
-
-    const subtitle = allSubtitles.find(s => s.language === subtitleLanguage && s.url);
-    if (subtitle) {
-      const cdnProxyUrl = subtitle.url.replace('https://cdn.media.ccc.de', '/subtitles');
-
-      fetchAndConvertSubtitle(cdnProxyUrl)
-        .then(blobUrl => setActiveSubtitle(blobUrl))
-        .catch(() => {
-          const staticUrl = subtitle.url
-            .replace('https://cdn.media.ccc.de/', 'https://static.media.ccc.de/media/')
-            .replace('https://static.media.ccc.de/media/media/', 'https://static.media.ccc.de/media/');
-
-          fetchAndConvertSubtitle(staticUrl)
-            .then(blobUrl => setActiveSubtitle(blobUrl))
-            .catch(() => setActiveSubtitle(null));
-        });
+    if (subtitleLanguage === 'none') {
+      setStatus('idle');
+      return undefined;
     }
 
-    return () => {
-      if (activeSubtitle && activeSubtitle.startsWith('blob:')) {
-        URL.revokeObjectURL(activeSubtitle);
-      }
-    };
-  }, [subtitleLanguage, allSubtitles]);
-
-  // Manage subtitle track on video element
-  useEffect(() => {
-    const videoElement = videoElementRef.current;
-    if (!videoElement) return;
-
-    const existingTracks = videoElement.querySelectorAll('track');
-    existingTracks.forEach(t => t.remove());
-
-    for (let i = 0; i < videoElement.textTracks.length; i++) {
-      videoElement.textTracks[i].mode = 'disabled';
+    const sources = getSubtitleSources(subtitles, subtitleLanguage);
+    if (sources.length === 0) {
+      setStatus(needsLookup && !data ? 'loading' : 'error');
+      return undefined;
     }
 
-    if (subtitleLanguage !== 'none' && activeSubtitle) {
-      const twoLetterLang = LANG_CODE_MAP[subtitleLanguage] || subtitleLanguage;
-      const trackElement = document.createElement('track');
-      trackElement.kind = 'subtitles';
-      trackElement.label = LANGUAGE_NAMES[subtitleLanguage] || subtitleLanguage;
-      trackElement.srclang = twoLetterLang;
-      trackElement.src = activeSubtitle;
-      trackElement.default = true;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let cancelled = false;
+    let track = null;
+    setStatus('loading');
 
-      trackElement.addEventListener('load', () => {
-        if (trackElement.track) trackElement.track.mode = 'showing';
+    loadSubtitleCues(sources, controller && controller.signal)
+      .then((cues) => {
+        if (cancelled) return;
+        track = videoElement.addTextTrack(
+          'subtitles',
+          LANGUAGE_NAMES[subtitleLanguage] || subtitleLanguage,
+          LANG_CODE_MAP[subtitleLanguage] || subtitleLanguage
+        );
+        cues.forEach((cue) => track.addCue(new window.VTTCue(cue.start, cue.end, cue.text)));
+        track.mode = 'showing';
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        markUnavailable(subtitleLanguage);
+        setStatus('error');
       });
 
-      videoElement.appendChild(trackElement);
+    return () => {
+      cancelled = true;
+      if (controller) controller.abort();
+      if (track) clearTrack(track);
+    };
+  }, [videoElement, subtitleLanguage, subtitles, needsLookup, data]);
 
-      setTimeout(() => {
-        if (videoElement.textTracks.length > 0) {
-          videoElement.textTracks[0].mode = 'showing';
+  useEffect(() => {
+    if (listedSubtitles.length === 0) return undefined;
+
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let cancelled = false;
+
+    (async () => {
+      for (const language of listedSubtitles) {
+        if (cancelled) return;
+        try {
+          await loadSubtitleCues(getSubtitleSources(subtitles, language), controller && controller.signal);
+        } catch (error) {
+          if (cancelled) return;
+          markUnavailable(language);
         }
-      }, 100);
-    }
-  }, [activeSubtitle, subtitleLanguage, videoElementRef]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (controller) controller.abort();
+    };
+  }, [subtitles, listedSubtitles, eventGuid]);
 
   return {
     subtitleLanguage,
     setSubtitleLanguage,
-    activeSubtitle,
+    subtitleStatus: status,
     availableSubtitles,
     subtitleOptions,
     hasSubtitles,

@@ -16,7 +16,3 @@ export function useScrollIntoView(selectedItemRef, containerRef, deps, block = '
     scrollIntoView(selectedItemRef, containerRef, block);
   }, [...depArray, block]);
 }
-
-export function isDevelopment() {
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-}

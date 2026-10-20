@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { TextInput, Loader, Center, Box, Text, Stack } from '@mantine/core';
-import { useDebouncedValue, useWindowEvent } from '@mantine/hooks';
+import React, { useState, useEffect, useRef } from 'react';
+import { useWindowEvent } from '../hooks/utils';
 import { formatSeconds } from '../helpers/helpers';
-import { isDevelopment, useScrollIntoView } from '../helpers/scrollHelpers';
+import { useScrollIntoView } from '../helpers/scrollHelpers';
+import { searchLectures, getCachedSearch, normalizeQuery } from '../search';
+import { Spinner } from './Spinner';
+import { useTranslation } from '../i18n';
+
+const SEARCH_DEBOUNCE_MS = 200;
 
 export const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused }) {
+  const t = useTranslation();
   const [query, setQuery] = useState('');
-  const [debouncedQuery] = useDebouncedValue(query, 400);
+  const [submitCount, setSubmitCount] = useState(0);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -14,25 +19,7 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
   const inputRef = useRef(null);
   const resultsContainerRef = useRef(null);
   const selectedItemRef = useRef(null);
-
-  const inputStyles = useMemo(() => ({
-    input: {
-      fontSize: '3rem',
-      padding: '24px 32px',
-      fontWeight: 'bold',
-      backgroundColor: query ? '#25262b' : '#AAF40D',
-      color: query ? '#fff' : '#000',
-      border: 'none',
-      '&:focus': {
-        border: 'none',
-        borderColor: 'transparent'
-      },
-      '&::placeholder': {
-        color: query ? '#666' : '#000',
-        fontWeight: 'bold'
-      }
-    }
-  }), [query]);
+  const submitNowRef = useRef(false);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -41,96 +28,53 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
   }, []);
 
   useEffect(() => {
-    if (!debouncedQuery || debouncedQuery.trim().length === 0) {
+    if (!normalizeQuery(query)) {
       setResults([]);
+      setLoading(false);
+      setError(null);
       setSelectedIndex(0);
-      return;
+      return undefined;
+    }
+
+    const cached = getCachedSearch(query);
+    if (cached) {
+      setResults(cached);
+      setLoading(false);
+      setError(null);
+      setSelectedIndex(0);
+      return undefined;
     }
 
     const abortController = new AbortController();
+    const delay = submitNowRef.current ? 0 : SEARCH_DEBOUNCE_MS;
+    submitNowRef.current = false;
+    setLoading(true);
 
-    const fetchResults = async () => {
-      setLoading(true);
-      setError(null);
-
+    const timer = setTimeout(async () => {
       try {
-        // Use proxy in dev to avoid CORS
-        const apiUrl = isDevelopment()
-          ? `/api/public/events/search?q=${encodeURIComponent(debouncedQuery)}`
-          : `https://api.media.ccc.de/public/events/search?q=${encodeURIComponent(debouncedQuery)}`;
-
-        const response = await fetch(apiUrl, {
-          signal: abortController.signal,
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Search failed: ${response.statusText} (${response.status})`);
-        }
-
-        const data = await response.json();
-
-        if (!data || !data.events) {
-          throw new Error('Invalid API response format');
-        }
-
-        // Transform REST API response to match GraphQL format
-        const transformedResults = data.events.map(event => ({
-          guid: event.guid,
-          title: event.title,
-          description: event.description,
-          duration: event.length || event.duration,
-          viewCount: event.view_count,
-          persons: event.persons || [],
-          conference_title: event.conference_title,
-          images: {
-            thumbUrl: event.thumb_url,
-            posterUrl: event.poster_url
-          },
-          videos: (event.recordings || [])
-            .filter(r => r.mime_type && r.mime_type.includes('video'))
-            .map(r => ({
-              url: r.recording_url,
-              mimeType: r.mime_type,
-              language: event.original_language || 'eng',
-              width: r.width,
-              highQuality: r.high_quality
-            })),
-          subtitles: (event.recordings || [])
-            .filter(r => r.mime_type && (r.mime_type.includes('text') || r.mime_type.includes('vtt')))
-            .map(r => ({
-              url: r.recording_url,
-              mimeType: r.mime_type,
-              language: r.language || 'eng'
-            }))
-        }));
-
-        setResults(transformedResults);
+        const found = await searchLectures(query, abortController.signal);
+        if (abortController.signal.aborted) return;
+        setResults(found);
+        setError(null);
         setSelectedIndex(0);
+        setLoading(false);
       } catch (err) {
-        // Ignore abort errors - they're expected when query changes
-        if (err.name === 'AbortError') {
-          return;
-        }
+        if (err.name === 'AbortError' || abortController.signal.aborted) return;
         console.error('Search error details:', err);
-        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
-          setError('Network error. Please check your internet connection or try again later.');
+        if (err.name === 'TypeError') {
+          setError(t('Network error. Please check your internet connection or try again later.'));
         } else {
-          setError(err.message || 'An error occurred while searching');
+          setError(err.message || t('An error occurred while searching'));
         }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+      abortController.abort();
     };
-
-    fetchResults();
-
-    return () => abortController.abort();
-  }, [debouncedQuery]);
+  }, [query, submitCount]);
 
   useScrollIntoView(selectedItemRef, resultsContainerRef, selectedIndex);
 
@@ -159,7 +103,10 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
           return prev === 0 ? 0 : newIndex;
         });
       }
-    } else if (e.key === 'Enter' && results.length > 0 && document.activeElement !== inputRef.current) {
+    } else if (e.key === 'Enter' && document.activeElement === inputRef.current) {
+      submitNowRef.current = true;
+      setSubmitCount((count) => count + 1);
+    } else if (e.key === 'Enter' && results.length > 0) {
       e.preventDefault();
       onSelectEvent(results[selectedIndex]);
     } else if (e.key === 'ArrowLeft') {
@@ -174,34 +121,32 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
 
   return (
     <div className="searchContainer">
-      <Stack spacing="md">
-        <TextInput
-          ref={inputRef}
-          className="searchInput"
-          size="lg"
-          placeholder="Search media.ccc.de events..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          styles={inputStyles}
-        />
+      <div>
+        <div className={`searchInput ${query ? 'searchInput--filled' : ''}`}>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder={t('Search media.ccc.de events...')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
 
         <div className="searchResults scrollable" ref={resultsContainerRef}>
-          {loading && (
-            <Center h={200}>
-              <Loader color="#AAF40D" type="dots" size="xl" />
-            </Center>
+          {loading && results.length === 0 && (
+            <div className="center" style={{ height: 200 }}>
+              <Spinner />
+            </div>
           )}
 
           {error && (
-            <Center h={200}>
-              <Text color="red" size="lg">
-                Error: {error}
-              </Text>
-            </Center>
+            <div className="center" style={{ height: 200 }}>
+              <p className="errorText">{t('Error: {message}', { message: error })}</p>
+            </div>
           )}
 
-          {!loading && !error && results.length > 0 && (
-            <div>
+          {!error && results.length > 0 && (
+            <div className={loading ? 'searchResults__list--stale' : undefined}>
               {results.map((event, index) => (
                 <div
                   key={event.guid}
@@ -215,6 +160,7 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
                       alt={event.title}
                       className="thumbnail"
                       loading="lazy"
+                      decoding="async"
                     />
                   )}
                   <div className="itemInfo">
@@ -236,7 +182,7 @@ export const Search = React.memo(function Search({ onClose, onSelectEvent, onFoc
             </div>
           )}
         </div>
-      </Stack>
+      </div>
     </div>
   );
 });

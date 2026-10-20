@@ -1,20 +1,19 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@apollo/client';
-import { GET_RECENT_CONFERENCES } from '../data';
+import { useQuery } from '../graphql';
+import { GET_RECENT_CONFERENCES, RECENT_KEY, mergeRecent } from '../data';
 import { Player } from './Player';
 import { ListView } from './ListView';
 import { formatSeconds } from '../helpers/helpers';
-
-import '../styles.css';
+import { useTranslation, useLanguage, formatNumber } from '../i18n';
 
 export const PopularView = React.memo(function PopularView({ onClose, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }) {
+  const t = useTranslation();
+  const language = useLanguage();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedVideo, setSelectedVideo] = useState(null);
 
-  const { loading, error, data } = useQuery(GET_RECENT_CONFERENCES, {
-    variables: { offset: 0 },
-    fetchPolicy: 'cache-first',
-  });
+  const { error, data } = useQuery(RECENT_KEY, GET_RECENT_CONFERENCES, { offset: 0 }, { revalidate: false, merge: mergeRecent });
+  const loading = !data && !error;
 
   const videos = useMemo(() => {
     if (!data || !data.conferencesRecent) return [];
@@ -61,14 +60,14 @@ export const PopularView = React.memo(function PopularView({ onClose, onFocusSid
         <div className="popularView__meta">
           {video.conference_title && <span>{video.conference_title}</span>}
           {video.duration && <span> • {formatSeconds(video.duration)}</span>}
-          {video.viewCount && <span> • {video.viewCount.toLocaleString()} views</span>}
+          {video.viewCount && <span> • {t('{count} views', { count: formatNumber(language, video.viewCount) })}</span>}
           {video.persons && video.persons.length > 0 && (
             <span> • {video.persons.join(', ')}</span>
           )}
         </div>
       </div>
     </>
-  ), []);
+  ), [t, language]);
 
   const playerIsOpen = !!selectedVideo;
 
@@ -88,7 +87,7 @@ export const PopularView = React.memo(function PopularView({ onClose, onFocusSid
       )}
       <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
         <ListView
-          title="Popular Videos"
+          title={t('Popular Videos')}
           items={videos}
           loading={loading}
           error={error?.message}
@@ -99,7 +98,7 @@ export const PopularView = React.memo(function PopularView({ onClose, onFocusSid
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
           disabled={playerIsOpen}
-          emptyMessage="No videos found"
+          emptyMessage={t('No videos found')}
           renderItem={renderItem}
           className="popularView"
           itemClassName="popularView__item"

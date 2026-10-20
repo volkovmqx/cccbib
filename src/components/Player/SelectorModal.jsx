@@ -1,7 +1,7 @@
-import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck';
+import React, { useEffect, useRef } from 'react';
+import { IconCheck } from '@tabler/icons-react';
 import { LANGUAGE_NAMES } from '../../constants';
+import { useTranslation } from '../../i18n';
 
 export const SelectorModal = React.memo(function SelectorModal({
   title,
@@ -12,27 +12,34 @@ export const SelectorModal = React.memo(function SelectorModal({
   onClose,
   getLabel,
 }) {
+  const t = useTranslation();
   const defaultGetLabel = (opt) => {
-    if (opt === 'none') return 'None';
-    return LANGUAGE_NAMES[opt] || opt;
+    if (opt === 'none') return t('None');
+    return t(LANGUAGE_NAMES[opt] || opt);
   };
 
   const labelFn = getLabel || defaultGetLabel;
+  const selectedRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedRef.current) selectedRef.current.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex]);
 
   return (
-    <div className="languageSelector">
-      <div className="languageSelector__overlay" onClick={onClose} />
-      <div className="languageSelector__content">
-        <h3 className="languageSelector__title">{title}</h3>
-        <div className="languageSelector__list">
+    <div className="picker">
+      <div className="picker__overlay" onClick={onClose} />
+      <div className="picker__panel">
+        <h3 className="picker__title">{title}</h3>
+        <div className="picker__list">
           {options.map((option, index) => (
             <div
               key={option}
-              className={`languageSelector__item ${index === selectedIndex ? 'languageSelector__item--selected' : ''} ${option === currentValue ? 'languageSelector__item--current' : ''}`}
+              ref={index === selectedIndex ? selectedRef : null}
+              className={`picker__item ${index === selectedIndex ? 'picker__item--selected' : ''} ${option === currentValue ? 'picker__item--current' : ''}`}
               onClick={() => onSelect(option)}
             >
               {labelFn(option)}
-              {option === currentValue && <span className="languageSelector__current"><FontAwesomeIcon icon={faCheck} /></span>}
+              {option === currentValue && <IconCheck />}
             </div>
           ))}
         </div>

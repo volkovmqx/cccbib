@@ -1,27 +1,51 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Center, Loader, Container, Title } from '@mantine/core';
-import { useWindowEvent } from '@mantine/hooks';
-import { useQuery } from '@apollo/client';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
+import { useWindowEvent } from '../hooks/utils';
+import { useQuery } from '../graphql';
+import { useSetting } from '../settings';
 import { GET_CONFERENCE } from '../data';
 import { Preview } from './Preview';
 import { Player } from './Player';
+import { LoadingScreen } from './Spinner';
+import { useTranslation } from '../i18n';
 
-import '../styles.css';
+const GRID_TILE_WIDTH = 400;
+const GRID_GAP = 16;
 
 export const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen, onClose }) {
+  const t = useTranslation();
   const [playerIsOpen, setPlayerIsOpen] = useState(false);
   const [activeEvent, setActiveEvent] = useState(0);
   const selectedItemRef = useRef(null);
   const containerRef = useRef(null);
 
-  const { loading, error, data } = useQuery(GET_CONFERENCE, {
-    variables: { id: conferenceId },
-    fetchPolicy: 'cache-first', // Use cache for better performance
-  });
+  const { error, data } = useQuery(`conference:${conferenceId}`, GET_CONFERENCE, { id: conferenceId }, { revalidate: false });
+  const loading = !data && !error;
 
-  const eventsPerRow = 4;
+  const [tileScale] = useSetting('tileScale');
+  const [textScale] = useSetting('textScale');
+  const gridRef = useRef(null);
+  const [gridWidth, setGridWidth] = useState(() => Math.max(600, window.innerWidth - 150));
+  const [measuredRowHeight, setMeasuredRowHeight] = useState(0);
+
+  const tileWidth = GRID_TILE_WIDTH * tileScale;
+  const eventsPerRow = Math.max(2, Math.floor((gridWidth + GRID_GAP) / (tileWidth + GRID_GAP)));
   const visibleRowBuffer = 3; // Render ±3 rows around active row
-  const itemHeight = 180; // Approximate height of each grid item in px
+  const columnWidth = (gridWidth - GRID_GAP * (eventsPerRow - 1)) / eventsPerRow;
+  const itemHeight = measuredRowHeight || Math.round(columnWidth * 9 / 16 + 110 + GRID_GAP);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (gridRef.current) setGridWidth(gridRef.current.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [loading, tileScale]);
+
+  useLayoutEffect(() => {
+    const item = gridRef.current && gridRef.current.querySelector('.conferenceView__gridItem');
+    if (item) setMeasuredRowHeight(item.offsetHeight + GRID_GAP);
+  }, [data, eventsPerRow, textScale, gridWidth]);
 
   // Calculate visible window of events for virtual scrolling
   const { visibleEvents, topSpacerHeight, bottomSpacerHeight } = useMemo(() => {
@@ -152,22 +176,18 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
   });
 
   if (loading) {
-    return (
-      <Center h={"100vh"}>
-        <Loader color="#AAF40D" type="dots" size="xl" />
-      </Center>
-    );
+    return <LoadingScreen />;
   }
 
   if (error) {
-    return <p>Error: {error.message}</p>;
+    return <p>{t('Error: {message}', { message: error.message })}</p>;
   }
 
   if (!data || !data.conference || !data.conference.lectures || !data.conference.lectures.nodes.length) {
     return (
-      <Center h={"100vh"}>
-        <p>No videos found for this conference.</p>
-      </Center>
+      <div className="center" style={{ height: '100vh' }}>
+        <p>{t('No videos found for this conference.')}</p>
+      </div>
     );
   }
 
@@ -188,17 +208,20 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
           />
         </div>
       )}
-      <Container fluid style={{ display: playerIsOpen ? 'none' : 'block' }}>
+      <div className="fluidContainer" style={{ display: playerIsOpen ? 'none' : 'block' }}>
         <Preview
           event={events[activeEvent]}
-          conferenceTitle={conference.title}
           disableVideo={playerIsOpen}
         />
         <div className="conferenceView__container scrollable" ref={containerRef} onScroll={handleScroll}>
           <div className="conferenceView__header">
             <h2 className="conferenceView__title">{conference.title}</h2>
           </div>
-          <div className="conferenceView__grid">
+          <div
+            className="conferenceView__grid"
+            ref={gridRef}
+            style={{ gridTemplateColumns: `repeat(${eventsPerRow}, minmax(0, 1fr))` }}
+          >
             {topSpacerHeight > 0 && (
               <div
                 className="conferenceView__gridSpacer"
@@ -212,12 +235,14 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
                 className={`conferenceView__gridItem ${event.originalIndex === activeEvent ? 'conferenceView__gridItem--active' : ''}`}
                 onClick={() => setActiveEvent(event.originalIndex)}
               >
-                <img
-                  src={event.images.thumbUrl}
-                  alt={event.title}
-                  className="conferenceView__gridItem__img"
-                  loading="lazy"
-                />
+                <div className="conferenceView__gridItem__media">
+                  <img
+                    src={event.images.thumbUrl}
+                    alt={event.title}
+                    className="conferenceView__gridItem__img"
+                    loading="lazy"
+                  />
+                </div>
                 <div className="conferenceView__gridItem__title">{event.title}</div>
               </div>
             ))}
@@ -229,7 +254,7 @@ export const ConferenceView = React.memo(function ConferenceView({ conferenceId,
             )}
           </div>
         </div>
-      </Container>
+      </div>
     </>
   );
 });

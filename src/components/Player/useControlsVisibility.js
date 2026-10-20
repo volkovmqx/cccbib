@@ -1,86 +1,55 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-export function useControlsVisibility({ showLanguageSelector, showSubtitleSelector, playing }) {
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const [controlsFocusArea, setControlsFocusArea] = useState('none');
-  const [focusedButtonIndex, setFocusedButtonIndex] = useState(0);
+const HIDE_DELAY_MS = 4000;
 
-  const controlsTimeoutRef = useRef(null);
-  const lastActivityRef = useRef(Date.now());
-  const controlsVisibleRef = useRef(true);
-  const controlsFocusAreaRef = useRef('none');
-  const focusedButtonIndexRef = useRef(0);
-  const playingRef = useRef(playing);
+export function useControlsVisibility({ selectorOpen, playing }) {
+  const [visible, setVisible] = useState(true);
+  const [focus, setFocus] = useState({ area: 'none', id: null });
+  const timerRef = useRef(null);
+  const stateRef = useRef({});
+  stateRef.current.selectorOpen = selectorOpen;
+  stateRef.current.playing = playing;
+  stateRef.current.area = focus.area;
 
-  // Keep playingRef in sync
+  const scheduleHide = useCallback(() => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const { selectorOpen: open, playing: isPlaying, area } = stateRef.current;
+      if (!open && isPlaying && area === 'none') setVisible(false);
+    }, HIDE_DELAY_MS);
+  }, []);
+
+  const show = useCallback(() => {
+    setVisible(true);
+    scheduleHide();
+  }, [scheduleHide]);
+
+  const updateFocus = useCallback((next) => {
+    stateRef.current.area = next.area;
+    setFocus(next);
+  }, []);
+
+  const hide = useCallback(() => {
+    clearTimeout(timerRef.current);
+    setVisible(false);
+    updateFocus({ area: 'none', id: null });
+  }, [updateFocus]);
+
+  const focusButton = useCallback((id) => updateFocus({ area: 'buttons', id }), [updateFocus]);
+  const focusProgress = useCallback(() => updateFocus({ area: 'progress', id: null }), [updateFocus]);
+
   useEffect(() => {
-    playingRef.current = playing;
-    // If video is paused, show controls and keep them visible
     if (!playing) {
-      setControlsVisible(true);
-      controlsVisibleRef.current = true;
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
+      clearTimeout(timerRef.current);
+      setVisible(true);
+    } else {
+      scheduleHide();
     }
-  }, [playing]);
+  }, [playing, scheduleHide]);
 
-  const showControls = useCallback(() => {
-    setControlsVisible(true);
-    controlsVisibleRef.current = true;
-    lastActivityRef.current = Date.now();
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
-    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
-
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-
-    controlsTimeoutRef.current = setTimeout(() => {
-      // Don't hide controls if paused, selector is open, or buttons are focused
-      if (!showLanguageSelector && !showSubtitleSelector && controlsFocusAreaRef.current === 'none' && playingRef.current) {
-        setControlsVisible(false);
-        controlsVisibleRef.current = false;
-      }
-    }, 4000);
-  }, [showLanguageSelector, showSubtitleSelector]);
-
-  const hideControls = useCallback(() => {
-    setControlsVisible(false);
-    controlsVisibleRef.current = false;
-    setControlsFocusArea('none');
-    controlsFocusAreaRef.current = 'none';
-    setFocusedButtonIndex(0);
-    focusedButtonIndexRef.current = 0;
-
-    const buttons = document.querySelectorAll('.tv-player button');
-    buttons.forEach(btn => btn.classList.remove('focused'));
-
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    showControls();
-    return () => {
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    };
-  }, []);
-
-  return {
-    controlsVisible,
-    controlsFocusArea,
-    setControlsFocusArea,
-    focusedButtonIndex,
-    setFocusedButtonIndex,
-    showControls,
-    hideControls,
-    controlsVisibleRef,
-    controlsFocusAreaRef,
-    focusedButtonIndexRef,
-    lastActivityRef,
-  };
+  return { visible, focus, show, hide, focusButton, focusProgress };
 }
 
 export default useControlsVisibility;
