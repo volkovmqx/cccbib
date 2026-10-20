@@ -9,7 +9,7 @@
 
 ## Background
 
-This app uses the official media.ccc.de/graphql endpoint. It is built using React, Embla and a plain HTML5 video player with the help of a lot of caffeine. ☕
+This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, React, Embla, and an HTML5 video player.
 
 ## Features
 
@@ -17,7 +17,7 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Preview of the events on scroll.
 - Support for language change.
 - Smart TV Navigation with React! (Thanks to [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1).)
-- Search functionnality.
+- Search for talks.
 - Watchlist and Continue Watching (20 most recent talks in progress).
 - Remote control options (see [Remote control](#remote-control)).
 - Customizations (Black, Dark, Light and Accent colors and custom fonts).
@@ -25,7 +25,7 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Aspect ratio changing for older videos (Auto, Zoom, Stretch).
 - Quality of Life Remote Controller Button Mapping (Thanks to [Simon34545](https://github.com/Simon34545) LG Input Keymapping overview!) inspired by Youtube/Jellyfin.
 - Configuration page for preferred languages and subtitles.
-- Substitles functionnality.
+- Subtitle support.
 - About Info page (in Settings on the bottom).
 
 ## Remote control
@@ -101,7 +101,7 @@ Old `.srt` (from 30c3) and new `.vtt` files both work. Languages that only exist
 
 ## Browser support
 
-The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syntax newer than ES2019. A startup error screen shows the error if the app fails to boot. `yarn test:chrome68` tests the production build with Chromium snapshot `561732` (Chromium 68.0.3440.0).
+The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or older syntax. A startup error screen shows the error if the app fails to start. CI tests the production build in current Chromium, Chrome 68, and LG’s Simulator. See the [testing guide](CONTRIBUTING.md#tests-and-quality-checks).
 
 ## Roadmap
 
@@ -109,120 +109,11 @@ The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syn
 - ~~&#9744; Jeopardy Theme song when waiting for too long.~~
 - Playback speed is left out on purpose: webOS mutes the audio at any speed except 1x.
 
-##  Contributions
+## Contributing
 
-Either you found a bug, optimisation strategy or want something implemented, go ahead and hack your way into the code, PRs are welcome 🌱.
+Contributions are welcome. You can report bugs, add translations, improve documentation, write tests, or submit code changes.
 
-To add a language, copy `src/shared/i18n/locales/de.ts`. Translate it and register it in `src/shared/i18n/translation.ts` and `UI_LANGUAGES` in `src/shared/config/constants.ts`. `yarn build` fails on missing or unused strings.
-
-
-## Development
-
-### Structure
-
-The application uses TypeScript and Feature-Sliced Design (FSD).
-
-| Layer | Responsibility |
-| --- | --- |
-| `src/app` | Startup, screen selection, remote command coordination, global styles, and reports. |
-| `src/pages` | Home, search, popular, conferences, conference, watchlist, and settings screens. |
-| `src/widgets` | The player, talk preview, and sidebar. |
-| `src/features` | Watchlist actions, playback history, and remote commands. |
-| `src/entities` | Talks, conferences, data conversion, and requests. |
-| `src/shared` | Generic UI, configuration, translations, browser helpers, and webOS adapters. |
-
-Import other slices through their `index.ts` public interface with the `@/` alias. Import files inside the same slice with relative paths. A slice can import only lower layers. The conference entity uses a type-only `@x` interface to refer to talks. Keep coordination between features in `app`.
-
-Steiger checks the FSD rules. Knip checks files, exports, and dependencies in normal and production modes. Its production mode excludes test references. The Knip configuration documents the `core-js` exception because Babel injects those imports. Build tools remain CommonJS.
-
-### Tests and quality checks
-
-```sh
-yarn typecheck       # Check application and test types.
-yarn lint:fsd        # Check FSD rules.
-yarn lint:unused     # Run both Knip modes.
-yarn test            # Run unit and React tests.
-yarn test:watch      # Run tests when files change.
-yarn test:coverage   # Check all four coverage thresholds.
-
-# Install the current Chromium browser and its system dependencies.
-yarn playwright install --with-deps chromium
-yarn build
-yarn test:e2e        # Run Playwright against the production build.
-yarn test:chrome68   # Run the Chrome 68 smoke test on Linux.
-yarn verify          # Run all checks, the build, and both browser runners.
-```
-
-Vitest requires at least 95% for statements, branches, functions, and lines across the application total. Coverage includes every application JavaScript and TypeScript file, including files that no test imports. It excludes tests and declaration files. HTML startup scripts have browser tests. Open `coverage/index.html` to inspect coverage.
-
-Browser tests use local REST, GraphQL, image, subtitle, and video fixtures. They reject unexpected external requests. The WebM fixture contains a generated blue test image. Playwright saves reports in `playwright-report/`. Both runners save failure data in `test-results/`.
-
-The Chrome 68 runner downloads its fixed snapshot into `/tmp/cccbib-chrome68`. Set `CHROME68_CACHE` to use another cache directory. Set `CHROME68_EXECUTABLE_PATH` to use an existing binary. The runner checks that the browser reports version 68. Its Linux font configuration requires DejaVu fonts.
-
-The build, release, and Docker workflows run the same quality workflow before they package or publish the application. CI uploads coverage reports, browser reports, and failure data.
-
-### webOS Simulator on Linux
-
-The `webos-simulator` CI job uses GitHub-hosted `ubuntu-24.04` and webOS TV 26 Simulator 1.5.0 for Linux x64. It runs the production files in `dist/`. It does not require a TV, an LG account, or manual input.
-
-The pinned public LG file ID is `RF00021103`. The setup script resolves its temporary download URL through `https://webostv.developer.lge.com/api/downloadSDK`. It records the resolved URL in `test-results/webos-download.json`. LG's download server is `https://gfts.lge.com/fts/gftsFilePathDownload.lge`. The archive SHA-256 is `8668c06503e82a52303e8c31e90c458c1d7c4d6dc74151ae6fc53df37e368d4e`. This checksum was calculated from the LG archive. The setup script verifies it on downloads and cache hits before extraction. The CI cache key contains the version and checksum.
-
-Install `xvfb`, `xauth`, `unzip`, `libnss3`, `libatk-bridge2.0-0`, `libgtk-3-0`, `libgbm1`, and `libasound2t64` on Ubuntu 24.04. Then run:
-
-```sh
-yarn setup:webos
-yarn build
-xvfb-run -a yarn test:webos
-
-# Use the same 1920×1080 display as CI.
-xvfb-run -a -s '-screen 0 1920x1080x24' yarn test:webos
-```
-
-The fixture starts the extracted Simulator executable directly with `--ozone-platform=x11` and `--no-sandbox`. It connects the installed Playwright package through `chromium.connectOverCDP()`. It selects the exact `file://` application target. It installs fixture interception before the tested reload. DNS resolution stays disabled, and unexpected external requests fail the test.
-
-Each test gets a separate Simulator storage directory. Restart tests reuse that directory. Navigation uses CDP input, including webOS Back keycode `461`. The reports contain application screenshots, Simulator output, console errors, target details, Chromium versions, launch arguments, HTML, and JUnit. CI retains them for 14 days. The fixture stops the Simulator process group after each test. CI also stops remaining Simulator processes after a failure.
-
-The [compatibility CI run](https://github.com/volkovmqx/cccbib/actions/runs/39418673503) passed before the full suite was added. It reported Chromium `120.0.6099.291`. It verified CDP attachment, application target selection, DOM reads, native navigation input, fixture interception, and screenshot capture. The full suite also checks all pages, search, playback, restart persistence, and request failure. Media fixtures support HTTP byte ranges for seeking.
-
-References: [LG installation instructions](https://webostv.developer.lge.com/develop/tools/simulator-installation), [LG Simulator guide](https://webostv.developer.lge.com/develop/tools/simulator-dev-guide), [Electron CI instructions](https://www.electronjs.org/docs/latest/tutorial/testing-on-headless-ci), and [Playwright CDP documentation](https://playwright.dev/docs/api/class-browsertype#browser-type-connect-over-cdp). Playwright documents reduced support for CDP connections. The compatibility test checks the required operations against the pinned runtime.
-
-Before a webOS release, check the installed package on a real TV. Check remote keys, preview-to-player decoder release, audio languages, subtitles, resume after seeking, and Auto/Zoom/Stretch. Browser tests cannot verify the TV hardware decoder or actual webOS services.
-
-### Local deployment
-
-```sh
-yarn install
-
-# Serve development build on http://127.0.0.1:3333
-yarn start
-
-# Production build (dumped into dist/)
-yarn build
-
-# Build production webOS package
-yarn package
-
-# Install webOS package
-yarn deploy
-
-# Launch
-yarn launch
-```
-
-### Docker
-
-#### Build image locally: 
-```sh
-docker build -t ghcr.io/volkovmqx/cccbib:dev .
-```
-
-#### Run the container:
-```sh
-docker run --rm -p 8080:80 ghcr.io/volkovmqx/cccbib:dev
-```
-
-This image is built in CI on pushes to `main` (tagged `latest`) and on version tags like `v1.1.0` (tagged `1.1.0`).
-
+The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the 95% coverage requirement, the coverage bot, and deployment.
 
 ## Credit
 
@@ -234,4 +125,4 @@ WebOS Project architecture from ["Informatic"](https://github.com/informatic/str
 
 ## License
 
-Check LICENSE
+See [LICENSE](LICENSE).
