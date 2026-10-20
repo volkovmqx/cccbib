@@ -1,0 +1,47 @@
+import { useWindowEvent } from './utils';
+
+export function useListNavigation({
+  itemCount,
+  selectedIndex,
+  setSelectedIndex,
+  onClose,
+  onSelect,
+  onFocusSidebar,
+  sidebarFocused,
+  disabled = false,
+}: { itemCount: number; selectedIndex: number; setSelectedIndex: React.Dispatch<React.SetStateAction<number>>; onClose: () => void; onSelect: (index: number) => void; onFocusSidebar: () => void; sidebarFocused: boolean; disabled?: boolean }) {
+  useWindowEvent('keydown', (e) => {
+    if (disabled || sidebarFocused) return;
+
+    switch (e.key) {
+      case 'Escape':
+      case 'Backspace':
+        e.preventDefault();
+        onClose();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (itemCount > 0) setSelectedIndex((prev) => (prev + 1) % itemCount);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (itemCount > 0) setSelectedIndex((prev) => (prev - 1 + itemCount) % itemCount);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        onFocusSidebar();
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (itemCount > 0) onSelect(selectedIndex);
+        break;
+      default:
+        // Handle webOS back button
+        if (e.keyCode === 461) {
+          e.preventDefault();
+          onClose();
+        }
+    }
+  });
+}
+

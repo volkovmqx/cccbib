@@ -4,11 +4,11 @@ const CopyPlugin = require('copy-webpack-plugin');
 const fs = require('fs');
 const appInfo = require('./assets/appinfo.json');
 
-const voctocat = fs.readFileSync(path.resolve(__dirname, 'src/assets/voctocat.html'), 'utf8').trim();
+const voctocat = fs.readFileSync(path.resolve(__dirname, 'src/shared/branding/voctocat.html'), 'utf8').trim();
 
 module.exports = {
   entry: {
-    app: ['./src/index.jsx'],
+    app: ['./src/index.tsx'],
   },
   target: ['web', 'es2017'],
   devtool: false,
@@ -44,7 +44,8 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: ['.*', '.js', '.jsx', '.ts', '.tsx', '.mjs'],
+    alias: { '@': path.resolve(__dirname, 'src') },
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs'],
     modules: [path.resolve(__dirname, 'src'), 'node_modules'],
   },
   output: {
@@ -75,7 +76,7 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { context: 'assets', from: '**/*' },
-        { context: 'src/assets/fonts', from: '*.{txt,md}', to: 'fonts' },
+        { context: 'src/shared/branding/fonts', from: '*.{txt,md}', to: 'fonts' },
         {
           context: 'src',
           from: 'index.html',

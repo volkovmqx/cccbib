@@ -1,0 +1,2 @@
+import '@/app/entrypoint/bootstrap';
+

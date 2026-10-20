@@ -1,6 +1,5 @@
 <h1><img alt="CCCBib" src=".github/logo.svg" height="34"></h1>
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/test.yml?branch=main&label=tests)](https://github.com/volkovmqx/cccbib/actions/workflows/test.yml)
 [![Build](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/main.yml?branch=main&label=build)](https://github.com/volkovmqx/cccbib/actions/workflows/main.yml)
 [![Version](https://img.shields.io/github/package-json/v/volkovmqx/cccbib?label=version)](https://github.com/volkovmqx/cccbib/blob/main/package.json)
 [![License](https://img.shields.io/github/license/volkovmqx/cccbib)](LICENSE)
@@ -8,14 +7,14 @@
 
 [media.ccc.de](https://media.ccc.de) media library application for webOS.
 
-![Main Screen](.github/screenshots/screenshot1.png)
+![Home screen](.github/screenshots/screenshot1.png)
 
-![Player Screen](.github/screenshots/screenshot2.png)
+![Player screen](.github/screenshots/screenshot2.png)
 
 
 ## Background
 
-This app uses the official media.ccc.de/graphql endpoint. It is built using React, Embla and a plain HTML5 video player with the help of a lot of Chaos. 🌸
+This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, React, Embla, and an HTML5 video player with the help of a lot of Chaos. 🌸
 
 ## Features
 
@@ -97,7 +96,7 @@ Zoom and Stretch call a TV service which webOS only allows for apps that were in
 
 ## Browser support
 
-The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syntax newer than ES2019 and a startup error screen shows the exact error if the app fails to boot. To test on an old engine use a Chromium snapshot (revision `561732` is Chromium 68) with `puppeteer-core@1.8`.
+The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or older syntax. A startup error screen shows the error if the app fails to start. CI tests the production build in current Chromium, Chrome 68, and LG’s Simulator. See the [testing guide](CONTRIBUTING.md#tests-and-quality-checks).
 
 ## Roadmap
 
@@ -105,54 +104,19 @@ The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syn
 - ~~&#9744; Jeopardy Theme song when waiting for too long.~~
 - Playback speed is left out on purpose: webOS mutes the audio at any speed except 1x.
 
-##  Contributions
+## Contributing
 
-Either you found a bug, optimisation strategy or want something implemented, go ahead and hack your way into the code, PRs are welcome 🌱.
+Contributions are welcome. You can report bugs, add translations, improve documentation, write tests, or submit code changes.
 
-To add a language copy `src/locales/de.js` and translate it and register it in `src/i18n.js` and `UI_LANGUAGES` in `src/constants.js`. `yarn build` fails on missing or unused strings.
+The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the 95% coverage requirement, the coverage bot, and deployment.
 
+## Contributors
 
-## Development
-
-### Local deployment
-
-```sh
-yarn install
-
-# Serve development build on http://127.0.0.1:3333
-yarn start
-
-# Production build (dumped into dist/)
-yarn build
-
-# Build production webOS package
-yarn package
-
-# Install webOS package
-yarn deploy
-
-# Launch
-yarn launch
-```
-
-### Docker
-
-#### Build image locally: 
-```sh
-docker build -t ghcr.io/volkovmqx/cccbib:dev .
-```
-
-#### Run the container:
-```sh
-docker run --rm -p 8080:80 ghcr.io/volkovmqx/cccbib:dev
-```
-
-This image is built in CI on pushes to `main` (tagged `latest`) and on version tags like `v1.1.0` (tagged `1.1.0`).
-
+[![Contributors to CCCBib](https://contrib.rocks/image?repo=volkovmqx/cccbib)](https://github.com/volkovmqx/cccbib/graphs/contributors)
 
 ## Credit
 
-The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/assets/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
+The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/shared/branding/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
 
 The TV navigation follows [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1). The LG input keymapping overview is by [Simon34545](https://github.com/Simon34545).
 
@@ -162,4 +126,4 @@ WebOS Project architecture from ["Informatic"](https://github.com/informatic/str
 
 ## License
 
-Check LICENSE
+See [LICENSE](LICENSE).

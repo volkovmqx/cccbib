@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage: compile static assets
-FROM node:25-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Install dependencies with Yarn (classic)
