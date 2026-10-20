@@ -23,7 +23,9 @@ test('history records only useful positions and removes completed talks', () => 
 
 test('history normalizes old entries, sorts by update time, and limits entries', () => {
   const items = Array.from({ length: 24 }, (_, i) => ({ ...input(30, String(i)), conferenceTitle: '', updatedAt: i }));
-  localStorage.setItem('continue_watching', JSON.stringify({ version: 1, items: [null, {}, { ...input(), event: null }, { ...input(), positionSeconds: -1 }, { ...input(), durationSeconds: 0 }, { ...input(590) }, ...items] }));
+  localStorage.setItem('continue_watching', JSON.stringify({ version: 1, items: [null, {}, { ...input(), event: null },
+    { ...input(), event: { guid: 'incomplete' } }, { ...input(), event: { ...talk(), persons: 'Speaker' } },
+    { ...input(), positionSeconds: -1 }, { ...input(), durationSeconds: 0 }, { ...input(590) }, ...items] }));
   expect(readPlaybackHistory()).toHaveLength(20);
   expect(readPlaybackHistory()[0].event.guid).toBe('23');
   expect(readPlaybackHistory()[0].conferenceTitle).toBe('Test conference');
@@ -31,6 +33,9 @@ test('history normalizes old entries, sorts by update time, and limits entries',
   expect(readPlaybackHistory().map(x => x.event.guid)).toEqual(['first', 'second']);
   localStorage.setItem('continue_watching', JSON.stringify({ version: 1, items: [{ ...input(), conferenceTitle: '', event: talk({ conference_title: undefined }), updatedAt: -1 }] }));
   expect(readPlaybackHistory()[0]).toMatchObject({ updatedAt: 0, conferenceTitle: '' });
+  localStorage.setItem('continue_watching', JSON.stringify({ version: 1,
+    items: [{ ...input(), conferenceTitle: {}, updatedAt: 1 }] }));
+  expect(readPlaybackHistory()[0].conferenceTitle).toBe('Test conference');
 });
 
 test('history validates the stored format and handles denied storage', () => {

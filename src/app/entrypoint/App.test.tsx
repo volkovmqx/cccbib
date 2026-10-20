@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import Root from './Root';
+import App from './App';
 import { dispatchCommand, onPlayerCommand } from '@/features/remote-control';
 import { fetchTalk } from '@/entities/talk';
 import type { Talk } from '@/entities/talk';
@@ -18,7 +18,10 @@ const send = async (command: RemoteCommand) => act(async () => { dispatchCommand
 beforeEach(() => { vi.useFakeTimers(); vi.mocked(fetchTalk).mockResolvedValue(talk()); commands.list.mockReset(); });
 
 test('app switches screens and moves sidebar focus', () => {
-  const view = render(<Root />);
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  const view = render(<App />);
+  expect(view.container.firstElementChild).toHaveClass('offline-banner');
+  expect(view.container.lastElementChild).toHaveClass('appShell');
   fireEvent.click(screen.getByText('Focus sidebar'));
   expect(view.container.querySelector('.sidebar')).toHaveClass('sidebar--focused');
   fireEvent.click(screen.getByText('Search', { selector: '.sidebarItem__label' }));
@@ -31,7 +34,7 @@ test('app switches screens and moves sidebar focus', () => {
 
 test('app opens remote talks, queues extras, updates the same talk, and restores its screen', async () => {
   vi.stubGlobal('__cccbibReady', vi.fn());
-  const view = render(<Root />);
+  const view = render(<App />);
   await send({ cmd: 'play', link: 'media.ccc.de/v/talk', start: 100, aspect: 'zoom', subtitle: 'eng', language: 'deu' });
   expect(screen.getByText('Close Test talk')).toBeVisible();
   expect(view.container.querySelector('.sidebar')).not.toBeInTheDocument();
@@ -51,7 +54,7 @@ test('app opens remote talks, queues extras, updates the same talk, and restores
 });
 
 test('app displays remote failures and each list result and clears notices', async () => {
-  render(<Root />);
+  render(<App />);
   vi.mocked(fetchTalk).mockRejectedValue(Error('404'));
   await send({ cmd: 'play', link: 'missing' });
   expect(screen.getByText('Could not load this talk')).toBeVisible();

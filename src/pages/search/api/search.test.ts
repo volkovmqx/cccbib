@@ -33,3 +33,41 @@ test('search falls back to REST and propagates cancellation and REST failures', 
   fetch.mockRejectedValueOnce(Error('GraphQL')).mockResolvedValueOnce(json({}));
   await expect(search.searchLectures('invalid')).rejects.toThrow('Invalid API');
 });
+
+test('search preserves older talks with a null description in both APIs', async () => {
+  const older = talk({ description: null });
+  const fetch = vi.fn().mockResolvedValueOnce(json({ data: { lectureSearch: [older] } }))
+    .mockRejectedValueOnce(Error('GraphQL unavailable'))
+    .mockResolvedValueOnce(json({ events: [{ guid: older.guid, title: older.title, description: null }] }));
+  vi.stubGlobal('fetch', fetch);
+  expect(await search.searchLectures('GraphQL older talk')).toMatchObject([{ guid: older.guid, description: null }]);
+  expect(await search.searchLectures('REST older talk')).toMatchObject([{ guid: older.guid, description: null }]);
+});
+
+test.each([
+  null,
+  { events: {} },
+  { events: [null] },
+  { events: [{ guid: 'rest' }] },
+  { events: [{ guid: 'rest', title: 'REST', persons: 'speaker' }] },
+  { events: [{ guid: 'rest', title: 'REST', recordings: {} }] },
+  { events: [{ guid: 'rest', title: 'REST', recordings: [null] }] },
+  { events: [{ guid: 'rest', title: 'REST', recordings: [{ recording_url: 42, mime_type: 'video/webm' }] }] },
+])('REST search rejects malformed responses without caching them: %j', async response => {
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(Error('GraphQL unavailable')).mockResolvedValueOnce(json(response)));
+  await expect(search.searchLectures('invalid')).rejects.toThrow('Invalid API response format');
+  expect(search.getCachedSearch('invalid')).toBeUndefined();
+});
+
+test.each([
+  'invalid',
+  { lectureSearch: {} },
+  { lectureSearch: [null] },
+  { lectureSearch: [{ ...talk(), title: 42 }] },
+  { lectureSearch: [{ ...talk(), videos: 'invalid' }] },
+])('malformed GraphQL search responses use the REST fallback: %j', async data => {
+  const fetch = vi.fn().mockResolvedValueOnce(json({ data })).mockResolvedValueOnce(json({ events: [{ guid: 'rest', title: 'REST' }] }));
+  vi.stubGlobal('fetch', fetch);
+  await expect(search.searchLectures('fallback')).resolves.toMatchObject([{ guid: 'rest', title: 'REST' }]);
+  expect(fetch.mock.calls[1][0]).toContain('/events/search?q=fallback');
+});

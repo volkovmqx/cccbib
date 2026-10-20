@@ -6,7 +6,7 @@ import { loadHomeCache } from '@/entities/conference';
 import { backfillTalkDetails, buildReport } from '@/app/model';
 
 vi.mock('react-dom/client', () => ({ createRoot: vi.fn(() => ({ render: vi.fn() })) }));
-vi.mock('./Root', () => ({ default: () => <div>Root</div> }));
+vi.mock('./App', () => ({ default: () => <div>App</div> }));
 vi.mock('@/shared/config', () => ({ initAppearance: vi.fn() }));
 vi.mock('@/shared/i18n', () => ({ initLanguage: vi.fn() }));
 vi.mock('@/features/remote-control', () => ({ initRemote: vi.fn() }));

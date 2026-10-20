@@ -4,7 +4,7 @@ import { ProgressBar } from './ProgressBar';
 
 const GROUPS = ['left', 'center', 'right'];
 
-export const Controls = React.memo(function Controls({ title, subTitle, buttons, focus, video, onSeek }: { title: string; subTitle?: string; buttons: PlayerButton[]; focus: Focus; video: HTMLVideoElement | null; onSeek: (seconds: number) => void }) {
+export const Controls = React.memo(function Controls({ title, subTitle, buttons, focus, video, onSeek }: { title: string; subTitle?: string | null; buttons: PlayerButton[]; focus: Focus; video: HTMLVideoElement | null; onSeek: (seconds: number) => void }) {
   return (
     <div className="playerUI">
       <div className="playerUI__cover" />

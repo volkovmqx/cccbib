@@ -1,7 +1,7 @@
 import '../styles/fonts.css';
 import '../styles/styles.css';
 import { createRoot } from 'react-dom/client';
-import App from './Root';
+import App from './App';
 import { initAppearance } from '@/shared/config';
 import { initLanguage } from '@/shared/i18n';
 import { RECENT_KEY } from '@/entities/conference';

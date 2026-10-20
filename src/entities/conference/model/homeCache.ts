@@ -1,15 +1,26 @@
 import type { Conference } from './types';
+import { isTalk } from '@/entities/talk/@x/conference';
 
 const KEY = 'home_cache_v1';
 const MAX_CHARS = 1500000;
 
 let savedJson: string | null = null;
 
+function isConference(value: unknown): value is Conference {
+  if (!value || typeof value !== 'object') return false;
+  const conference = value as Partial<Conference>;
+  return typeof conference.title === 'string'
+    && (conference.id === undefined || typeof conference.id === 'string')
+    && (conference.updatedAt === undefined || typeof conference.updatedAt === 'string')
+    && (conference.eventLastReleasedAt === undefined || typeof conference.eventLastReleasedAt === 'string')
+    && Array.isArray(conference.lectures?.nodes) && conference.lectures.nodes.every(isTalk);
+}
+
 export function loadHomeCache(): Conference[] | null {
   try {
     const raw = localStorage.getItem(KEY);
-    const conferences = raw && JSON.parse(raw);
-    if (!Array.isArray(conferences) || conferences.length === 0) return null;
+    const conferences: unknown = raw && JSON.parse(raw);
+    if (!Array.isArray(conferences) || conferences.length === 0 || !conferences.every(isConference)) return null;
     savedJson = raw;
     return conferences;
   } catch (error) {

@@ -1,4 +1,5 @@
 import type { Talk, RestTalk } from '@/entities/talk';
+import { isTalk } from '@/entities/talk';
 import type { PlaybackHistoryItem } from '@/features/playback-history';
 import { API_BASE } from '@/shared/api';
 import { PLAYBACK_HISTORY_KEY, PLAYBACK_HISTORY_EVENT } from '@/features/playback-history';
@@ -7,7 +8,7 @@ import { readWatchlist, writeWatchlist } from '@/features/watchlist';
 const MAX_LOOKUPS = 40;
 const PARALLEL = 3;
 
-const needsDetails = (event: Talk) => Boolean(event && !event.detailsChecked && Array.isArray(event.videos)
+const needsDetails = (event: Talk) => Boolean(isTalk(event) && !event.detailsChecked
   && (!event.slug || event.videos.some((video) => video.url && video.width && !video.height)));
 
 function readHistoryStore() {
@@ -42,7 +43,7 @@ function withDetails(event: Talk, details: { slug?: string; heights: Map<string,
 
 export async function backfillTalkDetails() {
   const history = readHistoryStore();
-  const events = [...readWatchlist(), ...(history ? history.items.map((item) => item.event) : [])];
+  const events = [...readWatchlist(), ...(history ? history.items.map((item) => item?.event) : [])];
   const guids = [...new Set(events.filter(needsDetails).map((event) => event.guid))].slice(0, MAX_LOOKUPS);
   if (guids.length === 0) return;
 
@@ -63,8 +64,8 @@ export async function backfillTalkDetails() {
   }
 
   const latest = readHistoryStore();
-  if (latest && latest.items.some((item) => item.event && found.has(item.event.guid) && needsDetails(item.event))) {
-    const items = latest.items.map((item) => (item.event && found.has(item.event.guid) ? { ...item, event: withDetails(item.event, found.get(item.event.guid)!) } : item));
+  if (latest && latest.items.some((item) => item?.event && found.has(item.event.guid) && needsDetails(item.event))) {
+    const items = latest.items.map((item) => (item?.event && found.has(item.event.guid) ? { ...item, event: withDetails(item.event, found.get(item.event.guid)!) } : item));
     localStorage.setItem(PLAYBACK_HISTORY_KEY, JSON.stringify({ ...latest, items }));
     window.dispatchEvent(new Event(PLAYBACK_HISTORY_EVENT));
   }

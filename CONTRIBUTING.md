@@ -52,7 +52,7 @@ Follow these import rules:
 - Import through the public `index.ts` interface. Use the `@/` alias, such as `import { useWatchlist } from '@/features/watchlist'`.
 - Use relative imports inside the same slice.
 - Keep coordination between features in `app`.
-- Keep the existing type-only entity reference in `src/entities/talk/@x/conference.ts` explicit. Do not use it to bypass other import rules.
+- Keep entity references explicit in `src/entities/talk/@x/conference.ts`. It exports the talk type and validates talks in the conference cache. Do not use it to bypass other import rules.
 
 Run `yarn lint:fsd` to check the structure with Steiger. Run `yarn lint:unused` to check files, exports, and dependencies with Knip. Knip runs in normal and production modes. Production mode also finds exports that only tests use. The Knip configuration documents the `core-js` exception because Babel adds those imports.
 

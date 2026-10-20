@@ -51,6 +51,16 @@ test('details backfill limits requests and merges into the latest stored data', 
   expect(readWatchlist()[1].detailsChecked).toBeUndefined();
 });
 
+test('details backfill skips malformed saved entries and preserves valid progress', async () => {
+  const old = talk({ slug: undefined });
+  const entry = { event: old, positionSeconds: 100, durationSeconds: 600, updatedAt: 1 };
+  localStorage.setItem('continue_watching', JSON.stringify({ version: 1, items: [null, { event: { guid: 'broken' } }, entry] }));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ slug: 'found' })));
+  await expect(backfillTalkDetails()).resolves.toBeUndefined();
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(readPlaybackHistory()).toMatchObject([{ event: { guid: 'talk', slug: 'found' }, positionSeconds: 100 }]);
+});
+
 test('report combines playback, watchlist, and progress using stable links and rounded numbers', () => {
   setNowPlayingReader(null);
   expect(buildReport()).toMatchObject({ v: 1, state: 'idle', now: null, watchlist: [], progress: [] });

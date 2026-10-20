@@ -1,4 +1,5 @@
 import type { PlaybackHistoryItem, ProgressInput } from './types';
+import { isTalk } from '@/entities/talk';
 
 export const PLAYBACK_HISTORY_KEY = 'continue_watching';
 export const PLAYBACK_HISTORY_EVENT = 'playbackHistoryUpdate';
@@ -13,11 +14,12 @@ const getLegacyStorageKey = (eventGuid: string) => `playback_position_${eventGui
 const isFinitePositiveNumber = (value: number) => Number.isFinite(value) && value > 0;
 
 const normalizeItem = (item: ProgressInput & { updatedAt: number }): PlaybackHistoryItem | null => {
-  if (!item?.event?.guid) return null;
+  if (!isTalk(item?.event)) return null;
 
   const positionSeconds = Number(item.positionSeconds);
   const durationSeconds = Number(item.durationSeconds);
   const updatedAt = Number(item.updatedAt);
+  const conferenceTitle = typeof item.conferenceTitle === 'string' ? item.conferenceTitle : '';
 
   if (!isFinitePositiveNumber(positionSeconds) || !isFinitePositiveNumber(durationSeconds)) {
     return null;
@@ -27,7 +29,7 @@ const normalizeItem = (item: ProgressInput & { updatedAt: number }): PlaybackHis
 
   return {
     event: item.event,
-    conferenceTitle: item.conferenceTitle || item.event.conference_title || '',
+    conferenceTitle: conferenceTitle || item.event.conference_title || '',
     positionSeconds,
     durationSeconds,
     updatedAt: isFinitePositiveNumber(updatedAt) ? updatedAt : 0,

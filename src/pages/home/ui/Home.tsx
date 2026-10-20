@@ -23,8 +23,8 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
   const fetchMore = useCallback((offset: number) => graphqlRequest<RecentData>(GET_RECENT_CONFERENCES, { offset }).then(
     (result) => updateQuery<RecentData>(RECENT_KEY, (existing) => mergeRecent(existing, result, offset))
   ), []);
-  const [playerIsOpen, setPlayerIsOpen] = useState(false)
   const [selectedPlayerItem, setSelectedPlayerItem] = useState<TalkSelection | null>(null)
+  const playerIsOpen = selectedPlayerItem !== null;
   const [activeSlice, setActiveSlice] = useState(0)
   const [dataSlice, dataSliceHandlers] = useListState(data?.conferencesRecent || []);
   const [isLoading, setIsLoading] = useState(false)
@@ -149,7 +149,6 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
     } else if (e.key === 'Enter') {
       if (!activeBrowseSelection.event) return;
       setSelectedPlayerItem(activeBrowseSelection);
-      setPlayerIsOpen(true)
       setIsPlayerFullscreen(true)
     } else if (e.key === 'ArrowRight') {
       const activeRow = continueWatchingActive ? 'continueWatching' : activeSlice;
@@ -193,13 +192,12 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
   // Keep carousel in DOM when player is open to preserve scroll position
   return (
     <>
-      {playerIsOpen && selectedPlayerItem && (
+      {selectedPlayerItem && (
         <div className="player-fullscreen-container">
           <Player
             event={selectedPlayerItem.event}
             conferenceTitle={selectedPlayerItem.conferenceTitle}
             onClose={() => {
-              setPlayerIsOpen(false);
               setSelectedPlayerItem(null);
               setIsPlayerFullscreen(false);
             }}

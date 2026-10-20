@@ -16,8 +16,14 @@ test('conference pages merge without duplicate IDs and preserve the fetched offs
 
 test('home cache ignores malformed, empty, unchanged, and oversized data', () => {
   clearHomeCache();
-  for (const raw of ['bad', '{}', 'null', '[]']) {
+  for (const raw of ['bad', '{}', 'null', '[]', '[null]', '[{}]', '[{"title":"Broken","lectures":{"nodes":[null]}}]']) {
     localStorage.setItem('home_cache_v1', raw);
+    expect(loadHomeCache()).toBeNull();
+  }
+  for (const value of [{ ...conference(), title: null }, { ...conference(), id: 1 },
+    { ...conference(), updatedAt: [] }, { ...conference(), eventLastReleasedAt: {} },
+    { title: 'Missing talks' }]) {
+    localStorage.setItem('home_cache_v1', JSON.stringify([value]));
     expect(loadHomeCache()).toBeNull();
   }
   const data = [conference()];

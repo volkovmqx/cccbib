@@ -34,8 +34,12 @@ test('home keeps selection while inactive and while the player opens', async () 
   expect(screen.getByTestId('preview')).toHaveTextContent('A0');
   key('ArrowRight'); expect(screen.getByTestId('preview')).toHaveTextContent('B0');
   key('Enter'); expect(callbacks.setIsPlayerFullscreen).toHaveBeenCalledWith(true);
+  expect(view.container.querySelector('.fluidContainer')).not.toBeVisible();
   key('ArrowDown'); expect(screen.getByRole('button', { name: 'Close B0' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Close B0' })); expect(callbacks.setIsPlayerFullscreen).toHaveBeenLastCalledWith(false);
+  expect(screen.queryByRole('button', { name: 'Close B0' })).not.toBeInTheDocument();
+  expect(view.container.querySelector('.fluidContainer')).toBeVisible();
+  expect(screen.getByTestId('preview')).toHaveTextContent('B0');
   view.rerender(<Home {...callbacks} active={false} />); key('ArrowRight');
   expect(view.container).toBeEmptyDOMElement();
   view.rerender(<Home {...callbacks} />); expect(screen.getByTestId('preview')).toHaveTextContent('B0');

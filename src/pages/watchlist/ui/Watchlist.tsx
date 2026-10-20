@@ -11,8 +11,8 @@ const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSideba
   const t = useTranslation();
   const [watchlist, setWatchlist] = useState<Talk[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [playerIsOpen, setPlayerIsOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Talk | null>(null);
+  const playerIsOpen = selectedEvent !== null;
 
   useEffect(() => {
     const loadWatchlist = () => setWatchlist(readWatchlist());
@@ -30,7 +30,6 @@ const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSideba
 
   const handleSelect = useCallback((item: Talk) => {
     setSelectedEvent(item);
-    setPlayerIsOpen(true);
     setIsPlayerFullscreen(true);
   }, [setIsPlayerFullscreen]);
 
@@ -55,13 +54,12 @@ const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSideba
 
   return (
     <>
-      {playerIsOpen && selectedEvent && (
+      {selectedEvent && (
         <div className="player-fullscreen-container">
           <Player
             event={selectedEvent}
             conferenceTitle={selectedEvent.conference_title || ''}
             onClose={() => {
-              setPlayerIsOpen(false);
               setSelectedEvent(null);
               setIsPlayerFullscreen(false);
             }}

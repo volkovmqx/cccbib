@@ -16,7 +16,7 @@ export interface Talk {
   guid: string;
   slug?: string;
   title: string;
-  description?: string;
+  description?: string | null;
   duration: number;
   viewCount?: number;
   persons: string[];
@@ -39,7 +39,7 @@ export interface RestTalk {
   guid: string;
   slug?: string;
   title: string;
-  description?: string;
+  description?: string | null;
   length?: number;
   duration?: number;
   view_count?: number;

@@ -33,6 +33,17 @@ test('watchlist rejects malformed storage and handles storage failures', () => {
   expect(removeFromWatchlistStore('talk')).toBe(false);
 });
 
+test('watchlist ignores malformed entries and preserves valid saved talks', () => {
+  const saved = { ...talk({ description: null }), addedAt: 123 };
+  const raw = JSON.stringify([null, {}, { guid: 'incomplete' }, { ...talk(), videos: [null] },
+    { ...talk(), addedAt: 'yesterday' }, { ...talk(), addedAt: null }, saved, talk({ guid: 'older' })]);
+  localStorage.setItem('watchlist', raw);
+  expect(readWatchlist()).toEqual([saved, talk({ guid: 'older' })]);
+  expect(localStorage.getItem('watchlist')).toBe(raw);
+  expect(addToWatchlistStore(talk({ guid: 'new' }))).toBe(true);
+  expect(readWatchlist().map(item => item.guid)).toEqual(['talk', 'older', 'new']);
+});
+
 test('watchlist hook follows changes, toggles items, and removes its listener', () => {
   const item = talk();
   const { result, rerender, unmount } = renderHook(({ guid }) => useWatchlist(guid), { initialProps: { guid: item.guid as string | undefined } });

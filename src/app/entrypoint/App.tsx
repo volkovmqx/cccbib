@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Screens } from '../routing/Screens';
 import { Sidebar } from '@/widgets/sidebar';
 import { Player } from '@/widgets/player';
+import { OfflineBanner } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
 import { onAppCommand, dispatchCommand, queuePlayerCommand } from '@/features/remote-control';
 import { fetchTalk } from '@/entities/talk';
@@ -78,41 +79,44 @@ export default function App() {
   const fullscreen = isPlayerFullscreen || Boolean(remote);
 
   return (
-    <div className={`appShell ${fullscreen ? 'appShell--fullscreen' : ''}`}>
-      {!fullscreen && (
-        <nav className="appShell__nav">
-          <Sidebar
-            selectedItem={selectedItem}
-            onSelectItem={(item) => {
-              setSelectedItem(item);
-              setSidebarFocused(false);
-            }}
-            focused={sidebarFocused}
-          />
-        </nav>
-      )}
-      <main className="appShell__main">
-        {remote ? (
-          <div className="player-fullscreen-container">
-            <Player
-              key={remote.talk.guid}
-              event={remote.talk}
-              conferenceTitle={remote.talk.conference_title}
-              startAt={remote.startAt}
-              onClose={() => setRemote(null)}
+    <>
+      <OfflineBanner />
+      <div className={`appShell ${fullscreen ? 'appShell--fullscreen' : ''}`}>
+        {!fullscreen && (
+          <nav className="appShell__nav">
+            <Sidebar
+              selectedItem={selectedItem}
+              onSelectItem={(item) => {
+                setSelectedItem(item);
+                setSidebarFocused(false);
+              }}
+              focused={sidebarFocused}
             />
-          </div>
-        ) : (
-          <Screens
-            selectedItem={selectedItem}
-            onFocusSidebar={() => setSidebarFocused(true)}
-            onSelectItem={(item) => setSelectedItem(item)}
-            sidebarFocused={sidebarFocused}
-            setIsPlayerFullscreen={setIsPlayerFullscreen}
-          />
+          </nav>
         )}
-      </main>
-      {notice && <div className="remote-notice">{notice}</div>}
-    </div>
+        <main className="appShell__main">
+          {remote ? (
+            <div className="player-fullscreen-container">
+              <Player
+                key={remote.talk.guid}
+                event={remote.talk}
+                conferenceTitle={remote.talk.conference_title}
+                startAt={remote.startAt}
+                onClose={() => setRemote(null)}
+              />
+            </div>
+          ) : (
+            <Screens
+              selectedItem={selectedItem}
+              onFocusSidebar={() => setSidebarFocused(true)}
+              onSelectItem={(item) => setSelectedItem(item)}
+              sidebarFocused={sidebarFocused}
+              setIsPlayerFullscreen={setIsPlayerFullscreen}
+            />
+          )}
+        </main>
+        {notice && <div className="remote-notice">{notice}</div>}
+      </div>
+    </>
   );
 }

@@ -1,12 +1,14 @@
 import type { Talk } from '@/entities/talk';
+import { isTalk } from '@/entities/talk';
 
 const WATCHLIST_KEY = 'watchlist';
 
 export function readWatchlist(): (Talk & { addedAt?: number })[] {
   try {
     const stored = localStorage.getItem(WATCHLIST_KEY);
-    const watchlist = stored ? JSON.parse(stored) : [];
-    return Array.isArray(watchlist) ? watchlist : [];
+    const watchlist: unknown = stored ? JSON.parse(stored) : [];
+    return Array.isArray(watchlist) ? watchlist.filter((item: unknown): item is Talk & { addedAt?: number } =>
+      isTalk(item) && (!('addedAt' in item) || (typeof item.addedAt === 'number' && Number.isFinite(item.addedAt)))) : [];
   } catch (err) {
     console.error('Error reading watchlist:', err);
     return [];
