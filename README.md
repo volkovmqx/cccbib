@@ -15,7 +15,7 @@
 
 ## Background
 
-This app uses the official media.ccc.de/graphql endpoint. It is built using React, Embla and a plain HTML5 video player with the help of a lot of caffeine. ☕
+This app uses the official media.ccc.de/graphql endpoint. It is built using React, Embla and a plain HTML5 video player with the help of a lot of Chaos. 🌸
 
 ## Features
 
