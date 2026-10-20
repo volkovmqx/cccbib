@@ -24,9 +24,9 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Watchlist and Continue Watching.
 - Subtitles and a choice of audio language when a talk offers several.
 - 9 app languages.
-- Black, Dark and Light themes with accent colors and custom fonts.
-- Aspect ratio fix for older videos (Auto, Zoom, Stretch).
+- App Customization (Themes, Accent Colors, Custom Fonts).
 - Remote control over webOS launch parameters (see [Remote control](#remote-control)).
+- Quality of Life improvements.
 
 ## Remote control
 
