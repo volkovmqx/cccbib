@@ -101,7 +101,7 @@ Old `.srt` (from 30c3) and new `.vtt` files both work. Languages that only exist
 
 ## Browser support
 
-The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syntax newer than ES2019 and a startup error screen shows the exact error if the app fails to boot. To test on an old engine use a Chromium snapshot (revision `561732` is Chromium 68) with `puppeteer-core@1.8`.
+The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syntax newer than ES2019. A startup error screen shows the error if the app fails to boot. `yarn test:chrome68` tests the production build with Chromium snapshot `561732` (Chromium 68.0.3440.0).
 
 ## Roadmap
 
@@ -113,10 +113,55 @@ The target is Chrome 68 (webOS 5). `yarn build` fails if the output contains syn
 
 Either you found a bug, optimisation strategy or want something implemented, go ahead and hack your way into the code, PRs are welcome 🌱.
 
-To add a language copy `src/locales/de.js` and translate it and register it in `src/i18n.js` and `UI_LANGUAGES` in `src/constants.js`. `yarn build` fails on missing or unused strings.
+To add a language, copy `src/shared/i18n/locales/de.ts`. Translate it and register it in `src/shared/i18n/translation.ts` and `UI_LANGUAGES` in `src/shared/config/constants.ts`. `yarn build` fails on missing or unused strings.
 
 
 ## Development
+
+### Structure
+
+The application uses TypeScript and Feature-Sliced Design (FSD).
+
+| Layer | Responsibility |
+| --- | --- |
+| `src/app` | Startup, screen selection, remote command coordination, global styles, and reports. |
+| `src/pages` | Home, search, popular, conferences, conference, watchlist, and settings screens. |
+| `src/widgets` | The player, talk preview, and sidebar. |
+| `src/features` | Watchlist actions, playback history, and remote commands. |
+| `src/entities` | Talks, conferences, data conversion, and requests. |
+| `src/shared` | Generic UI, configuration, translations, browser helpers, and webOS adapters. |
+
+Import other slices through their `index.ts` public interface with the `@/` alias. Import files inside the same slice with relative paths. A slice can import only lower layers. The conference entity uses a type-only `@x` interface to refer to talks. Keep coordination between features in `app`.
+
+Steiger checks the FSD rules. Knip checks files, exports, and dependencies in normal and production modes. Its production mode excludes test references. The Knip configuration documents the `core-js` exception because Babel injects those imports. Build tools remain CommonJS.
+
+### Tests and quality checks
+
+```sh
+yarn typecheck       # Check application and test types.
+yarn lint:fsd        # Check FSD rules.
+yarn lint:unused     # Run both Knip modes.
+yarn test            # Run unit and React tests.
+yarn test:watch      # Run tests when files change.
+yarn test:coverage   # Check all four coverage thresholds.
+
+# Install the current Chromium browser and its system dependencies.
+yarn playwright install --with-deps chromium
+yarn build
+yarn test:e2e        # Run Playwright against the production build.
+yarn test:chrome68   # Run the Chrome 68 smoke test on Linux.
+yarn verify          # Run all checks, the build, and both browser runners.
+```
+
+Vitest requires at least 95% for statements, branches, functions, and lines across the application total. Coverage includes every application JavaScript and TypeScript file, including files that no test imports. It excludes tests and declaration files. HTML startup scripts have browser tests. Open `coverage/index.html` to inspect coverage.
+
+Browser tests use local REST, GraphQL, image, subtitle, and video fixtures. They reject unexpected external requests. The WebM fixture contains a generated blue test image. Playwright saves reports in `playwright-report/`. Both runners save failure data in `test-results/`.
+
+The Chrome 68 runner downloads its fixed snapshot into `/tmp/cccbib-chrome68`. Set `CHROME68_CACHE` to use another cache directory. Set `CHROME68_EXECUTABLE_PATH` to use an existing binary. The runner checks that the browser reports version 68. Its Linux font configuration requires DejaVu fonts.
+
+The build, release, and Docker workflows run the same quality workflow before they package or publish the application. CI uploads coverage reports, browser reports, and failure data.
+
+Before a webOS release, check the installed package on a real TV. Check remote keys, preview-to-player decoder release, audio languages, subtitles, resume after seeking, and Auto/Zoom/Stretch. Browser tests cannot verify the TV hardware decoder or actual webOS services.
 
 ### Local deployment
 
@@ -156,7 +201,7 @@ This image is built in CI on pushes to `main` (tagged `latest`) and on version t
 
 ## Credit
 
-The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/assets/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
+The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/shared/branding/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
 
 WebOS Project architecture from ["Informatic"](https://github.com/informatic/streamkatze)
 

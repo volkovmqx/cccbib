@@ -1,0 +1,114 @@
+import type { Talk } from '@/entities/talk';
+import type { PlaybackPageProps } from '@/shared/ui';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@/shared/api';
+import { GET_RECENT_CONFERENCES, RECENT_KEY, mergeRecent } from '@/entities/conference';
+import { Player } from '@/widgets/player';
+import { ListView } from '@/shared/ui';
+import { formatSeconds } from '@/entities/talk';
+import { useTranslation, useLanguage, formatNumber } from '@/shared/i18n';
+
+const PopularView = React.memo(function PopularView({ onClose, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }: PlaybackPageProps) {
+  const t = useTranslation();
+  const language = useLanguage();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedVideo, setSelectedVideo] = useState<Talk | null>(null);
+
+  const { error, data } = useQuery(RECENT_KEY, GET_RECENT_CONFERENCES, { offset: 0 }, { revalidate: false, merge: mergeRecent });
+  const loading = !data && !error;
+
+  const videos = useMemo(() => {
+    if (!data || !data.conferencesRecent) return [];
+
+    const allVideos: (Talk & { conference_updated_at?: string })[] = [];
+    data.conferencesRecent.forEach(conference => {
+      conference.lectures.nodes.forEach(lecture => {
+        allVideos.push({
+          ...lecture,
+          conference_title: conference.title,
+          conference_updated_at: conference.eventLastReleasedAt || conference.updatedAt,
+        });
+      });
+    });
+
+    allVideos.sort((a, b) => {
+      const viewDiff = (b.viewCount || 0) - (a.viewCount || 0);
+      if (viewDiff !== 0) return viewDiff;
+      const dateA = new Date(a.conference_updated_at || 0);
+      const dateB = new Date(b.conference_updated_at || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return allVideos.slice(0, 100);
+  }, [data]);
+
+  const handleSelect = useCallback((item: Talk) => {
+    setSelectedVideo(item);
+    setIsPlayerFullscreen(true);
+  }, [setIsPlayerFullscreen]);
+
+  const renderItem = useCallback((video: Talk) => (
+    <>
+      {video.images.thumbUrl && (
+        <img
+          src={video.images.thumbUrl}
+          alt={video.title}
+          className="popularView__thumbnail"
+          loading="lazy"
+        />
+      )}
+      <div className="popularView__info">
+        <div className="popularView__title">{video.title}</div>
+        <div className="popularView__meta">
+          {video.conference_title && <span>{video.conference_title}</span>}
+          {video.duration && <span> • {formatSeconds(video.duration)}</span>}
+          {video.viewCount && <span> • {t('{count} views', { count: formatNumber(language, video.viewCount) })}</span>}
+          {video.persons && video.persons.length > 0 && (
+            <span> • {video.persons.join(', ')}</span>
+          )}
+        </div>
+      </div>
+    </>
+  ), [t, language]);
+
+  const playerIsOpen = !!selectedVideo;
+
+  return (
+    <>
+      {playerIsOpen && (
+        <div className="player-fullscreen-container">
+          <Player
+            event={selectedVideo}
+            conferenceTitle={selectedVideo.conference_title}
+            onClose={() => {
+              setSelectedVideo(null);
+              setIsPlayerFullscreen(false);
+            }}
+          />
+        </div>
+      )}
+      <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
+        <ListView
+          title={t('Popular Videos')}
+          items={videos}
+          loading={loading}
+          error={error?.message}
+          selectedIndex={selectedIndex}
+          setSelectedIndex={setSelectedIndex}
+          onClose={onClose}
+          onSelect={handleSelect}
+          onFocusSidebar={onFocusSidebar}
+          sidebarFocused={sidebarFocused}
+          disabled={playerIsOpen}
+          emptyMessage={t('No videos found')}
+          renderItem={renderItem}
+          className="popularView"
+          itemClassName="popularView__item"
+          selectedItemClassName="popularView__item--selected"
+        />
+      </div>
+    </>
+  );
+});
+
+export default PopularView;

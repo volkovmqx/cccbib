@@ -1,0 +1,78 @@
+name: Quality checks
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  webos-simulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+      - name: Install Simulator dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth unzip libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libasound2t64
+      - id: simulator-pin
+        run: echo "key=$(node tools/setup-webos-simulator.cjs --cache-key)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .cache/webos-simulator/*.zip
+          key: ${{ runner.os }}-${{ steps.simulator-pin.outputs.key }}
+      - run: yarn setup:webos
+      - name: Test production app in LG Simulator
+        run: xvfb-run -a -s '-screen 0 1920x1080x24' yarn test:webos
+      - name: Stop Simulator children
+        if: always()
+        run: pkill -f '[.]cache/webos-simulator/runtime' || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webos-simulator-reports
+          path: |
+            test-results/
+            webos-report/
+          retention-days: 14
+          if-no-files-found: warn
+  quality:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      - run: yarn lint:fsd
+      - run: yarn lint:unused
+      - run: yarn test:coverage
+      - run: yarn build
+      - run: yarn playwright install --with-deps chromium
+      - name: Install fonts for Chrome 68
+        run: sudo apt-get install -y fonts-dejavu-core
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/cccbib-chrome68
+          key: chromium68-linux-561732
+      - run: yarn test:e2e
+      - run: yarn test:chrome68
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-reports
+          path: |
+            coverage/
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore

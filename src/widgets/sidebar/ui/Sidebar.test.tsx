@@ -1,0 +1,30 @@
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { expect, test, vi } from 'vitest';
+import { Sidebar } from './Sidebar';
+import { setSetting } from '@/shared/config';
+
+test('sidebar selects screens with keyboard and mouse and supports the logo setting', () => {
+  vi.useFakeTimers();
+  setSetting('uiLanguage', 'en'); setSetting('settingsEntry', 'icon');
+  const onSelectItem = vi.fn();
+  const view = render(<Sidebar selectedItem="recent" onSelectItem={onSelectItem} focused={false} />);
+  fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(onSelectItem).not.toHaveBeenCalled();
+  view.rerender(<Sidebar selectedItem="recent" onSelectItem={onSelectItem} focused />);
+  for (const key of ['ArrowDown', 'ArrowUp', 'ArrowUp', 'Enter']) fireEvent.keyDown(window, { key });
+  act(() => { vi.runOnlyPendingTimers(); });
+  expect(onSelectItem).toHaveBeenLastCalledWith('settings');
+  fireEvent.keyDown(window, { key: 'ArrowRight' });
+  act(() => { vi.runOnlyPendingTimers(); });
+  expect(onSelectItem).toHaveBeenLastCalledWith('recent');
+  fireEvent.click(screen.getByText('Search'));
+  expect(onSelectItem).toHaveBeenLastCalledWith('search');
+  view.rerender(<Sidebar selectedItem="conference-id" onSelectItem={onSelectItem} focused />);
+  expect(screen.getByText('Events').closest('.sidebarItem')).toHaveClass('sidebarItem--selected');
+  act(() => { setSetting('settingsEntry', 'logo'); });
+  expect(view.container.querySelector('.sidebarItem--brand')).toBeInTheDocument();
+  view.rerender(<Sidebar selectedItem="settings" onSelectItem={onSelectItem} focused />);
+  fireEvent.keyDown(window, { key: 'Enter' });
+  act(() => { vi.runOnlyPendingTimers(); });
+  expect(onSelectItem).toHaveBeenLastCalledWith('settings');
+});

@@ -2,13 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.join(__dirname, '..', 'src');
-const CATALOGS = fs.readdirSync(path.join(SRC, 'locales')).filter((file) => file.endsWith('.js'));
+const CATALOGS = fs.readdirSync(path.join(SRC, 'shared/i18n/locales')).filter((file) => file.endsWith('.ts'));
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) return entry.name === 'assets' || entry.name === 'locales' ? [] : walk(full);
-    return /\.(js|jsx)$/.test(entry.name) ? [full] : [];
+    return !entry.name.includes('.test.') && /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
   });
 }
 
@@ -24,14 +24,14 @@ const add = (text, where) => { if (text && /[A-Za-z]/.test(text)) used.set(text,
 sources.forEach(({ file, text }) => {
   const name = path.relative(SRC, file);
   for (const match of text.matchAll(new RegExp(String.raw`\bt\(\s*(?:${STRING})`, 'g'))) add(pick(match), name);
-  if (name === 'constants.js') {
+  if (name === path.join('shared', 'config', 'constants.ts')) {
     text.split('\n').forEach((line) => {
       if (/family:|native: true/.test(line)) return;
       for (const match of line.matchAll(new RegExp(String.raw`\bname:\s*(?:${STRING})`, 'g'))) add(pick(match), name);
     });
     for (const match of text.matchAll(/\? '(Normal[^']*)'/g)) add(match[1], name);
   }
-  if (name === path.join('components', 'Settings.jsx')) {
+  if (name === path.join('pages', 'settings', 'ui', 'Settings.tsx')) {
     for (const match of text.matchAll(new RegExp(String.raw`\b(?:title|description|label|button):\s*(?:${STRING})`, 'g'))) add(pick(match), name);
   }
 });
@@ -41,7 +41,7 @@ let failed = false;
 
 CATALOGS.forEach((file) => {
   const module = { exports: {} };
-  new Function('module', fs.readFileSync(path.join(SRC, 'locales', file), 'utf8').replace('export default', 'module.exports ='))(module);
+  new Function('module', fs.readFileSync(path.join(SRC, 'shared/i18n/locales', file), 'utf8').replace('export default', 'module.exports ='))(module);
   const catalog = module.exports;
   const keys = Object.keys(catalog);
   const missing = [...used.keys()].filter((text) => !(text in catalog));
