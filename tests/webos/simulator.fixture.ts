@@ -48,7 +48,7 @@ export class Simulator {
       '--host-resolver-rules=MAP * ~NOTFOUND', '--disable-gpu', '--disable-dev-shm-usage'];
     this.launches++;
     await writeFile(this.info.outputPath(`launch-${this.launches}.json`), JSON.stringify({ pin, executable, args }, null, 2));
-    this.child = spawn(executable, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+    this.child = spawn('/missing/webos-simulator', args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, XDG_CONFIG_HOME: path.join(this.storage, 'config'), XDG_CACHE_HOME: path.join(this.storage, 'cache'),
         HTTP_PROXY: 'http://127.0.0.1:9', HTTPS_PROXY: 'http://127.0.0.1:9', ALL_PROXY: 'http://127.0.0.1:9', NO_PROXY: '',
         http_proxy: 'http://127.0.0.1:9', https_proxy: 'http://127.0.0.1:9', all_proxy: 'http://127.0.0.1:9', no_proxy: '' } });

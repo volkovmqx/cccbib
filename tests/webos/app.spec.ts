@@ -50,7 +50,7 @@ test('startup: CDP controls the production application', async ({ simulator }) =
   await expect(page.locator('#boot')).toHaveCount(0);
   await expect(page.locator('.carouselTitle').first()).toHaveText('Fixture conference 0');
   await simulator.key('ArrowRight');
-  await expect(page.locator('.embla__slide.active .embla__slide__title')).toHaveText('DELIBERATELY BROKEN ASSERTION');
+  await expect(page.locator('.embla__slide.active .embla__slide__title')).toHaveText('Other talk 0');
 });
 
 test('navigation: arrows select, OK opens, and webOS Back returns', async ({ simulator }) => {
@@ -77,6 +77,10 @@ test('pages: every page and conference details load', async ({ simulator }) => {
   await expect(page.locator('.eventsListView__item').first()).toContainText('Fixture conference 0');
   await simulator.key('Enter');
   await expect(page.locator('.conferenceView__title')).toHaveText('Fixture conference 0');
+  await expect(page.locator('.conferenceView__title')).toBeVisible();
+  await expect(page.locator('video.player-video')).toHaveCount(0);
+  // Conference details suppress Back for 300 ms after entry and player close.
+  await new Promise(resolve => setTimeout(resolve, 350));
   await simulator.key('Back');
   await expect(page.locator('.eventsListView')).toBeVisible();
   await menu(simulator, 'Settings');
