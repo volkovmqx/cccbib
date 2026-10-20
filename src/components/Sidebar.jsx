@@ -17,8 +17,8 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }) => {
   const logoEntry = settingsEntry === 'logo';
 
   const menuItems = [
-    { id: 'search', label: t('Search') },
     { id: 'recent', label: t('Home') },
+    { id: 'search', label: t('Search') },
     { id: 'popular', label: t('Popular') },
     { id: 'events', label: t('Events') },
     { id: 'watchlist', label: t('Watchlist') },
