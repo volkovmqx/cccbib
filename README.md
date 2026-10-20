@@ -19,20 +19,14 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 
 ## Features
 
-- Support for conferences lazy loading.
-- Preview of the events on scroll.
-- Support for language change.
-- Smart TV Navigation with React! (Thanks to [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1).)
-- Search functionnality.
-- Watchlist and Continue Watching (20 most recent talks in progress).
-- Remote control options (see [Remote control](#remote-control)).
-- Customizations (Black, Dark, Light and Accent colors and custom fonts).
-- 9 app languages.
-- Aspect ratio changing for older videos (Auto, Zoom, Stretch).
-- Quality of Life Remote Controller Button Mapping (Thanks to [Simon34545](https://github.com/Simon34545) LG Input Keymapping overview!) inspired by Youtube/Jellyfin.
-- Configuration page for preferred languages and subtitles.
-- Substitles functionnality.
-- About Info page (in Settings on the bottom).
+- Browse every conference with lazy loading and video previews while you scroll (on, muted, still image or off).
+- Made for the TV remote with [spatial navigation](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) in React ([and this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1)) and a button mapping inspired by YouTube and Jellyfin (thanks to [Simon34545](https://github.com/Simon34545) for the LG input keymapping overview).
+- Watchlist and Continue Watching with your 20 most recent talks in progress.
+- Subtitles for old `.srt` and new `.vtt` files and your preferred audio and subtitle languages.
+- Available in 9 languages that you can switch any time.
+- Black, Dark and Light themes with accent colors and custom fonts.
+- Aspect ratio fix for older videos (Auto, Zoom, Stretch).
+- Remote control over webOS launch parameters (see [Remote control](#remote-control)).
 
 ## Remote control
 
@@ -100,10 +94,6 @@ To read the state use the TV's web inspector (port 9998). `window.cccbib.report(
 </details>
 
 Zoom and Stretch call a TV service which webOS only allows for apps that were installed the normal way (`yarn deploy` or ares-install or the Homebrew Channel). Copying the files onto the TV by hand skips that registration.
-
-## Subtitles
-
-Old `.srt` (from 30c3) and new `.vtt` files both work. Languages that only exist as dead links or placeholder files are hidden and the subtitle button disappears when nothing usable is left. They load from the same CORS enabled hosts as the media.ccc.de website so no proxy is needed.
 
 ## Browser support
 
