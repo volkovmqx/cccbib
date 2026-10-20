@@ -3,6 +3,7 @@ import { IconHeartOff } from '@tabler/icons-react';
 import { Player } from './Player';
 import { ListView } from './ListView';
 import { useTranslation } from '../i18n';
+import { readWatchlist } from '../helpers/watchlist';
 
 export const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }) {
   const t = useTranslation();
@@ -12,26 +13,16 @@ export const WatchlistView = React.memo(function WatchlistView({ onClose, onFocu
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
-    const loadWatchlist = () => {
-      try {
-        const stored = localStorage.getItem('watchlist');
-        if (stored) {
-          setWatchlist(JSON.parse(stored));
-        }
-      } catch (err) {
-        console.error('Error loading watchlist:', err);
-      }
-    };
+    const loadWatchlist = () => setWatchlist(readWatchlist());
 
     loadWatchlist();
 
-    const handleStorageChange = () => loadWatchlist();
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('watchlistUpdate', handleStorageChange);
+    window.addEventListener('storage', loadWatchlist);
+    window.addEventListener('watchlistUpdate', loadWatchlist);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('watchlistUpdate', handleStorageChange);
+      window.removeEventListener('storage', loadWatchlist);
+      window.removeEventListener('watchlistUpdate', loadWatchlist);
     };
   }, []);
 

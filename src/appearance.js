@@ -77,7 +77,6 @@ function accentVars(accentColor, isLight) {
   return {
     '--accent': toHex(rgb),
     '--accent-rgb': rgbString(rgb),
-    '--accent-alpha': `rgba(${rgbString(rgb)}, 0.3)`,
     '--accent-glow': `0 0 10px rgba(${rgbString(rgb)}, 0.5)`,
     '--accent-contrast': luminance(rgb) > 0.4 ? '#000000' : '#ffffff',
     '--accent-text': toHex(hslToRgb(h, s, textLightness)),

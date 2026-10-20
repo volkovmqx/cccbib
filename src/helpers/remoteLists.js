@@ -2,6 +2,7 @@ import { fetchTalk, commandItems } from './remoteTalk';
 import { addToWatchlistStore, removeFromWatchlistStore } from './watchlist';
 import { removePlaybackHistoryItem, replacePlaybackHistory } from './playbackHistory';
 import { progressSeconds, saveTalkProgress, MIN_SECONDS } from './remoteProgress';
+import { readNowPlaying } from './nowPlaying';
 
 const PARALLEL = 3;
 
@@ -22,7 +23,7 @@ async function loadTalks(items) {
   return loaded;
 }
 
-export async function applyListCommand(command, playingGuid, seekPlaying) {
+export async function applyListCommand(command, seekPlaying) {
   const items = commandItems(command);
   const loaded = await loadTalks(items);
   if (loaded.length === 0 || (command.cmd === 'progress-set' && loaded.length < items.length)) return { kind: 'none' };
@@ -44,11 +45,12 @@ export async function applyListCommand(command, playingGuid, seekPlaying) {
       loaded.forEach(({ talk }) => removeFromWatchlistStore(talk.guid));
       return single ? { kind: 'removed', title: single.title } : { kind: 'watchlist', count };
     case 'progress': {
+      const playing = readNowPlaying();
       let cleared = false;
       loaded.forEach(({ talk, item }) => {
         const seconds = progressSeconds(talk, item);
         if (seconds === null) return;
-        if (talk.guid === playingGuid) seekPlaying(seconds);
+        if (playing && talk.guid === playing.event.guid) seekPlaying(seconds);
         else cleared = saveTalkProgress(talk, seconds) === 'cleared';
       });
       return single ? { kind: cleared ? 'cleared' : 'progress', title: single.title } : { kind: 'progressList', count };

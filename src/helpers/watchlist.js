@@ -3,7 +3,8 @@ const WATCHLIST_KEY = 'watchlist';
 export function readWatchlist() {
   try {
     const stored = localStorage.getItem(WATCHLIST_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const watchlist = stored ? JSON.parse(stored) : [];
+    return Array.isArray(watchlist) ? watchlist : [];
   } catch (err) {
     console.error('Error reading watchlist:', err);
     return [];

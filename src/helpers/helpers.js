@@ -1,4 +1,4 @@
-// Returns [recording, foundLanguage, recordingLanguage] for best matching video
+// Returns [recording, recordingLanguage] for best matching video
 export function getVideo(videos, preferredLanguage = 'deu') {
       if (preferredLanguage === 'auto') {
         const widest = (mimeType) => videos
@@ -6,14 +6,13 @@ export function getVideo(videos, preferredLanguage = 'deu') {
           .reduce((best, s) => (!best || (s.width || 0) > (best.width || 0) ? s : best), null);
         const recording = widest("video/webm") || widest("video/mp4");
         if (recording) {
-          return [recording, true, recording?.language];
+          return [recording, recording.language];
         }
-        return [null, false, null];
+        return [null, null];
       }
 
       let bestMatch = null;
       let bestPriority = 0;
-      let foundLanguage = false;
       const isBetter = (priority, video) => priority > bestPriority
         || (priority === bestPriority && bestMatch && (video.width || 0) > (bestMatch.width || 0));
 
@@ -49,19 +48,17 @@ export function getVideo(videos, preferredLanguage = 'deu') {
           if (isBetter(priority, video)) {
             bestMatch = video;
             bestPriority = priority;
-            foundLanguage = priority >= 3; // Found language if priority is 3 or higher
           }
         } else {
           const priority = isWebm ? 2 : 1;
           if (isBetter(priority, video)) {
             bestMatch = video;
             bestPriority = priority;
-            foundLanguage = false;
           }
         }
       }
 
-      return [bestMatch, foundLanguage, bestMatch?.language];
+      return [bestMatch, bestMatch?.language];
 }
 export function isOddAspect(videos, preferredLanguage) {
   const [recording] = getVideo(videos || [], preferredLanguage);

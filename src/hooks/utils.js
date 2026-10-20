@@ -43,15 +43,6 @@ export function useIdle(idleMs) {
   return idle;
 }
 
-export function useDebouncedValue(value, wait) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), wait);
-    return () => clearTimeout(timer);
-  }, [value, wait]);
-  return [debounced];
-}
-
 export function useListState(initial) {
   const [list, setList] = useState(initial);
   const handlers = useMemo(() => ({

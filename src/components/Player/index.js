@@ -138,7 +138,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     : availableLanguages[0] || preferredAudioLanguage;
   const language = languageChoice || initialLanguage;
 
-  const [recording, , recordingLanguage] = useMemo(
+  const [recording, recordingLanguage] = useMemo(
     () => getVideo(event.videos, language),
     [event.videos, language]
   );

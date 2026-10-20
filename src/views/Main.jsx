@@ -29,8 +29,7 @@ export default function App() {
 
   const handleCommand = useCallback(async (command) => {
     if (LIST_COMMANDS.includes(command.cmd)) {
-      const playing = remoteRef.current && remoteRef.current.talk.guid;
-      const result = await applyListCommand(command, playing, (seconds) => dispatchCommand({ cmd: 'seek', to: seconds }));
+      const result = await applyListCommand(command, (seconds) => dispatchCommand({ cmd: 'seek', to: seconds }));
       const notices = {
         none: t('Could not load this talk'),
         added: t('Added to watchlist: {title}', result),
@@ -107,7 +106,6 @@ export default function App() {
             onFocusSidebar={() => setSidebarFocused(true)}
             onSelectItem={(item) => setSelectedItem(item)}
             sidebarFocused={sidebarFocused}
-            isPlayerFullscreen={isPlayerFullscreen}
             setIsPlayerFullscreen={setIsPlayerFullscreen}
           />
         )}

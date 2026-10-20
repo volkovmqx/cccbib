@@ -10,7 +10,7 @@ const PREVIEW_DEBOUNCE_MS = 300;
 const POSTER_DEBOUNCE_MS = 250;
 const PREVIEW_IDLE_MS = 120000;
 
-export const Preview = React.memo(function Preview({ event, conferenceTitle, disableVideo = false }) {
+export const Preview = React.memo(function Preview({ event, disableVideo = false }) {
     const t = useTranslation();
     const [language] = useSetting('language');
     const [previewVideo] = useSetting('previewVideo');

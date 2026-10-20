@@ -1,5 +1,4 @@
 :root {
-  --ccc-green: #AAF40D;
   --text-scale: 1;
   --tile-scale: 1;
   --icon-scale: 1;
@@ -38,7 +37,6 @@
   --focus-ring: transparent;
   --list-item-border: 5px;
   --transition-fast: 0.2s ease;
-  --transition-normal: 0.3s ease;
 
   /* Responsive Font Sizes */
   --font-size-xs: 1.5rem;

@@ -64,7 +64,7 @@ const LazyView = ({ children }) => (
   </ErrorBoundary>
 );
 
-export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onSelectItem, sidebarFocused, isPlayerFullscreen, setIsPlayerFullscreen }) {
+export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onSelectItem, sidebarFocused, setIsPlayerFullscreen }) {
   const t = useTranslation();
   const playbackHistory = usePlaybackHistory();
   const { error, data } = useQuery(RECENT_KEY, GET_RECENT_CONFERENCES, { offset: 0 }, { merge: mergeRecent });
@@ -306,7 +306,6 @@ export const Home = React.memo(function Home({ selectedItem, onFocusSidebar, onS
           <div className="fluidContainer">
             <Preview
               event={activeBrowseSelection.event}
-              conferenceTitle={activeBrowseSelection.conferenceTitle}
               disableVideo={playerIsOpen}
             />
             <div className="container">
