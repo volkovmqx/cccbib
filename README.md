@@ -2,9 +2,9 @@
 
 [media.ccc.de](https://media.ccc.de) media library application for webOS.
 
-![Main Screen](https://github.com/volkovmqx/cccbib/blob/main/.github/screenshots/screenshot1.png?raw=true)
+![Home screen](.github/screenshots/screenshot1.png)
 
-![Player Screen](https://github.com/volkovmqx/cccbib/blob/main/.github/screenshots/screenshot2.png?raw=true)
+![Player screen](.github/screenshots/screenshot2.png)
 
 
 ## Background

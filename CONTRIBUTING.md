@@ -131,6 +131,12 @@ References: [LG installation instructions](https://webostv.developer.lge.com/dev
 
 Before a webOS release, check the installed package on a real TV. Check remote keys, preview-to-player decoder release, audio languages, subtitles, resume after seeking, and Auto/Zoom/Stretch. Browser tests cannot verify the TV hardware decoder or actual webOS services.
 
+## Screenshots
+
+Capture the production app at 1920×1080. Save the Home screen as `.github/screenshots/screenshot1.png` and the player screen as `.github/screenshots/screenshot2.png`.
+
+The [Homebrew listing](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/) uses these files from `main`. Keep the filenames when you update the images. README image links use the current branch, so you can review new screenshots before a merge.
+
 ## Translations
 
 Copy `src/shared/i18n/locales/de.ts` to a new `.ts` file. Translate its values. Keep the source keys and `{placeholders}` unchanged. Register the language in `src/shared/i18n/translation.ts` and `UI_LANGUAGES` in `src/shared/config/constants.ts`.
