@@ -1,5 +1,10 @@
 <h1><img alt="CCCBib" src=".github/logo.svg" height="34"></h1>
 
+[![CI](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/main.yml?branch=main&label=CI)](https://github.com/volkovmqx/cccbib/actions/workflows/main.yml)
+[![Version](https://img.shields.io/github/package-json/v/volkovmqx/cccbib?label=version)](https://github.com/volkovmqx/cccbib/blob/main/package.json)
+[![License](https://img.shields.io/github/license/volkovmqx/cccbib)](LICENSE)
+[![LG Homebrew](https://img.shields.io/badge/LG%20Homebrew-install-ff69b4)](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/)
+
 [media.ccc.de](https://media.ccc.de) media library application for webOS.
 
 ![Home screen](.github/screenshots/screenshot1.png)
@@ -13,20 +18,14 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 
 ## Features
 
-- Support for conferences lazy loading.
-- Preview of the events on scroll.
-- Support for language change.
-- Smart TV Navigation with React! (Thanks to [this](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [this](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1).)
-- Search for talks.
-- Watchlist and Continue Watching (20 most recent talks in progress).
-- Remote control options (see [Remote control](#remote-control)).
-- Customizations (Black, Dark, Light and Accent colors and custom fonts).
-- 9 app languages.
-- Aspect ratio changing for older videos (Auto, Zoom, Stretch).
-- Quality of Life Remote Controller Button Mapping (Thanks to [Simon34545](https://github.com/Simon34545) LG Input Keymapping overview!) inspired by Youtube/Jellyfin.
-- Configuration page for preferred languages and subtitles.
-- Subtitle support.
-- About Info page (in Settings on the bottom).
+- Browse conferences with video previews and search for talks.
+- Use the TV remote to navigate and control playback.
+- Save talks to the Watchlist and resume the 20 most recent talks in Continue Watching.
+- Select audio languages and subtitles when a talk provides them.
+- Choose from 9 app languages.
+- Change themes, accent colors, and fonts.
+- Select Auto, Zoom, or Stretch for the video aspect ratio.
+- Send commands through webOS launch parameters (see [Remote control](#remote-control)).
 
 ## Remote control
 
@@ -122,6 +121,8 @@ The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced
 ## Credit
 
 The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/shared/branding/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
+
+The TV navigation follows [Norigin Media's guide](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [Utkarsh Gupta's guide](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1). The remote button mapping uses the LG input keymapping overview by [Simon34545](https://github.com/Simon34545).
 
 WebOS Project architecture from ["Informatic"](https://github.com/informatic/streamkatze)
 
