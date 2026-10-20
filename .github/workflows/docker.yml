@@ -11,7 +11,10 @@ permissions:
   packages: write
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
   build-and-push:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -29,7 +32,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+            ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}

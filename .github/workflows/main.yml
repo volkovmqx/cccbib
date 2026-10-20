@@ -1,6 +1,3 @@
-# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
 name: Build & Test
 
 on:
@@ -9,13 +6,41 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+  coverage:
+    needs: quality
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: quality-reports
+      - name: Report application coverage
+        uses: davelosert/vitest-coverage-report-action@8f86cfb56ed6d5613ea8cdc5259f207fbfd51ece # v2
+        with:
+          name: Application
+          vite-config-path: vitest.config.mts
+          # Forks and Dependabot have read-only tokens. Keep their reports in the job summary.
+          comment-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' && 'pr' || 'none' }}
   build:
+    needs: quality
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [25.x, latest]
+        node-version: [24.x, latest]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
@@ -29,13 +54,12 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - run: yarn install --frozen-lockfile
-      - run: yarn test
       - run: yarn run build
       - run: yarn run package
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: matrix.node-version == '25.x'
+        if: matrix.node-version == '24.x'
         with:
           name: cccbib_ipk
           path: |

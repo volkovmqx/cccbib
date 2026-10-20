@@ -11,7 +11,10 @@ on:
       - 'v*.*'
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
   build-and-release:
+    needs: quality
     runs-on: ubuntu-latest
 
     steps:
@@ -19,10 +22,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Use Node.js 25.x
+      - name: Use Node.js from .nvmrc
         uses: actions/setup-node@v4
         with:
-          node-version: 25.x
+          node-version-file: .nvmrc
 
       - run: yarn install --frozen-lockfile
       - run: yarn run build

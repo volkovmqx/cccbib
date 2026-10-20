@@ -4,6 +4,7 @@ module.exports = {
   targets: { chrome: '68' },
   presets: [
     '@babel/preset-env',
+    '@babel/preset-typescript',
     ['@babel/preset-react', { runtime: 'automatic', development: false }],
   ],
   plugins: [
