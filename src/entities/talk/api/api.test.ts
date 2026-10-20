@@ -21,21 +21,36 @@ type TalkImages = ReturnType<typeof talk>['images'];
 
 test('remote talk links accept only the documented host and path', async () => {
   for (const link of ['https://media.ccc.de/v/talk', 'http://media.ccc.de/v/talk', 'media.ccc.de/v/talk?x#y', ' HTTPS://MEDIA.CCC.DE/v/talk/ ']) expect(talkReference(link)).toBe('talk');
-  for (const link of [null, '', {}, 'talk', 'https://example.com/v/talk', 'https://media.ccc.de.evil/v/talk', 'https://media.ccc.de/v/', 'https://media.ccc.de/v/-bad']) {
+  const request = vi.fn();
+  vi.stubGlobal('fetch', request);
+  for (const link of [
+    null, '', {}, 123, 'talk', '419d4f7e-7506-4d46-8700-e47e164a8e32',
+    'https://example.com/v/talk', 'https://media.ccc.de.evil/v/talk', 'https://media.ccc.de@evil.example/v/talk',
+    'https://api.media.ccc.de/public/events/talk', 'https://media.ccc.de/public/events/talk',
+    'https://media.ccc.de/v/', 'https://media.ccc.de/v/-bad', 'https://media.ccc.de/v/../../etc',
+    'javascript:alert(1)', 'file:///etc/passwd',
+  ]) {
     expect(talkReference(link)).toBeNull();
     await expect(fetchTalk(link)).rejects.toThrow('Only media.ccc.de');
   }
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ guid: 'g', title: 'Title', length: 10, recordings: [
-    { mime_type: 'video/webm', recording_url: 'https://static.media.ccc.de/g', language: 'eng' },
-    { mime_type: 'video/webm', recording_url: 'https://evil.example/g' },
-    { mime_type: 'text/vtt', recording_url: 'https://static.media.ccc.de/g.vtt' },
-    { mime_type: 'text/vtt' },
-  ] })));
-  const result = await fetchTalk('media.ccc.de/v/talk');
-  expect(result.videos).toHaveLength(1);
-  expect(result.subtitles).toHaveLength(1);
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({}, 404)));
+  expect(request).not.toHaveBeenCalled();
+  request.mockResolvedValue(json({}, 404));
   await expect(fetchTalk('media.ccc.de/v/missing')).rejects.toThrow('404');
+});
+
+test('remote recordings accept only HTTPS URLs on media.ccc.de and its subdomains', async () => {
+  const allowed = ['https://media.ccc.de/fixture', 'https://cdn.media.ccc.de/fixture'];
+  const urls = [
+    ...allowed, undefined, 'https://evil.example/fixture', 'http://cdn.media.ccc.de/fixture',
+    'https://media.ccc.de.evil.example/fixture', 'https://evilmedia.ccc.de/fixture',
+    'https://media.ccc.de@evil.example/fixture', 'file:///fixture',
+  ];
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ guid: 'g', title: 'Title', length: 10,
+    recordings: urls.flatMap(recording_url => ['video/webm', 'text/vtt'].map(mime_type => ({ recording_url, mime_type }))),
+  })));
+  const result = await fetchTalk('media.ccc.de/v/talk');
+  expect(result.videos.map(video => video.url)).toEqual(allowed);
+  expect(result.subtitles?.map(subtitle => subtitle.url)).toEqual(allowed);
 });
 
 test('mirror selection preserves direct URLs and remembers a working mirror', () => {
