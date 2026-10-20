@@ -1,5 +1,9 @@
 <h1><img alt="CCCBib" src=".github/logo.svg" height="34"></h1>
 
+[![Tests](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/test.yml?branch=main&label=tests)](https://github.com/volkovmqx/cccbib/actions/workflows/test.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/main.yml?branch=main&label=build)](https://github.com/volkovmqx/cccbib/actions/workflows/main.yml)
+[![LG Homebrew](https://img.shields.io/badge/LG%20Homebrew-install-ff69b4)](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/)
+
 [media.ccc.de](https://media.ccc.de) media library application for webOS.
 
 ![Main Screen](https://github.com/volkovmqx/cccbib/blob/main/.github/screenshots/screenshot1.png?raw=true)
