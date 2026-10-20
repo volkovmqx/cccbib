@@ -21,7 +21,9 @@ type TalkImages = ReturnType<typeof talk>['images'];
 
 test('remote talk links accept only the documented host and path', async () => {
   for (const link of ['https://media.ccc.de/v/talk', 'http://media.ccc.de/v/talk', 'media.ccc.de/v/talk?x#y', ' HTTPS://MEDIA.CCC.DE/v/talk/ ']) expect(talkReference(link)).toBe('talk');
-  for (const link of [null, '', {}, 'talk', 'https://example.com/v/talk', 'https://media.ccc.de.evil/v/talk', 'https://media.ccc.de/v/', 'https://media.ccc.de/v/-bad']) {
+  for (const link of [null, '', {}, 'talk', 'https://example.com/v/talk', 'https://media.ccc.de.evil/v/talk', 'https://media.ccc.de/v/', 'https://media.ccc.de/v/-bad',
+    'https://media.ccc.de@evil.example/v/talk', 'https://evilmedia.ccc.de/v/talk', 'https://api.media.ccc.de/v/talk', 'https://api.media.ccc.de/public/events/talk', 'https://media.ccc.de/public/events/talk',
+    '419d4f7e-7506-4d46-8700-e47e164a8e32', 'javascript:alert(1)', 'https://media.ccc.de/v/../../etc', 'file:///etc/passwd']) {
     expect(talkReference(link)).toBeNull();
     await expect(fetchTalk(link)).rejects.toThrow('Only media.ccc.de');
   }
@@ -36,6 +38,21 @@ test('remote talk links accept only the documented host and path', async () => {
   expect(result.subtitles).toHaveLength(1);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({}, 404)));
   await expect(fetchTalk('media.ccc.de/v/missing')).rejects.toThrow('404');
+});
+
+test('recording and subtitle urls outside https media.ccc.de are dropped', async () => {
+  const recordings = [
+    { recording_url: 'https://cdn.media.ccc.de/a.webm', mime_type: 'video/webm' },
+    { recording_url: 'http://cdn.media.ccc.de/c.webm', mime_type: 'video/webm' },
+    { recording_url: 'https://media.ccc.de.evil.example/d.webm', mime_type: 'video/webm' },
+    { recording_url: 'https://evilmedia.ccc.de/e.webm', mime_type: 'video/webm' },
+    { recording_url: 'https://static.media.ccc.de/x.vtt', mime_type: 'text/vtt' },
+    { recording_url: 'https://evil.example/x.vtt', mime_type: 'text/vtt' },
+  ];
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ guid: 'g', title: 'Title', length: 60, recordings })));
+  const result = await fetchTalk('media.ccc.de/v/talk');
+  expect(result.videos.map(video => video.url)).toEqual(['https://cdn.media.ccc.de/a.webm']);
+  expect(result.subtitles?.map(subtitle => subtitle.url)).toEqual(['https://static.media.ccc.de/x.vtt']);
 });
 
 test('mirror selection preserves direct URLs and remembers a working mirror', () => {
