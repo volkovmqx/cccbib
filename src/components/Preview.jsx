@@ -114,20 +114,22 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle, dis
             </div>
             <div className="preview">
                 <div className="previewOverlay" />
-                <div className="previewBackdrop" aria-hidden="true">
-                    {thumbUrl && <img key={`thumb-${event.guid}`} className="previewBackdrop__img" src={thumbUrl} alt="" />}
-                    {posterUrl && loadPoster && (
-                        <img
-                            key={`poster-${event.guid}`}
-                            className="previewBackdrop__img"
-                            style={{ opacity: posterLoadedFor === event.guid ? 1 : 0 }}
-                            src={posterUrl}
-                            onLoad={() => setPosterLoadedFor(event.guid)}
-                            alt=""
-                        />
-                    )}
-                </div>
-                {showVideo && !idle && recording && recording.url && !disableVideo && previewVideo !== 'off' && (
+                {previewVideo !== 'none' && (
+                    <div className="previewBackdrop" aria-hidden="true">
+                        {thumbUrl && <img key={`thumb-${event.guid}`} className="previewBackdrop__img" src={thumbUrl} alt="" />}
+                        {posterUrl && loadPoster && (
+                            <img
+                                key={`poster-${event.guid}`}
+                                className="previewBackdrop__img"
+                                style={{ opacity: posterLoadedFor === event.guid ? 1 : 0 }}
+                                src={posterUrl}
+                                onLoad={() => setPosterLoadedFor(event.guid)}
+                                alt=""
+                            />
+                        )}
+                    </div>
+                )}
+                {showVideo && !idle && recording && recording.url && !disableVideo && (previewVideo === 'on' || previewVideo === 'mute') && (
                     <video
                         ref={trackPreviewVideo}
                         src={`${previewSources[Math.min(previewSourceIndex, previewSources.length - 1)]}#t=${previewTimestamp}`}
@@ -140,7 +142,7 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle, dis
                         className="player"
                     />
                 )}
-                {!recording && (
+                {previewVideo !== 'none' && !recording && (
                     <div className="noRecording">
                         {t('No recording available')}
                     </div>

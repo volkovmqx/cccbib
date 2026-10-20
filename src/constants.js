@@ -54,7 +54,8 @@ export const SUBTITLE_SIZES = [
 export const PREVIEW_VIDEO_OPTIONS = [
   { code: 'on', name: 'On' },
   { code: 'mute', name: 'Mute' },
-  { code: 'off', name: 'Off' },
+  { code: 'still', name: 'Still' },
+  { code: 'none', name: 'Off' },
 ];
 
 export const REMOTE_CONTROL_OPTIONS = [

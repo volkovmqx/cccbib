@@ -90,7 +90,7 @@ const TABS = [
         title: 'Video',
         rows: [
           { key: 'aspectRatio', title: 'Aspect Ratio', description: 'Zoom crops and Stretch distorts to fill the screen, which helps with old 4:3 recordings.', options: ASPECT_RATIOS },
-          { key: 'previewVideo', title: 'Preview Videos', description: 'Video previews while browsing.', options: PREVIEW_VIDEO_OPTIONS },
+          { key: 'previewVideo', title: 'Preview Videos', description: 'Video previews while browsing. Still shows only the picture and Off shows nothing.', options: PREVIEW_VIDEO_OPTIONS },
         ],
       },
       {

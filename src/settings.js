@@ -9,6 +9,10 @@ const LEGACY = {
   subtitleColor: { key: 'subtitleStyle', map: { green: '#AAF40D', white: '#FFFFFF', black: '#000000' } },
 };
 
+const VALUE_ALIASES = {
+  previewVideo: { off: 'still' },
+};
+
 function parseStored(raw) {
   try {
     return JSON.parse(raw);
@@ -27,7 +31,8 @@ function readStored(key) {
       const legacyRaw = localStorage.getItem(legacy.key);
       return (legacyRaw !== null && legacy.map[parseStored(legacyRaw)]) || fallback;
     }
-    const parsed = parseStored(raw);
+    const stored = parseStored(raw);
+    const parsed = (VALUE_ALIASES[key] && VALUE_ALIASES[key][stored]) || stored;
     return typeof parsed === typeof fallback ? parsed : fallback;
   } catch (error) {
     return fallback;
