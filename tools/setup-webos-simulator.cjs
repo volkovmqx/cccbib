@@ -32,7 +32,8 @@ async function setup() {
   if (!await stat(archive).catch(() => null)) {
     const partial = `${archive}.partial`;
     try {
-      run('curl', ['--fail', '--location', '--retry', '2', '--max-time', '180', '--output', partial, pin.url]);
+      run('curl', ['--fail-with-body', '--location', '--retry', '2', '--max-time', '180',
+        '--referer', 'https://webostv.developer.lge.com/', '--user-agent', 'Mozilla/5.0', '--output', partial, pin.url]);
       await verify(partial);
       await rename(partial, archive);
     } finally { await rm(partial, { force: true }); }
