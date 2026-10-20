@@ -22,7 +22,7 @@ This app uses the official media.ccc.de/graphql endpoint. It is built using Reac
 - Browse all conferences with video previews.
 - Made for the TV remote with a button mapping inspired by YouTube and Jellyfin.
 - Watchlist and Continue Watching.
-- Subtitles and a choice of audio language when a talk offers several.
+- Subtitles and a choice of audio language when a talk offers them.
 - 9 app languages.
 - App Customization (Themes, Accent Colors, Custom Fonts).
 - Remote control over webOS launch parameters (see [Remote control](#remote-control)).
