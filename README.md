@@ -161,6 +161,31 @@ The Chrome 68 runner downloads its fixed snapshot into `/tmp/cccbib-chrome68`. S
 
 The build, release, and Docker workflows run the same quality workflow before they package or publish the application. CI uploads coverage reports, browser reports, and failure data.
 
+### webOS Simulator on Linux
+
+The `webos-simulator` CI job uses GitHub-hosted `ubuntu-24.04` and webOS TV 26 Simulator 1.5.0 for Linux x64. It runs the production files in `dist/`. It does not require a TV, an LG account, or manual input.
+
+The pinned public LG file ID is `RF00021103`. The setup script resolves its temporary download URL through `https://webostv.developer.lge.com/api/downloadSDK`. It records the resolved URL in `test-results/webos-download.json`. LG's download server is `https://gfts.lge.com/fts/gftsFilePathDownload.lge`. The archive SHA-256 is `8668c06503e82a52303e8c31e90c458c1d7c4d6dc74151ae6fc53df37e368d4e`. This checksum was calculated from the LG archive. The setup script verifies it on downloads and cache hits before extraction. The CI cache key contains the version and checksum.
+
+Install `xvfb`, `xauth`, `unzip`, `libnss3`, `libatk-bridge2.0-0`, `libgtk-3-0`, `libgbm1`, and `libasound2t64` on Ubuntu 24.04. Then run:
+
+```sh
+yarn setup:webos
+yarn build
+xvfb-run -a yarn test:webos
+
+# Use the same 1920×1080 display as CI.
+xvfb-run -a -s '-screen 0 1920x1080x24' yarn test:webos
+```
+
+The fixture starts the extracted Simulator executable directly with `--ozone-platform=x11` and `--no-sandbox`. It connects the installed Playwright package through `chromium.connectOverCDP()`. It selects the exact `file://` application target. It installs fixture interception before the tested reload. DNS resolution stays disabled, and unexpected external requests fail the test.
+
+Each test gets a separate Simulator storage directory. Restart tests reuse that directory. Navigation uses CDP input, including webOS Back keycode `461`. The reports contain application screenshots, Simulator output, console errors, target details, Chromium versions, launch arguments, HTML, and JUnit. CI retains them for 14 days. The fixture stops the Simulator process group after each test. CI also stops remaining Simulator processes after a failure.
+
+The [compatibility CI run](https://github.com/volkovmqx/cccbib/actions/runs/39418673503) passed before the full suite was added. It reported Chromium `120.0.6099.291`. It verified CDP attachment, application target selection, DOM reads, native navigation input, fixture interception, and screenshot capture. The full suite also checks all pages, search, playback, restart persistence, and request failure. Media fixtures support HTTP byte ranges for seeking.
+
+References: [LG installation instructions](https://webostv.developer.lge.com/develop/tools/simulator-installation), [LG Simulator guide](https://webostv.developer.lge.com/develop/tools/simulator-dev-guide), [Electron CI instructions](https://www.electronjs.org/docs/latest/tutorial/testing-on-headless-ci), and [Playwright CDP documentation](https://playwright.dev/docs/api/class-browsertype#browser-type-connect-over-cdp). Playwright documents reduced support for CDP connections. The compatibility test checks the required operations against the pinned runtime.
+
 Before a webOS release, check the installed package on a real TV. Check remote keys, preview-to-player decoder release, audio languages, subtitles, resume after seeking, and Auto/Zoom/Stretch. Browser tests cannot verify the TV hardware decoder or actual webOS services.
 
 ### Local deployment

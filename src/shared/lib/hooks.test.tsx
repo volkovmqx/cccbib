@@ -74,6 +74,18 @@ test('list navigation wraps selection, transfers focus, and handles both back ke
   expect(onSelect).toHaveBeenCalledTimes(1);
 });
 
+test('empty lists keep Back and sidebar navigation usable', () => {
+  const onClose = vi.fn(); const onSelect = vi.fn(); const onFocusSidebar = vi.fn(); const setSelectedIndex = vi.fn();
+  renderHook(() => useListNavigation({ itemCount: 0, selectedIndex: 0, setSelectedIndex, onClose, onSelect, onFocusSidebar, sidebarFocused: false }));
+  for (const [key, keyCode] of [['Unidentified', 461], ['ArrowLeft', 37], ['ArrowDown', 40], ['ArrowUp', 38], ['Enter', 13]] as const) {
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key, keyCode, cancelable: true })); });
+  }
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(onFocusSidebar).toHaveBeenCalledOnce();
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(setSelectedIndex).not.toHaveBeenCalled();
+});
+
 test('image preloading skips missing and duplicate URLs and respects its range', () => {
   const images: string[] = [];
   vi.stubGlobal('Image', class { set src(url: string) { images.push(url); } });
