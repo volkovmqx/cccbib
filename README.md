@@ -2,6 +2,8 @@
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/test.yml?branch=main&label=tests)](https://github.com/volkovmqx/cccbib/actions/workflows/test.yml)
 [![Build](https://img.shields.io/github/actions/workflow/status/volkovmqx/cccbib/main.yml?branch=main&label=build)](https://github.com/volkovmqx/cccbib/actions/workflows/main.yml)
+[![Version](https://img.shields.io/github/package-json/v/volkovmqx/cccbib?label=version)](https://github.com/volkovmqx/cccbib/blob/main/package.json)
+[![License](https://img.shields.io/github/license/volkovmqx/cccbib)](LICENSE)
 [![LG Homebrew](https://img.shields.io/badge/LG%20Homebrew-install-ff69b4)](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/)
 
 [media.ccc.de](https://media.ccc.de) media library application for webOS.
