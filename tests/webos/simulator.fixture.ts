@@ -62,7 +62,7 @@ export class Simulator {
       if (this.child?.exitCode !== null) throw new Error(`Simulator exited: ${this.child?.exitCode}`);
       return fetch(`${endpoint}/json/version`).then(r => r.ok).catch(() => false);
     }, { timeout: 30_000, message: 'Simulator must expose CDP.' }).toBe(true);
-    this.browser = await chromium.connectOverCDP('http://127.0.0.1:65534', { timeout: 15_000 });
+    this.browser = await chromium.connectOverCDP(endpoint, { timeout: 15_000 });
     const context = this.browser.contexts()[0];
     if (!context) throw new Error('Simulator has no default context.');
     await context.route('**/*', async route => {
