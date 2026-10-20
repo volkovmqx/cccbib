@@ -20,9 +20,16 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle, dis
     const [showVideo, setShowVideo] = useState(false);
     useEffect(() => {
         setShowVideo(false);
+        if (disableVideo) return undefined;
         const timer = setTimeout(() => setShowVideo(true), PREVIEW_DEBOUNCE_MS);
         return () => clearTimeout(timer);
-    }, [event.guid]);
+    }, [event.guid, disableVideo]);
+
+    const silencePreview = (event) => {
+        const tracks = event.target.audioTracks;
+        if (previewVideo !== 'mute' || !tracks) return;
+        for (let i = 0; i < tracks.length; i += 1) tracks[i].enabled = false;
+    };
 
     const previewVideoRef = useRef(null);
     const trackPreviewVideo = useCallback((element) => {
@@ -128,6 +135,8 @@ export const Preview = React.memo(function Preview({ event, conferenceTitle, dis
                         preload="none"
                         autoPlay
                         muted={previewVideo === 'mute'}
+                        onLoadedMetadata={silencePreview}
+                        onPlaying={silencePreview}
                         className="player"
                     />
                 )}

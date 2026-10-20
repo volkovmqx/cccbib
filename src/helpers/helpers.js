@@ -81,6 +81,7 @@ export function getPreviewVideo(videos, preferredLanguage) {
 export function releaseVideo(video) {
   if (!video) return;
   try {
+    video.muted = true;
     video.pause();
     video.removeAttribute('src');
     video.load();
