@@ -129,6 +129,8 @@ The TV navigation follows [Norigin Media's guide](https://noriginmedia.com/2019/
 
 WebOS Project architecture from ["Informatic"](https://github.com/informatic/streamkatze)
 
+The themes and the look of the app are inspired by [Litefin](https://github.com/MoazSalem/litefin) by [MoazSalem](https://github.com/MoazSalem).
+
 
 
 ## License
