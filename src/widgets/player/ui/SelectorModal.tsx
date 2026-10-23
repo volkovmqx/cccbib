@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import { LANGUAGE_NAMES } from '@/shared/config';
 import { useTranslation } from '@/shared/i18n';
+import { pointerMoved, revealInList } from '@/shared/lib';
 
 export const SelectorModal = React.memo(function SelectorModal({
   title,
@@ -9,9 +10,10 @@ export const SelectorModal = React.memo(function SelectorModal({
   selectedIndex,
   currentValue,
   onSelect,
+  onHover,
   onClose,
   getLabel,
-}: { title: string; options: string[]; selectedIndex: number; currentValue: string; onSelect: (value: string) => void; onClose: () => void; getLabel?: (value: string) => string }) {
+}: { title: string; options: string[]; selectedIndex: number; currentValue: string; onSelect: (value: string) => void; onHover?: (index: number) => void; onClose: () => void; getLabel?: (value: string) => string }) {
   const t = useTranslation();
   const defaultGetLabel = (opt: string) => {
     if (opt === 'none') return t('None');
@@ -22,7 +24,7 @@ export const SelectorModal = React.memo(function SelectorModal({
   const selectedRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (selectedRef.current) selectedRef.current.scrollIntoView({ block: 'nearest' });
+    revealInList(selectedRef.current);
   }, [selectedIndex]);
 
   return (
@@ -30,13 +32,14 @@ export const SelectorModal = React.memo(function SelectorModal({
       <div className="picker__overlay" onClick={onClose} />
       <div className="picker__panel">
         <h3 className="picker__title">{title}</h3>
-        <div className="picker__list">
+        <div className="picker__list" data-wheel="scroll">
           {options.map((option, index) => (
             <div
               key={option}
               ref={index === selectedIndex ? selectedRef : null}
               className={`picker__item ${index === selectedIndex ? 'picker__item--selected' : ''} ${option === currentValue ? 'picker__item--current' : ''}`}
               onClick={() => onSelect(option)}
+              onMouseMove={(e) => { if (onHover && pointerMoved(e)) onHover(index); }}
             >
               {labelFn(option)}
               {option === currentValue && <IconCheck />}

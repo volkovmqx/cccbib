@@ -38,6 +38,23 @@ test('home cache ignores malformed, empty, unchanged, and oversized data', () =>
   expect(loadHomeCache()).toBeNull();
 });
 
+test('the home cache is only serialised again when a conference object changed', () => {
+  clearHomeCache();
+  const first = conference({ id: 'a' });
+  const second = conference({ id: 'b' });
+  const stringify = vi.spyOn(JSON, 'stringify');
+  saveHomeCache([first, second]);
+  saveHomeCache([first, second]);
+  saveHomeCache([first, second].slice());
+  expect(stringify).toHaveBeenCalledTimes(1);
+  saveHomeCache([first, { ...second }]);
+  expect(stringify).toHaveBeenCalledTimes(2);
+  clearHomeCache();
+  saveHomeCache([first, second]);
+  expect(stringify).toHaveBeenCalledTimes(3);
+  stringify.mockRestore();
+});
+
 test('home cache handles denied reads and writes', () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw Error('denied'); });

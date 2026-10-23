@@ -1,8 +1,8 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import Settings from './Settings';
 import { getSetting, setSetting } from '@/shared/config';
-import { SETTING_DEFAULTS } from '@/shared/config/constants';
+import { LOADER_STYLES, SETTING_DEFAULTS, SPINNER_STYLES, THEME_MODES } from '@/shared/config/constants';
 import type { SettingKey } from '@/shared/config';
 
 const callbacks = () => ({ onClose: vi.fn(), onFocusSidebar: vi.fn(), sidebarFocused: false });
@@ -79,6 +79,133 @@ test('settings swatch picker navigates a grid and closes by its overlay', () => 
   expect(view.container.querySelector('.picker')).not.toBeInTheDocument();
 });
 
+test('settings content keeps the normal wheel scrolling while the tabs are stepped through', () => {
+  const view = render(<Settings {...callbacks()} />);
+  expect(view.container.querySelector('.settingsView__content')).toHaveAttribute('data-wheel', 'scroll');
+  expect(view.container.querySelector('.settingsView__tabs')).not.toHaveAttribute('data-wheel');
+});
+
+test('going back to the content from the tabs or the side menu returns to the row you left without scrolling', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const scroll = vi.mocked(HTMLElement.prototype.scrollIntoView);
+  const key = (name: string) => fireEvent.keyDown(window, { key: name });
+  key('ArrowRight'); key('ArrowDown'); key('ArrowDown');
+  const rows = [...view.container.querySelectorAll('.settingsView__row')];
+  expect(rows[2]).toHaveClass('settingsView__row--focused');
+  key('ArrowLeft');
+  expect(view.container.querySelector('.settingsView__tab--focused')).toBeInTheDocument();
+  expect(rows[2]).not.toHaveClass('settingsView__row--focused');
+  scroll.mockClear();
+  key('ArrowRight');
+  expect(rows[2]).toHaveClass('settingsView__row--focused');
+  expect(scroll).toHaveBeenCalledTimes(1);
+  expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+  key('ArrowLeft'); key('Enter');
+  expect(rows[2]).toHaveClass('settingsView__row--focused');
+  fireEvent.click(view.container.querySelectorAll('.settingsView__tab')[1]);
+  key('ArrowRight');
+  expect(view.container.querySelector('.settingsView__row--focused')).toHaveTextContent('Text Size');
+});
+
+test('every setting with more than four options is chosen in a popup, the others stay in one line', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const popups: string[] = [];
+  for (const tab of [...view.container.querySelectorAll('.settingsView__tab')]) {
+    fireEvent.click(tab);
+    for (const row of [...view.container.querySelectorAll('.settingsView__row')]) {
+      const segments = row.querySelectorAll('.settingsView__segment').length;
+      expect(segments, row.textContent ?? '').toBeLessThanOrEqual(4);
+      if (row.querySelector('.settingsView__select')) popups.push(row.querySelector('.settingsView__rowName')!.textContent!);
+    }
+  }
+  for (const name of ['Theme', 'Button Style', 'Border Width', 'Startup Animation', 'Loading Animation', 'Text Size', 'Accent Color', 'Font']) expect(popups).toContain(name);
+  for (const name of ['Corners', 'Indicator', 'Icon Color']) expect(popups).not.toContain(name);
+});
+
+test('theme, border width, and animations are previewed in their popups', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const preview = (title: string, selector: string, count: number) => {
+    const row = screen.getByText(title).closest('.settingsView__row')!;
+    expect(row.querySelector(`.settingsView__select ${selector}`), title).toBeInTheDocument();
+    fireEvent.click(row.querySelector('.settingsView__select')!);
+    const items = [...view.container.querySelectorAll('.picker__item')];
+    expect(items).toHaveLength(count);
+    for (const item of items) expect(item.querySelector(selector), title).toBeInTheDocument();
+    fireEvent.click(view.container.querySelector('.picker__overlay')!);
+  };
+  preview('Theme', '.settingsView__btnPreview', THEME_MODES.length);
+  preview('Border Width', '.settingsView__borderPreview', 7);
+  preview('Startup Animation', '.settingsView__loaderPreview', LOADER_STYLES.length);
+  preview('Loading Animation', '.settingsView__loaderPreview', SPINNER_STYLES.length);
+  const row = screen.getByText('Theme').closest('.settingsView__row')!;
+  fireEvent.click(row.querySelector('.settingsView__select')!);
+  fireEvent.click([...view.container.querySelectorAll('.picker__item')].find(item => /Light$/.test(item.textContent ?? ''))!);
+  expect(getSetting('themeMode')).toBe('light');
+  expect(row.querySelector('.settingsView__select')).toHaveTextContent('Light');
+});
+
+test('button style is chosen in a popup that previews every style', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const row = screen.getByText('Button Style').closest('.settingsView__row')!;
+  expect(row.querySelectorAll('.settingsView__segment')).toHaveLength(0);
+  const select = row.querySelector('.settingsView__select')!;
+  expect(select).toHaveTextContent('Accent');
+  expect(select.querySelector('.settingsView__btnPreview')).toBeInTheDocument();
+  fireEvent.click(select);
+  const items = [...view.container.querySelectorAll('.picker__item')];
+  expect(items).toHaveLength(8);
+  for (const item of items) expect(item.querySelector('.settingsView__btnPreview')).toBeInTheDocument();
+  expect(items[0]).toHaveClass('picker__item--current');
+  fireEvent.click(items[1]);
+  expect(getSetting('buttonStyle')).toBe('inverted');
+  expect(view.container.querySelector('.picker')).not.toBeInTheDocument();
+  expect(row.querySelector('.settingsView__select')).toHaveTextContent('Inverted');
+});
+
+test('a row focused by the pointer is not scrolled to the centre but one focused by the keys is', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const scroll = vi.mocked(HTMLElement.prototype.scrollIntoView);
+  const rows = [...view.container.querySelectorAll('.settingsView__row')];
+  fireEvent.mouseMove(rows[3], { clientX: 201, clientY: 301 });
+  expect(rows[3]).toHaveClass('settingsView__row--focused');
+  expect(scroll).not.toHaveBeenCalled();
+  fireEvent.mouseMove(rows[3], { clientX: 202, clientY: 302 });
+  fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(rows[4]).toHaveClass('settingsView__row--focused');
+  expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+});
+
+test('settings follow a moving pointer over tabs, rows, options, and the picker', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const move = (element: Element, x: number) => fireEvent.mouseMove(element, { clientX: x, clientY: 5 });
+  const tabs = [...view.container.querySelectorAll('.settingsView__tab')];
+  move(tabs[1], 101);
+  expect(tabs[1]).toHaveClass('settingsView__tab--active');
+  expect(tabs[1]).toHaveClass('settingsView__tab--focused');
+  move(tabs[1], 102);
+  fireEvent.click(tabs[0]);
+  const indicator = screen.getByText('Indicator').closest('.settingsView__row')!;
+  move(indicator, 103);
+  expect(indicator).toHaveClass('settingsView__row--focused');
+  expect(tabs[0]).not.toHaveClass('settingsView__tab--focused');
+  const border = [...indicator.querySelectorAll('.settingsView__segment')].find(option => option.textContent === 'Border')!;
+  move(border, 104);
+  expect(border).toHaveClass('settingsView__control--focused');
+  move(indicator, 105);
+  expect(indicator.querySelector('.settingsView__control--focused')).toHaveTextContent('Line');
+  fireEvent.click(screen.getByText('Font').closest('.settingsView__row')!.querySelector('.settingsView__select')!);
+  const items = [...view.container.querySelectorAll('.picker__item')];
+  move(items[2], 106);
+  expect(items[2]).toHaveClass('picker__item--selected');
+  move(items[2], 107);
+  expect(items[2]).toHaveClass('picker__item--selected');
+  fireEvent.click(view.container.querySelector('.picker__overlay')!);
+  fireEvent.click(screen.getByText('Accent Color').closest('.settingsView__row')!.querySelector('.settingsView__select')!);
+  const swatches = [...view.container.querySelectorAll('.picker__swatch')];
+  move(swatches[3], 108);
+  expect(swatches[3]).toHaveClass('picker__swatch--selected');
+});
+
 test('settings show conditional glass controls and clear only the requested stored data', () => {
   vi.useFakeTimers();
   setSetting('railStyle', 'glass');
@@ -104,4 +231,99 @@ test('settings show conditional glass controls and clear only the requested stor
   expect(localStorage.getItem('playback_position_talk')).toBeNull();
   expect(localStorage.getItem('home_cache_v1')).toBeNull();
   expect(localStorage.getItem('unrelated')).toBe('keep');
+});
+
+test('the font popup shows each font at its own size factor so the list looks even', () => {
+  const view = render(<Settings {...callbacks()} />);
+  fireEvent.click(screen.getByText('Font').closest('.settingsView__row')!.querySelector('.settingsView__select')!);
+  expect(view.container.querySelector('.picker__list')).toHaveAttribute('data-wheel', 'scroll');
+  const label = (name: string) => [...view.container.querySelectorAll<HTMLElement>('.picker__itemLabel span')].find((span) => span.textContent === name)!;
+  expect(label('VT323').style.fontSize).toBe('1.15em');
+  expect(label('Silkscreen').style.fontSize).toBe('0.85em');
+  expect(label('Inter').style.fontSize).toBe('');
+});
+
+test('the subtitle font starts with App, which follows the app font, and the app font has no such entry', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const names = () => [...view.container.querySelectorAll('.picker__itemLabel span')].map((span) => span.textContent);
+  const openFont = () => fireEvent.click(screen.getByText('Font').closest('.settingsView__row')!.querySelector('.settingsView__select')!);
+  openFont();
+  expect(names()).not.toContain('App');
+  fireEvent.keyDown(window, { key: 'Escape' });
+  fireEvent.click([...view.container.querySelectorAll('.settingsView__tab')].find((tab) => tab.textContent!.includes('Subtitles'))!);
+  openFont();
+  expect(names().slice(0, 3)).toEqual(['App', 'System', 'Inconsolata']);
+  expect(view.container.querySelector<HTMLElement>('.picker__itemLabel span')!.style.fontFamily).toBe('');
+  fireEvent.click(view.container.querySelector('.picker__item')!);
+  expect(getSetting('subtitleFont')).toBe('app');
+});
+
+test('the scrollbar row offers normal, large and hidden and stores the choice', () => {
+  render(<Settings {...callbacks()} />);
+  const row = screen.getByText('Scrollbar').closest('.settingsView__row') as HTMLElement;
+  for (const name of ['Normal', 'Large', 'Hidden']) expect(within(row).getByText(name)).toBeInTheDocument();
+  expect(getSetting('scrollbarSize')).toBe('normal');
+  fireEvent.click(within(row).getByText('Large'));
+  expect(getSetting('scrollbarSize')).toBe('large');
+  fireEvent.click(within(row).getByText('Hidden'));
+  expect(getSetting('scrollbarSize')).toBe('hidden');
+});
+
+test('the tab list wraps around from its last tab to the first and back', () => {
+  render(<Settings {...callbacks()} />);
+  const key = (name: string) => fireEvent.keyDown(window, { key: name });
+  const active = () => document.querySelector('.settingsView__tab--active')!.textContent;
+  key('ArrowUp');
+  expect(active()).toContain('Data & About');
+  key('ArrowDown');
+  expect(active()).toContain('Appearance');
+  for (let index = 0; index < 4; index++) key('ArrowDown');
+  expect(active()).toContain('Data & About');
+});
+
+test.each([[false, 0], [true, 1]])('the menu position row only shows on a small screen: %s', (small, count) => {
+  vi.stubGlobal('matchMedia', () => ({ matches: small, addListener: vi.fn(), removeListener: vi.fn() }));
+  const view = render(<Settings {...callbacks()} />);
+  expect([...view.container.querySelectorAll('.settingsView__rowName')].filter((name) => name.textContent === 'Menu Position')).toHaveLength(count);
+  if (small) {
+    const row = [...view.container.querySelectorAll('.settingsView__row')].find((item) => item.textContent?.startsWith('Menu Position'))!;
+    fireEvent.click(within(row as HTMLElement).getByText('Bottom'));
+    expect(getSetting('menuPosition')).toBe('bottom');
+  }
+  vi.unstubAllGlobals();
+});
+
+test('a select whose saved value is not among its options shows an empty name', () => {
+  setSetting('themeMode', 'removed-theme' as never);
+  const view = render(<Settings {...callbacks()} />);
+  const row = screen.getByText('Theme').closest('.settingsView__row')!;
+  expect(row.querySelector('.settingsView__selectName')).toHaveTextContent('');
+  expect(view.container.querySelector('.settingsView__select')).toBeInTheDocument();
+});
+
+test('the keys move through button rows and select rows without changing a choice they do not have', () => {
+  vi.useFakeTimers();
+  const view = render(<Settings {...callbacks()} />);
+  const key = (name: string) => fireEvent.keyDown(window, { key: name });
+  for (let step = 0; step < 4; step++) key('ArrowDown');
+  expect(view.container.querySelector('.settingsView__tab--active')).toHaveTextContent('Data & About');
+  key('ArrowRight');
+  key('ArrowRight');
+  key('ArrowLeft');
+  expect(view.container.querySelector('.settingsView__tab--focused')).toBeInTheDocument();
+  key('ArrowRight');
+  key('ArrowDown');
+  key('Enter');
+  expect(view.container.textContent).toContain('Watchlist cleared.');
+  act(() => { vi.runOnlyPendingTimers(); });
+  key('ArrowUp');
+  key('Enter');
+  expect(view.container.querySelector('.settingsView__tab--active')).toHaveTextContent('Data & About');
+  for (let step = 0; step < 4; step++) { key('ArrowLeft'); key('ArrowUp'); }
+  key('ArrowRight');
+  key('ArrowDown');
+  key('ArrowRight');
+  key('ArrowLeft');
+  key('ArrowLeft');
+  expect(view.container.querySelector('.settingsView__tab--focused')).toBeInTheDocument();
 });

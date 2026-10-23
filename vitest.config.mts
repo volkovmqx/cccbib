@@ -21,7 +21,7 @@ export default defineConfig({
       exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.d.ts'],
       reporter: ['text', 'html', 'lcov', 'json-summary', 'json'],
       reportOnFailure: true,
-      thresholds: { lines: 95, statements: 95, functions: 95, branches: 95 },
+      thresholds: { lines: 99, statements: 99, functions: 99, branches: 96.5 },
     },
   },
 });

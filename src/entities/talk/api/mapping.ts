@@ -26,7 +26,7 @@ export const fromRest = (event: RestTalk): Talk => ({
   images: { thumbUrl: event.thumb_url, posterUrl: event.poster_url },
   videos: (event.recordings || [])
     .filter((r) => r.mime_type && r.mime_type.includes('video'))
-    .map((r) => ({ url: r.recording_url, mimeType: r.mime_type, language: r.language || event.original_language || 'eng', width: r.width, height: r.height })),
+    .map((r) => ({ url: r.recording_url, mimeType: r.mime_type, language: r.language || event.original_language || 'eng', width: r.width, height: r.height, size: r.size })),
   subtitles: (event.recordings || [])
     .filter((r) => r.mime_type && /vtt|subrip/i.test(r.mime_type))
     .map((r) => ({ url: r.recording_url, mimeType: r.mime_type, language: r.language || 'eng' })),

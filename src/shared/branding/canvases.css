@@ -1,0 +1,87 @@
+/* Written into index.html too, so the startup screen shows the glow */
+html[data-theme='ambient'] {
+  --canvas:
+    radial-gradient(circle at 85% 15%, rgba(var(--accent-rgb), 0.3) 0%, rgba(var(--accent-rgb), 0.1) 35%, transparent 70%),
+    radial-gradient(circle at 15% 85%, rgba(var(--accent-rgb), 0.3) 0%, rgba(var(--accent-rgb), 0.1) 35%, transparent 70%);
+  --canvas-fixed: fixed, fixed;
+}
+
+html[data-theme='ember'] {
+  --canvas:
+    radial-gradient(65% 55% at 50% 110%, rgba(var(--accent-rgb), 0.3) 0%, rgba(var(--accent-rgb), 0.12) 38%, transparent 66%),
+    radial-gradient(35% 38% at 6% 102%, rgba(var(--accent-rgb), 0.2) 0%, transparent 62%),
+    radial-gradient(35% 38% at 94% 102%, rgba(var(--accent-rgb), 0.2) 0%, transparent 62%),
+    linear-gradient(to top, rgba(var(--accent-rgb), 0.08) 0%, transparent 50%);
+  --canvas-fixed: fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='sunset'] {
+  --canvas:
+    radial-gradient(58% 44% at 50% 108%, rgba(var(--accent-rgb), 0.4) 0%, rgba(var(--accent-rgb), 0.16) 36%, transparent 64%),
+    radial-gradient(52% 36% at 12% 0%, rgba(98, 74, 208, 0.24) 0%, transparent 60%),
+    linear-gradient(to top, rgba(var(--accent-rgb), 0.16) 0%, transparent 26%),
+    linear-gradient(180deg, rgba(21, 15, 46, 0.7) 0%, rgba(36, 22, 64, 0) 38%, rgba(84, 38, 24, 0.5) 82%, rgba(107, 50, 38, 0.8) 100%);
+  --canvas-fixed: fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='frost'] {
+  --canvas:
+    radial-gradient(90% 42% at 88% -8%, rgba(var(--accent-rgb), 0.12) 0%, transparent 58%),
+    radial-gradient(75% 42% at 12% 112%, rgba(130, 190, 225, 0.28) 0%, rgba(130, 190, 225, 0.1) 38%, transparent 62%),
+    linear-gradient(180deg, rgba(245, 250, 253, 0.8) 0%, rgba(232, 241, 246, 0) 48%, rgba(217, 233, 242, 0.9) 100%);
+  --canvas-fixed: fixed, fixed, fixed;
+}
+
+html[data-theme='paper'] {
+  --canvas:
+    radial-gradient(85% 50% at 50% -6%, rgba(255, 251, 238, 0.6) 0%, transparent 62%),
+    radial-gradient(80% 44% at 50% 114%, rgba(var(--accent-rgb), 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 80% at 50% 42%, transparent 55%, rgba(122, 95, 58, 0.12) 100%),
+    linear-gradient(180deg, rgba(247, 242, 230, 0.8) 0%, rgba(242, 234, 217, 0) 52%, rgba(234, 223, 198, 0.9) 100%);
+  --canvas-fixed: fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='nocturne'] {
+  --canvas:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.16) 0%, rgba(var(--accent-rgb), 0.07) 14%, transparent 34%),
+    linear-gradient(142deg, rgba(255, 232, 196, 0.06) 0%, rgba(255, 232, 196, 0.03) 22%, transparent 50%),
+    radial-gradient(38% 30% at 30% 32%, rgba(var(--accent-rgb), 0.08) 0%, transparent 70%),
+    linear-gradient(to bottom, rgba(44, 52, 72, 0.55) 0%, transparent 52%);
+  --canvas-fixed: fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='abyss'] {
+  --canvas:
+    radial-gradient(42% 40% at 22% 108%, rgba(var(--accent-rgb), 0.22) 0%, rgba(var(--accent-rgb), 0.07) 40%, transparent 68%),
+    radial-gradient(15% 13% at 23% 105%, rgba(var(--accent-rgb), 0.3) 0%, transparent 72%),
+    linear-gradient(225deg, rgba(150, 230, 225, 0.07) 0%, rgba(150, 230, 225, 0.03) 20%, transparent 46%),
+    linear-gradient(to bottom, rgba(26, 62, 88, 0.5) 0%, transparent 52%);
+  --canvas-fixed: fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='cyberpunk'] {
+  --canvas:
+    repeating-linear-gradient(0deg, rgba(2, 0, 8, 0.16) 0px, rgba(2, 0, 8, 0.16) 1px, transparent 1px, transparent 3px),
+    radial-gradient(40% 42% at 86% 62%, rgba(var(--accent-rgb), 0.2) 0%, rgba(var(--accent-rgb), 0.06) 42%, transparent 70%),
+    radial-gradient(36% 38% at 10% 84%, rgba(34, 216, 255, 0.14) 0%, rgba(34, 216, 255, 0.04) 44%, transparent 70%),
+    linear-gradient(to top, rgba(var(--accent-rgb), 0.08) 0%, transparent 16%),
+    linear-gradient(to bottom, rgba(36, 24, 74, 0.6) 0%, transparent 55%);
+  --canvas-fixed: fixed, fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='terminal'] {
+  --canvas:
+    repeating-linear-gradient(0deg, rgba(150, 255, 190, 0.07) 0px, rgba(150, 255, 190, 0.07) 1px, transparent 1px, transparent 3px),
+    radial-gradient(60% 46% at 50% 108%, rgba(var(--accent-rgb), 0.2) 0%, rgba(var(--accent-rgb), 0.07) 40%, transparent 68%),
+    radial-gradient(38% 34% at 92% 4%, rgba(60, 220, 150, 0.1) 0%, transparent 66%),
+    linear-gradient(to bottom, rgba(14, 44, 30, 0.5) 0%, transparent 50%);
+  --canvas-fixed: fixed, fixed, fixed, fixed;
+}
+
+html[data-theme='chicago'] {
+  --canvas:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0px, rgba(0, 0, 0, 0.05) 1px, transparent 1px, transparent 2px),
+    linear-gradient(135deg, rgba(0, 128, 128, 0.45) 0%, rgba(0, 128, 128, 0.14) 32%, transparent 60%),
+    radial-gradient(60% 40% at 50% 112%, rgba(var(--accent-rgb), 0.1) 0%, transparent 64%);
+  --canvas-fixed: fixed, fixed, fixed;
+}

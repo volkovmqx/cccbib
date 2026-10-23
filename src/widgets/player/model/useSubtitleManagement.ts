@@ -8,6 +8,7 @@ import { LANGUAGE_NAMES, LANG_CODE_MAP } from '@/shared/config';
 
 const NO_SUBTITLES: SubtitleSource[] = [];
 const NONE_UNAVAILABLE: string[] = [];
+const PROBE_DELAY_MS = 4000;
 
 function clearTrack(track: TextTrack) {
   track.mode = 'disabled';
@@ -100,7 +101,8 @@ export function useSubtitleManagement({ eventGuid, eventSubtitles, videoElement,
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     let cancelled = false;
 
-    (async () => {
+    // The check for dead languages waits until the video has started so it does not compete with it
+    const timer = setTimeout(async () => {
       for (const language of listedSubtitles) {
         if (cancelled) return;
         try {
@@ -110,10 +112,11 @@ export function useSubtitleManagement({ eventGuid, eventSubtitles, videoElement,
           markUnavailable(language);
         }
       }
-    })();
+    }, PROBE_DELAY_MS);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
       if (controller) controller.abort();
     };
   }, [subtitles, listedSubtitles, eventGuid]);

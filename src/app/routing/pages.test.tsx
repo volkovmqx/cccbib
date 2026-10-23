@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type { Talk } from '@/entities/talk';
 import { conference, json, talk } from '../../../tests/fixtures';
 import Popular from '@/pages/popular';
@@ -15,6 +15,15 @@ vi.mock('@/widgets/player', () => ({ Player: ({ event, onClose }: { event: Talk;
 vi.mock('@/widgets/talk-preview', () => ({ Preview: ({ event }: { event: Talk }) => <div data-testid="preview">{event?.title}</div> }));
 const props = () => ({ onClose: vi.fn(), onFocusSidebar: vi.fn(), sidebarFocused: false, setIsPlayerFullscreen: vi.fn() });
 beforeEach(() => { query.data = undefined; query.error = null; setSetting('uiLanguage', 'en'); });
+afterEach(() => { vi.restoreAllMocks(); });
+const layoutRows = () => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(300);
+  vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockReturnValue(0);
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(700);
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(1200);
+};
+const manyTalks = (count: number) => ({ conference: conference({ lectures: { nodes: Array.from({ length: count }, (_, index) => talk({ guid: String(index), title: `Talk ${index}` })) } }) });
+const renderedTitles = (container: HTMLElement) => [...container.querySelectorAll('.conferenceView__gridItem__title')].map((title) => title.textContent);
 
 test('popular page handles loading, errors, empty data, ranking, and player transitions', () => {
   const callbacks = props();
@@ -33,6 +42,18 @@ test('popular page handles loading, errors, empty data, ranking, and player tran
   expect(callbacks.setIsPlayerFullscreen).toHaveBeenLastCalledWith(false);
   view.rerender(<Popular {...callbacks} />);
   fireEvent.keyDown(window, { key: 'Escape' }); expect(callbacks.onClose).toHaveBeenCalled();
+});
+
+test('popular page ranks equal view counts by the newest conference and puts missing counts last', () => {
+  const older = conference({ id: 'older', updatedAt: '2025-01-01', lectures: { nodes: [talk({ guid: 'old', title: 'Older talk', viewCount: 5 }), talk({ guid: 'none', title: 'No counts', viewCount: undefined })] } });
+  const undated = conference({ id: 'undated', lectures: { nodes: [talk({ guid: 'undated', title: 'Undated talk', viewCount: 5 })] } });
+  const newer = conference({ id: 'newer', updatedAt: '2026-01-01', lectures: { nodes: [talk({ guid: 'new', title: 'Newer talk', viewCount: 5 })] } });
+  query.data = { conferencesRecent: [older, undated, newer] };
+  const view = render(<Popular {...props()} />);
+  const text = view.container.textContent!;
+  const positions = ['Newer talk', 'Older talk', 'Undated talk', 'No counts'].map(title => text.indexOf(title));
+  expect(positions.every(position => position >= 0)).toBe(true);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
 });
 
 test('watchlist page follows storage changes and restores the list after playback', () => {
@@ -89,6 +110,20 @@ test('conference page handles loading, errors, and empty results', () => {
   }
 });
 
+test('conference grid items follow a moving pointer and open the player on click', () => {
+  const callbacks = { ...props(), conferenceId: 'conf' };
+  query.data = { conference: conference({ lectures: { nodes: Array.from({ length: 6 }, (_, index) => talk({ guid: String(index), title: `Talk ${index}` })) } }) };
+  const view = render(<Conference {...callbacks} />);
+  const items = () => [...view.container.querySelectorAll('.conferenceView__gridItem')];
+  fireEvent.mouseMove(items()[2], { clientX: 51, clientY: 71 });
+  expect(items()[2]).toHaveClass('conferenceView__gridItem--active');
+  fireEvent.mouseMove(items()[3], { clientX: 51, clientY: 71 });
+  expect(items()[2]).toHaveClass('conferenceView__gridItem--active');
+  fireEvent.click(items()[4]);
+  expect(callbacks.setIsPlayerFullscreen).toHaveBeenLastCalledWith(true);
+  expect(screen.getByRole('button', { name: 'Close Talk 4' })).toBeInTheDocument();
+});
+
 test('conference page navigates its virtual grid and restores scroll after the player closes', async () => {
   vi.useFakeTimers();
   const callbacks = { ...props(), conferenceId: 'conf' };
@@ -106,6 +141,11 @@ test('conference page navigates its virtual grid and restores scroll after the p
   container.scrollTop = 500;
   fireEvent.scroll(container);
   fireEvent.keyDown(window, { key: 'Enter' });
+  expect(callbacks.setIsPlayerFullscreen).not.toHaveBeenCalled();
+  act(() => { vi.advanceTimersByTime(60); });
+  container.scrollTop = 500;
+  fireEvent.scroll(container);
+  fireEvent.keyDown(window, { key: 'Enter' });
   expect(callbacks.setIsPlayerFullscreen).toHaveBeenLastCalledWith(true);
   fireEvent.keyDown(window, { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('button', { name: /^Close Talk/ }));
@@ -115,4 +155,97 @@ test('conference page navigates its virtual grid and restores scroll after the p
   view.rerender(<Conference {...callbacks} sidebarFocused />);
   fireEvent.keyDown(window, { key: 'Enter' });
   expect(screen.queryByRole('button', { name: /^Close Talk/ })).not.toBeInTheDocument();
+});
+
+test('the page title names the conference while it is open and returns to the app name when it closes', () => {
+  document.title = 'CCCBib';
+  query.data = { conference: conference({ title: 'Chaostreff Heidelberg' }) };
+  const view = render(<Conference {...props()} conferenceId="conf" />);
+  expect(document.title).toBe('CCCBib - Chaostreff Heidelberg');
+  view.unmount();
+  expect(document.title).toBe('CCCBib');
+});
+
+test('scrolling the conference with the wheel or the finger renders the rows in view and shows a loading animation where rows are still missing', () => {
+  layoutRows();
+  query.data = manyTalks(90);
+  const view = render(<Conference {...props()} conferenceId="conf" />);
+  const container = view.container.querySelector('.conferenceView__container') as HTMLElement;
+  const loaders = () => view.container.querySelectorAll('.conferenceView__gridSpacer .conferenceView__gridLoading [role="status"]').length;
+  expect(renderedTitles(view.container)).toContain('Talk 0');
+  expect(renderedTitles(view.container)).not.toContain('Talk 60');
+  expect(loaders()).toBe(1);
+  container.scrollTop = 30 * 316 + 40;
+  fireEvent.scroll(container);
+  expect(renderedTitles(view.container)).toContain('Talk 60');
+  expect(renderedTitles(view.container)).not.toContain('Talk 0');
+  expect(loaders()).toBe(2);
+  expect(view.container.querySelectorAll('.conferenceView__gridItem').length).toBeLessThan(30);
+  container.scrollTop = 44 * 316;
+  fireEvent.scroll(container);
+  expect(renderedTitles(view.container)).toContain('Talk 89');
+  expect(loaders()).toBe(1);
+  container.scrollTop = 0;
+  fireEvent.scroll(container);
+  expect(renderedTitles(view.container)).toContain('Talk 0');
+});
+
+test('a key after the conference was scrolled away from the selection starts at the row in view, and the selection scrolling along keeps its rows', () => {
+  layoutRows();
+  query.data = manyTalks(90);
+  const view = render(<Conference {...props()} conferenceId="conf" />);
+  const container = view.container.querySelector('.conferenceView__container') as HTMLElement;
+  const active = () => view.container.querySelector('.conferenceView__gridItem--active .conferenceView__gridItem__title')?.textContent;
+  expect(active()).toBe('Talk 0');
+  container.scrollTop = 30 * 316 + 40;
+  fireEvent.scroll(container);
+  expect(active()).toBeUndefined();
+  fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(active()).toBe('Talk 60');
+  fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(active()).toBe('Talk 62');
+  for (let step = 0; step < 12; step++) fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(active()).toBe('Talk 86');
+  expect(renderedTitles(view.container)).toContain('Talk 86');
+  for (let step = 0; step < 20; step++) fireEvent.keyDown(window, { key: 'ArrowUp' });
+  expect(active()).toBe('Talk 46');
+  fireEvent.keyDown(window, { key: 'Escape' });
+});
+
+test('the conference grid ignores measurements taken while it is hidden', () => {
+  layoutRows();
+  query.data = manyTalks(30);
+  const view = render(<Conference {...props()} conferenceId="conf" />);
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(0);
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(0);
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(0);
+  fireEvent(window, new Event('resize'));
+  const container = view.container.querySelector('.conferenceView__container') as HTMLElement;
+  container.scrollTop = 6 * 316;
+  fireEvent.scroll(container);
+  expect(renderedTitles(view.container)).toContain('Talk 12');
+});
+
+test.each([[false, 2, 1, 0], [true, 1, 0, 6]])('on a small screen %s the conference grid has %s columns, %s previews and %s described tiles in its window', (small, columns, previews, described) => {
+  vi.stubGlobal('matchMedia', () => ({ matches: small, addListener: vi.fn(), removeListener: vi.fn() }));
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(small ? 350 : 1200);
+  query.data = { conference: conference({ lectures: { nodes: Array.from({ length: 6 }, (_, index) => talk({ guid: String(index), title: `Talk ${index}` })) } }) };
+  const view = render(<Conference {...props()} conferenceId="conf" />);
+  expect((view.container.querySelector('.conferenceView__grid') as HTMLElement).style.gridTemplateColumns).toBe(`repeat(${columns}, minmax(0, 1fr))`);
+  expect(screen.queryAllByTestId('preview')).toHaveLength(previews);
+  expect(view.container.querySelectorAll('.conferenceView__gridItem__description')).toHaveLength(described);
+});
+
+test.each([[false, true], [true, false]])('in the conference grid on a touch screen %s the title opens the player: %s', (touch, titleOpens) => {
+  vi.stubGlobal('matchMedia', () => ({ matches: touch, addListener: vi.fn(), removeListener: vi.fn() }));
+  query.data = { conference: conference({ lectures: { nodes: Array.from({ length: 3 }, (_, index) => talk({ guid: String(index), title: `Talk ${index}` })) } }) };
+  const callbacks = props();
+  const view = render(<Conference {...callbacks} conferenceId="conf" />);
+  fireEvent.click(view.container.querySelector('.conferenceView__gridItem__title')!);
+  expect(Boolean(screen.queryByRole('button', { name: 'Close Talk 0' }))).toBe(titleOpens);
+  if (!titleOpens) {
+    fireEvent.click(view.container.querySelector('.conferenceView__gridItem__media')!);
+    expect(screen.getByRole('button', { name: 'Close Talk 0' })).toBeInTheDocument();
+  }
+  vi.unstubAllGlobals();
 });

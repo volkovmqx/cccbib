@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest';
-import { getVideo, getPreviewVideo, isOddAspect, releaseVideo, formatDuration, formatSeconds } from './media';
+import { getVideo, isOddAspect, releaseVideo, formatDuration, formatSeconds } from './media';
 import { talk } from '../../../../tests/fixtures';
 
 const recording = talk().videos[0];
@@ -28,13 +28,13 @@ test('video selection resolves ties and handles missing recordings', () => {
   expect(getVideo([{ ...recording, language: '' }], 'deu')[0]).toBeTruthy();
 });
 
-test('previews use the smallest matching recording and aspect checks require dimensions', () => {
-  const small = { ...recording, width: 320 };
-  expect(getPreviewVideo([recording, small], 'deu')).toBe(small);
-  expect(getPreviewVideo([small, recording], 'deu')).toBe(small);
-  expect(getPreviewVideo([], 'deu')).toBeNull();
+test('video selection and aspect checks tolerate recordings without widths and missing lists', () => {
   const noWidth = { ...recording, width: undefined };
-  expect(getPreviewVideo([noWidth], 'deu')).toBe(noWidth);
+  expect(getVideo([noWidth, { ...noWidth, language: 'eng' }], 'auto')[0]).toBe(noWidth);
+  expect(isOddAspect(undefined as never)).toBe(false);
+});
+
+test('aspect checks require dimensions', () => {
   expect(isOddAspect([recording], 'deu')).toBe(true);
   expect(isOddAspect([{ ...recording, width: 1920, height: 1080 }], 'deu')).toBe(false);
   for (const sources of [[], [{ ...recording, width: 0 }], [{ ...recording, height: 0 }]]) expect(isOddAspect(sources)).toBe(false);

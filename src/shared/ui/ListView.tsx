@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { LoadingScreen } from './Spinner';
-import { useListNavigation } from '@/shared/lib';
+import { isPointerDriven, pointerMoved, useListNavigation } from '@/shared/lib';
 import { useTranslation } from '@/shared/i18n';
 
 interface ListViewProps<T> {
@@ -14,6 +14,26 @@ interface ListViewProps<T> {
 
 
 
+
+interface ListRowProps<T> {
+  item: T; index: number; selected: boolean; className?: string; selectedClassName?: string;
+  selectedRef: React.RefObject<HTMLDivElement | null> | null; renderItem: (item: T, index: number) => React.ReactNode;
+  onSelect: (item: T, index: number) => void; onHover: (index: number) => void;
+}
+
+// A key press changes the selection of two rows, so the others keep their markup
+const ListRow = React.memo(function ListRow<T>({ item, index, selected, className = '', selectedClassName = '', selectedRef, renderItem, onSelect, onHover }: ListRowProps<T>) {
+  return (
+    <div
+      ref={selectedRef}
+      className={`listItem ${className} ${selected ? `listItem--selected ${selectedClassName}` : ''}`}
+      onClick={() => onSelect(item, index)}
+      onMouseMove={(e) => { if (pointerMoved(e)) onHover(index); }}
+    >
+      {renderItem(item, index)}
+    </div>
+  );
+}) as <T>(props: ListRowProps<T>) => React.ReactElement;
 
 // Only virtualize if more than this many items
 const VIRTUALIZATION_THRESHOLD = 150;
@@ -119,7 +139,7 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
   }, [items.length]);
 
   useEffect(() => {
-    if (!isInitialMount.current) {
+    if (!isInitialMount.current && !isPointerDriven()) {
       scrollItemIntoView(selectedItemRef, containerRef);
     }
   }, [selectedIndex]);
@@ -140,6 +160,9 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
   const handleSelect = useCallback((index: number) => {
     onSelect(items[index], index);
   }, [items, onSelect]);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const selectItem = useCallback((item: T, index: number) => onSelectRef.current(item, index), []);
 
   useListNavigation({
     itemCount: items.length,
@@ -186,21 +209,25 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
           <p className={`${className}__count`}>{countLabel}</p>
         )}
       </div>
-      <div className={`${className}__list scrollable`} ref={containerRef}>
+      <div className={`${className}__list scrollable`} ref={containerRef} data-wheel="scroll" data-wheel-main>
         {topSpacerHeight > 0 && (
           <div style={{ height: topSpacerHeight }} aria-hidden="true" />
         )}
         {visibleItems.map((item, i) => {
           const actualIndex = startIndex + i;
           return (
-            <div
+            <ListRow
               key={item.guid || item.slug || item.acronym || actualIndex}
-              ref={actualIndex === selectedIndex ? selectedItemRef : null}
-              className={`listItem ${itemClassName} ${actualIndex === selectedIndex ? `listItem--selected ${selectedItemClassName}` : ''}`}
-              onClick={() => onSelect(item, actualIndex)}
-            >
-              {renderItem(item, actualIndex)}
-            </div>
+              item={item}
+              index={actualIndex}
+              selected={actualIndex === selectedIndex}
+              className={itemClassName}
+              selectedClassName={selectedItemClassName}
+              selectedRef={actualIndex === selectedIndex ? selectedItemRef : null}
+              renderItem={renderItem}
+              onSelect={selectItem}
+              onHover={setSelectedIndex}
+            />
           );
         })}
         {bottomSpacerHeight > 0 && (

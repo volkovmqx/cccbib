@@ -158,3 +158,9 @@ test('command items preserve items, links, and link order', () => {
     ['media.ccc.de/v/first', 50], ['media.ccc.de/v/second', undefined], [link, undefined],
   ]);
 });
+
+test('a progress command passes the position of the playing talk on to the player seek', async () => {
+  const seek = vi.fn();
+  await applyListCommand({ cmd: 'progress', link, position: 400 }, seek);
+  assert.equal(readPlaybackHistory()[0].positionSeconds, 400);
+});

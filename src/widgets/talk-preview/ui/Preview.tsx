@@ -1,42 +1,16 @@
 import type { Talk } from '@/entities/talk';
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { getPreviewVideo, formatSeconds, releaseVideo, isOddAspect } from '@/entities/talk';
-import { videoSources } from '@/entities/talk';
+import React, { useMemo, useState, useEffect } from 'react';
+import { getVideo, formatSeconds, isOddAspect } from '@/entities/talk';
 import { IconEye, IconClock, IconUser, IconWorld, IconBadgeCc, IconAspectRatio } from '@tabler/icons-react';
 import { useSetting } from '@/shared/config';
-import { useIdle } from '@/shared/lib';
 import { useTranslation } from '@/shared/i18n';
 
-const PREVIEW_DEBOUNCE_MS = 300;
 const POSTER_DEBOUNCE_MS = 250;
-const PREVIEW_IDLE_MS = 120000;
 
-export const Preview = React.memo(function Preview({ event, disableVideo = false }: { event: Talk; disableVideo?: boolean }) {
+export const Preview = React.memo(function Preview({ event }: { event: Talk }) {
     const t = useTranslation();
     const [language] = useSetting('language');
-    const [previewVideo] = useSetting('previewVideo');
-    const idle = useIdle(PREVIEW_IDLE_MS);
-
-    // Debounce video loading - wait before loading video on rapid navigation
-    const [showVideo, setShowVideo] = useState(false);
-    useEffect(() => {
-        setShowVideo(false);
-        if (disableVideo) return undefined;
-        const timer = setTimeout(() => setShowVideo(true), PREVIEW_DEBOUNCE_MS);
-        return () => clearTimeout(timer);
-    }, [event.guid, disableVideo]);
-
-    const silencePreview = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-        const tracks = event.currentTarget.audioTracks;
-        if (previewVideo !== 'mute' || !tracks) return;
-        for (let i = 0; i < tracks.length; i += 1) tracks[i].enabled = false;
-    };
-
-    const previewVideoRef = useRef<HTMLVideoElement | null>(null);
-    const trackPreviewVideo = useCallback((element: HTMLVideoElement | null) => {
-        if (!element) releaseVideo(previewVideoRef.current);
-        previewVideoRef.current = element;
-    }, []);
+    const [previewImage] = useSetting('previewImage');
 
     const [posterLoadedFor, setPosterLoadedFor] = useState<string | null>(null);
     const [loadPoster, setLoadPoster] = useState(false);
@@ -48,21 +22,8 @@ export const Preview = React.memo(function Preview({ event, disableVideo = false
     const thumbUrl = event.images && event.images.thumbUrl;
     const posterUrl = event.images && event.images.posterUrl;
 
-    // Memoize getVideo call to avoid re-computation on every render
-    const recording = useMemo(() =>
-        getPreviewVideo(event.videos, language),
-        [event.videos, language]
-    );
-
-    const previewSources = useMemo(() => (recording && recording.url ? videoSources(recording.url) : []), [recording && recording.url]);
-    const [previewSourceIndex, setPreviewSourceIndex] = useState(0);
-    useEffect(() => setPreviewSourceIndex(0), [recording && recording.url]);
-
-    // Memoize preview timestamp - only changes when event changes
-    const previewTimestamp = useMemo(() =>
-        Math.floor(Math.random() * event.duration / 2),
-        [event.guid, event.duration]
-    );
+    const hasRecording = useMemo(() => getVideo(event.videos, language)[0] !== null, [event.videos, language]);
+    const showPicture = previewImage !== 'none';
 
     // Check if multiple audio languages are available
     const availableLanguages = useMemo(() => [...new Set(
@@ -115,7 +76,7 @@ export const Preview = React.memo(function Preview({ event, disableVideo = false
             </div>
             <div className="preview">
                 <div className="previewOverlay" />
-                {previewVideo !== 'none' && (
+                {showPicture && (
                     <div className="previewBackdrop" aria-hidden="true">
                         {thumbUrl && <img key={`thumb-${event.guid}`} className="previewBackdrop__img" src={thumbUrl} alt="" />}
                         {posterUrl && loadPoster && (
@@ -130,20 +91,7 @@ export const Preview = React.memo(function Preview({ event, disableVideo = false
                         )}
                     </div>
                 )}
-                {showVideo && !idle && recording && recording.url && !disableVideo && (previewVideo === 'on' || previewVideo === 'mute') && (
-                    <video
-                        ref={trackPreviewVideo}
-                        src={`${previewSources[Math.min(previewSourceIndex, previewSources.length - 1)]}#t=${previewTimestamp}`}
-                        onError={() => setPreviewSourceIndex((index) => index + 1)}
-                        preload="none"
-                        autoPlay
-                        muted={previewVideo === 'mute'}
-                        onLoadedMetadata={silencePreview}
-                        onPlaying={silencePreview}
-                        className="player"
-                    />
-                )}
-                {previewVideo !== 'none' && !recording && (
+                {showPicture && !hasRecording && (
                     <div className="noRecording">
                         {t('No recording available')}
                     </div>

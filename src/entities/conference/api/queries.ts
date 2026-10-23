@@ -24,6 +24,7 @@ const CONFERENCE_FIELDS = `
         mimeType
         language
         url
+        size
       }
       subtitles {
         mimeType

@@ -6,10 +6,10 @@ import type { KeyboardContext } from './types';
 
 function context(): KeyboardContext {
   return {
-    onClose: vi.fn(), controls: { visible: true, focus: { area: 'none', id: null }, show: vi.fn(), hide: vi.fn(), focusButton: vi.fn(), focusProgress: vi.fn() },
+    onClose: vi.fn(), controls: { visible: true, focus: { area: 'none', id: null }, show: vi.fn(), hide: vi.fn(), focusButton: vi.fn(), focusProgress: vi.fn(), focusBack: vi.fn() },
     selector: null, selectorLength: 3, selectorIndex: 0, setSelectorIndex: vi.fn(), openSelector: vi.fn(), confirmSelector: vi.fn(), closeSelector: vi.fn(),
     buttons: ['playpause', 'disabled'].map(id => ({ id, align: 'center', label: id, icon: null, onPress: vi.fn(), disabled: id === 'disabled' })),
-    hasMultipleLanguages: true, hasSubtitles: true, setPlaying: vi.fn(), seek: vi.fn(), toggleMute: vi.fn(),
+    backButton: false, hasMultipleLanguages: true, hasSubtitles: true, setPlaying: vi.fn(), seek: vi.fn(), toggleMute: vi.fn(),
   };
 }
 const key = (key: string, keyCode = 0) => act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key, keyCode, cancelable: true })); });
@@ -18,8 +18,17 @@ test('player keys control playback, seeking, mute, selectors, and exit', () => {
   vi.useFakeTimers();
   const ctx = context();
   const hook = renderHook(({ value }) => usePlayerKeyboard(value), { initialProps: { value: ctx } });
-  for (const [name, code] of [['', 413], ['', 178], ['Escape', 0], ['Backspace', 0], ['', 461]] as const) key(name, code);
+  for (const [name, code] of [['', 413], ['', 178]] as const) key(name, code);
+  expect(ctx.onClose).toHaveBeenCalledTimes(2);
+  for (const [name, code] of [['Escape', 0], ['Backspace', 0], ['', 461]] as const) key(name, code);
+  expect(ctx.controls.hide).toHaveBeenCalledTimes(3);
+  expect(ctx.onClose).toHaveBeenCalledTimes(2);
+  const hidden = { ...ctx, controls: { ...ctx.controls, visible: false } };
+  hook.rerender({ value: hidden });
+  for (const [name, code] of [['Escape', 0], ['Backspace', 0], ['', 461]] as const) key(name, code);
+  expect(ctx.controls.hide).toHaveBeenCalledTimes(3);
   expect(ctx.onClose).toHaveBeenCalledTimes(5);
+  hook.rerender({ value: ctx });
   key('', 19); expect(ctx.setPlaying).toHaveBeenCalledWith(false);
   key('', 415);
   act(() => { vi.advanceTimersByTime(20); });
@@ -52,6 +61,34 @@ test('player button focus wraps and disabled buttons do not execute', () => {
   expect(ctx.buttons[1].onPress).not.toHaveBeenCalled();
 });
 
+test('with the back button enabled, up from the buttons focuses it and OK leaves the video', () => {
+  const ctx = context(); ctx.backButton = true; ctx.controls.focus = { area: 'buttons', id: 'playpause' };
+  const { rerender } = renderHook(({ value }) => usePlayerKeyboard(value), { initialProps: { value: ctx } });
+  key('ArrowUp');
+  expect(ctx.controls.focusBack).toHaveBeenCalledTimes(1);
+  expect(ctx.controls.focusButton).not.toHaveBeenCalled();
+  rerender({ value: { ...ctx, controls: { ...ctx.controls, focus: { area: 'back', id: null } } } });
+  key('ArrowUp'); key('ArrowLeft'); key('ArrowRight');
+  expect(ctx.seek).not.toHaveBeenCalled();
+  expect(ctx.controls.focusBack).toHaveBeenCalledTimes(1);
+  expect(ctx.controls.focusButton).not.toHaveBeenCalled();
+  expect(ctx.onClose).not.toHaveBeenCalled();
+  key('Enter'); expect(ctx.onClose).toHaveBeenCalledTimes(1);
+  key('ArrowDown'); expect(ctx.controls.focusButton).toHaveBeenCalledWith('playpause');
+  expect(ctx.controls.focusProgress).not.toHaveBeenCalled();
+  key('Escape'); expect(ctx.controls.hide).toHaveBeenCalledTimes(1);
+  expect(ctx.onClose).toHaveBeenCalledTimes(1);
+});
+
+test('up never reaches the back button when it is off or when the progress bar is focused', () => {
+  const ctx = context(); ctx.controls.focus = { area: 'buttons', id: 'disabled' };
+  const { rerender } = renderHook(({ value }) => usePlayerKeyboard(value), { initialProps: { value: ctx } });
+  key('ArrowUp'); expect(ctx.controls.focusButton).toHaveBeenLastCalledWith('playpause');
+  rerender({ value: { ...ctx, backButton: true, controls: { ...ctx.controls, focus: { area: 'progress', id: null } } } });
+  key('ArrowUp'); expect(ctx.controls.focusButton).toHaveBeenCalledTimes(2);
+  expect(ctx.controls.focusBack).not.toHaveBeenCalled();
+});
+
 test('selector keys consume navigation and return focus to the selector button', () => {
   const ctx = { ...context(), selector: 'subtitle' as const };
   renderHook(() => usePlayerKeyboard(ctx));
@@ -73,6 +110,9 @@ test('controls hide only when playback has no focused control or open selector',
   act(() => { result.current.show(); result.current.focusButton('playpause'); vi.advanceTimersByTime(4000); });
   expect(result.current.visible).toBe(true);
   act(() => { result.current.focusProgress(); }); expect(result.current.focus.area).toBe('progress');
+  act(() => { result.current.focusBack(); vi.advanceTimersByTime(4000); });
+  expect(result.current.focus).toEqual({ area: 'back', id: null });
+  expect(result.current.visible).toBe(true);
   act(() => { result.current.hide(); }); expect(result.current.focus.area).toBe('none');
   rerender({ selectorOpen: true, playing: true });
   act(() => { result.current.show(); vi.advanceTimersByTime(4000); }); expect(result.current.visible).toBe(true);

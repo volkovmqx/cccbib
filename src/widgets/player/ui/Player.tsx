@@ -1,8 +1,8 @@
 import type { PlayerProps, PlayerButton, Selector } from '../model/types';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  IconWorld, IconBadgeCc, IconAspectRatio, IconRewindBackward10, IconRewindForward10,
-  IconPlayerPlayFilled, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled,
+  IconWorld, IconBadgeCc, IconAspectRatio, IconPlayerTrackPrev, IconPlayerTrackNext,
+  IconPlayerPlayFilled, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled, IconBug,
 } from '@tabler/icons-react';
 import { getVideo, releaseVideo } from '@/entities/talk';
 import { videoSources, rememberMirror } from '@/entities/talk';
@@ -11,9 +11,12 @@ import { LANGUAGE_NAMES, ASPECT_RATIOS } from '@/shared/config';
 import { useSetting } from '@/shared/config';
 import { useWatchlist } from '@/features/watchlist';
 import { useTranslation } from '@/shared/i18n';
+import { useDelayedFlag, usePageTitle, useWindowEvent } from '@/shared/lib';
 import { usePlayerKeyboard } from '../model/usePlayerKeyboard';
 import { useControlsVisibility } from '../model/useControlsVisibility';
 import { Controls } from './Controls';
+import { StatsPanel } from './StatsPanel';
+import { usePlaybackStats } from '../model/usePlaybackStats';
 import { Spinner } from '@/shared/ui';
 import { usePlaybackPosition } from '../model/usePlaybackPosition';
 import { useSubtitleManagement } from '../model/useSubtitleManagement';
@@ -22,9 +25,9 @@ import { useRemoteControl } from '../model/useRemoteControl';
 import { setNowPlayingReader } from '../model/nowPlaying';
 import { SelectorModal } from './SelectorModal';
 
-const IDLE_TITLE = document.title;
 const TOAST_MS = 3000;
 const SOURCE_DELAY_MS = 200;
+const BUFFERING_SPINNER_MS = 800;
 const STALL_CHECK_MS = 4000;
 const START_TIMEOUT_MS = 12000;
 const RESUME_SETTLE_MS = 150;
@@ -32,7 +35,11 @@ const NUDGE_DELAY_MS = 300;
 const NUDGE_SECONDS = 0.01;
 const RESUME_SEEK_TIMEOUT_MS = 8000;
 const PAUSING_SELECTORS = ['language', 'subtitle'];
+// The TV needs a moment to free its video decoder, so the layer stays this long
+const CLOSE_HOLD_MS = 1000;
+const CLOSE_RELEASE_MS = 300;
 
+const windowRatio = () => (window.innerWidth && window.innerHeight ? window.innerWidth / window.innerHeight : 16 / 9);
 const aspectName = (code: string) => (ASPECT_RATIOS.find((aspect) => aspect.code === code) || {}).name || code;
 
 export const Player = React.memo(function Player({ event, conferenceTitle, onClose, startAt }: PlayerProps) {
@@ -49,6 +56,35 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const [preferredAudioLanguage] = useSetting('language');
   const [preferredSubtitleLanguage] = useSetting('subtitleLanguage');
   const [defaultAspect] = useSetting('aspectRatio');
+  const [backSetting] = useSetting('osdBackButton');
+  const backButton = backSetting === 'on';
+  const [statsSetting] = useSetting('statsForNerds');
+  const statsEnabled = statsSetting === 'on';
+  const [statsOpen, setStatsOpen] = useState(false);
+
+  const [closing, setClosing] = useState(false);
+  const [released, setReleased] = useState(false);
+  const closeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const hushRef = useRef<() => void>(() => {});
+  const closePlayer = useCallback(() => {
+    if (closeTimersRef.current.length) return;
+    hushRef.current();
+    setClosing(true);
+    closeTimersRef.current = [
+      setTimeout(() => setReleased(true), CLOSE_RELEASE_MS),
+      setTimeout(() => onCloseRef.current(), CLOSE_HOLD_MS),
+    ];
+  }, []);
+  useEffect(() => () => closeTimersRef.current.forEach(clearTimeout), []);
+  const backAction = useMemo(() => (backButton ? { label: t('Back'), onPress: closePlayer } : undefined), [backButton, t, closePlayer]);
+  useEffect(() => {
+    if (!closing) return undefined;
+    document.documentElement.setAttribute('data-player-closing', '');
+    return () => document.documentElement.removeAttribute('data-player-closing');
+  }, [closing]);
+  const toggleStats = useCallback(() => setStatsOpen((open) => !open), []);
 
   const [languageChoice, setLanguageChoice] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState(defaultAspect);
@@ -59,11 +95,20 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
   const [buffering, setBuffering] = useState(true);
   const [failed, setFailed] = useState(false);
+  const showSpinner = useDelayedFlag(buffering && !failed, BUFFERING_SPINNER_MS);
   const [videoRatio, setVideoRatio] = useState<number | null>(null);
+  const [viewRatio, setViewRatio] = useState(() => windowRatio());
+  useWindowEvent('resize', () => setViewRatio(windowRatio()));
   const [toast, setToast] = useState('');
   const [savedStart] = useState(() => (Number.isFinite(startAt) ? startAt! : getSavedPlaybackPosition(event.guid)));
 
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
+  hushRef.current = () => {
+    const element = videoElementRef.current;
+    if (!element) return;
+    element.muted = true;
+    element.pause();
+  };
   const startTimeRef = useRef(savedStart);
   const resumePendingRef = useRef(savedStart > 0);
   const playingRef = useRef(playing);
@@ -360,10 +405,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   useOutputWindow(videoElement, aspectRatio);
 
-  useEffect(() => {
-    document.title = `${playing ? 'Playing' : 'Paused'}: ${event.title}`;
-  }, [playing, event.title]);
-  useEffect(() => () => { document.title = IDLE_TITLE; }, []);
+  usePageTitle(event.title);
 
   useEffect(() => {
     setNowPlayingReader(() => {
@@ -373,7 +415,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     return () => setNowPlayingReader(null);
   }, [event]);
 
-  const showAspect = aspectRatio !== 'auto' || (videoRatio !== null && Math.abs(videoRatio - 16 / 9) > 0.08);
+  const showAspect = aspectRatio !== 'auto' || (videoRatio !== null && Math.abs(videoRatio - viewRatio) > 0.08);
 
   useEffect(() => {
     if (subtitleStatus === 'error') showToast(t('Subtitles are not available for this talk'));
@@ -466,27 +508,37 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     if (showAspect) {
       list.push({ id: 'aspect', align: 'left', label: t('Aspect: {name}', { name: t(aspectName(aspectRatio)) }), icon: <IconAspectRatio />, onPress: () => openSelector('aspect') });
     }
+    list.push({ id: 'skipback', align: 'center', label: t('Skip Back'), icon: <IconPlayerTrackPrev />, onPress: () => seek(-10) });
+    list.push({
+      id: 'playpause', align: 'center', label: playing ? t('Pause') : t('Play'),
+      icon: playing ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />, onPress: () => setPlaying((value) => !value),
+    });
+    list.push({ id: 'skipforward', align: 'center', label: t('Skip Forward'), icon: <IconPlayerTrackNext />, onPress: () => seek(10) });
     list.push(
-      { id: 'skipback', align: 'center', label: t('Skip Back'), icon: <IconRewindBackward10 />, onPress: () => seek(-10) },
-      {
-        id: 'playpause', align: 'center', label: playing ? t('Pause') : t('Play'),
-        icon: playing ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />, onPress: () => setPlaying((value) => !value),
-      },
-      { id: 'skipforward', align: 'center', label: t('Skip Forward'), icon: <IconRewindForward10 />, onPress: () => seek(10) },
       { id: 'mute', align: 'right', label: isMuted ? t('Unmute') : t('Mute'), icon: isMuted ? <IconVolumeOff /> : <IconVolume />, onPress: toggleMute },
       {
         id: 'watchlist', align: 'right', label: isInWatchlist ? t('In Watchlist') : t('Add to Watchlist'),
         icon: isInWatchlist ? <IconBookmarkFilled /> : <IconBookmark />, onPress: toggleWatchlist,
       },
     );
+    if (statsEnabled) list.push({ id: 'stats', align: 'right', label: t('Stats for Nerds'), icon: <IconBug />, onPress: toggleStats });
     return list;
   }, [
     hasMultipleLanguages, hasSubtitles, languageButtonLabel, subtitleLanguage, aspectRatio,
-    playing, isMuted, isInWatchlist, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect,
+    playing, isMuted, isInWatchlist, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect, statsEnabled, toggleStats,
   ]);
 
+  const statsRows = usePlaybackStats({
+    video: videoElement,
+    active: statsEnabled && statsOpen,
+    context: {
+      guid: event.guid, recording, duration: event.duration, sourceUrl: videoUrl || '', sourceIndex, sourceCount: sources.length,
+      aspect: aspectRatio, audioLanguage: recordingLanguage || language, subtitleLanguage, subtitleStatus, buffering, version: APP_VERSION,
+    },
+  });
+
   usePlayerKeyboard({
-    onClose,
+    onClose: closePlayer,
     controls,
     selector,
     selectorLength: selector ? selectorOptions[selector].length : 0,
@@ -496,6 +548,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     confirmSelector,
     closeSelector,
     buttons,
+    backButton,
     hasMultipleLanguages,
     hasSubtitles,
     setPlaying,
@@ -509,7 +562,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     else if (cmd === 'resume') setPlaying(true);
     else if (cmd === 'toggle') setPlaying((current) => !current);
     else if (cmd === 'mute') setIsMuted((current) => (typeof value === 'boolean' ? value : !current));
-    else if (cmd === 'stop') onClose();
+    else if (cmd === 'stop') closePlayer();
     else if (cmd === 'aspect' && typeof value === 'string' && ASPECT_RATIOS.some((aspect) => aspect.code === value)) applySelection('aspect', value);
     else if (cmd === 'subtitle' && typeof value === 'string') setSubtitleLanguage(value);
     else if (cmd === 'language' && typeof value === 'string' && availableLanguages.includes(value)) applySelection('language', value);
@@ -546,8 +599,8 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const handleEnded = useCallback(() => {
     removePlaybackHistoryItem(event.guid);
     if (isInWatchlist) toggleWatchlist();
-    onClose();
-  }, [event.guid, isInWatchlist, toggleWatchlist, onClose]);
+    closePlayer();
+  }, [event.guid, isInWatchlist, toggleWatchlist, closePlayer]);
 
   if (!recording) {
     return <div className="player-message">{t('No recording available')}</div>;
@@ -557,10 +610,10 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   return (
     <div
-      className={`player-wrapper ${controls.visible ? 'player-wrapper--controls-visible' : 'player-wrapper--controls-hidden'}`}
+      className={`player-wrapper ${controls.visible ? 'player-wrapper--controls-visible' : 'player-wrapper--controls-hidden'} ${closing ? 'player-wrapper--closing' : ''}`}
       onMouseMove={controls.show}
     >
-      <video
+      {!released && <video
         key={`${recording.url}#${sourceIndex}`}
         ref={handleVideoRef}
         className="player-video"
@@ -575,19 +628,22 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
         onPlaying={() => setBuffering(false)}
         onCanPlay={() => { if (!resumePendingRef.current) setBuffering(false); }}
         onError={() => advanceSource()}
-      />
+      />}
 
-      {buffering && !failed && <div className="player-buffering"><Spinner /></div>}
+      {showSpinner && <div className="player-buffering"><Spinner /></div>}
       {failed && <div className="player-message">{t('This video could not be played')}</div>}
 
       <Controls
         title={event.title}
-        subTitle={event.description}
         buttons={buttons}
+        back={backAction}
         focus={controls.focus}
         video={videoElement}
+        visible={controls.visible}
         onSeek={seekTo}
       />
+
+      {statsEnabled && statsOpen && <StatsPanel rows={statsRows} title={t('Stats for Nerds')} />}
 
       {toast && <div className="player-toast">{toast}</div>}
 
@@ -599,6 +655,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
           currentValue={currentValues[selector]}
           getLabel={selectorLabels[selector]}
           onSelect={(value) => applySelection(selector, value)}
+          onHover={setSelectorIndex}
           onClose={closeSelector}
         />
       )}

@@ -5,7 +5,18 @@
 @font-face { font-family: 'Merriweather'; src: url('../../shared/branding/fonts/Merriweather.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Courier Prime'; src: url('../../shared/branding/fonts/CourierPrime.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Inconsolata'; src: url('../../shared/branding/fonts/Inconsolata.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('../../shared/branding/fonts/IBMPlexMono-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('../../shared/branding/fonts/IBMPlexMono-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Fira Code'; src: url('../../shared/branding/fonts/FiraCode-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Fira Code'; src: url('../../shared/branding/fonts/FiraCode-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Space Mono'; src: url('../../shared/branding/fonts/SpaceMono-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Space Mono'; src: url('../../shared/branding/fonts/SpaceMono-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Jersey 10'; src: url('../../shared/branding/fonts/Jersey10.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: 'Silkscreen'; src: url('../../shared/branding/fonts/Silkscreen.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'VT323'; src: url('../../shared/branding/fonts/VT323.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Pixel'; src: url('../../shared/branding/fonts/GeistPixel.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Tiny5'; src: url('../../shared/branding/fonts/Tiny5-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Tiny5'; src: url('../../shared/branding/fonts/Tiny5-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 @font-face { font-family: 'Andika'; src: url('../../shared/branding/fonts/Andika-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Andika'; src: url('../../shared/branding/fonts/Andika-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 @font-face { font-family: 'Comic Neue'; src: url('../../shared/branding/fonts/ComicNeue-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }

@@ -3,7 +3,7 @@ import type { Talk } from '@/entities/talk';
 import type { useControlsVisibility } from './useControlsVisibility';
 
 export type Selector = 'language' | 'subtitle' | 'aspect';
-export interface Focus { area: 'none' | 'buttons' | 'progress'; id: string | null }
+export interface Focus { area: 'none' | 'buttons' | 'progress' | 'back'; id: string | null }
 export interface PlayerButton {
   id: string;
   align: string;
@@ -25,6 +25,7 @@ export interface KeyboardContext {
   confirmSelector: (index: number) => void;
   closeSelector: () => void;
   buttons: PlayerButton[];
+  backButton: boolean;
   hasMultipleLanguages: boolean;
   hasSubtitles: boolean;
   setPlaying: Dispatch<SetStateAction<boolean>>;

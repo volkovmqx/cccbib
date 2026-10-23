@@ -56,7 +56,7 @@ function handleKey(e: KeyboardEvent, ref: React.RefObject<KeyboardContext>) {
 
   if (isBack(e)) {
     consume();
-    if (controls.focus.area !== 'none') controls.hide();
+    if (controls.visible || controls.focus.area !== 'none') controls.hide();
     else ctx.onClose();
     return;
   }
@@ -81,10 +81,15 @@ function handleKey(e: KeyboardEvent, ref: React.RefObject<KeyboardContext>) {
     ctx.setPlaying((prev) => !prev);
   } else if (e.key === 'ArrowDown') {
     consume();
-    controls.focusProgress();
+    if (controls.focus.area === 'back') controls.focusButton('playpause');
+    else controls.focusProgress();
   } else if (e.key === 'ArrowUp') {
     consume();
-    controls.focusButton('playpause');
+    if (ctx.backButton && controls.focus.area === 'buttons') controls.focusBack();
+    else if (controls.focus.area !== 'back') controls.focusButton('playpause');
+  } else if (e.key === 'Enter' && controls.focus.area === 'back') {
+    consume();
+    ctx.onClose();
   } else if (e.key === 'Enter' && controls.focus.area === 'buttons') {
     consume();
     const button = ctx.buttons.find((b) => b.id === controls.focus.id);
@@ -93,6 +98,7 @@ function handleKey(e: KeyboardEvent, ref: React.RefObject<KeyboardContext>) {
     e.preventDefault();
     e.stopPropagation();
     const direction = e.key === 'ArrowRight' ? 1 : -1;
+    if (controls.focus.area === 'back') return;
     if (controls.focus.area !== 'buttons') {
       ctx.seek(direction * 10);
     } else {

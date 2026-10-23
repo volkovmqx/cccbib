@@ -86,11 +86,11 @@ yarn test:chrome68
 
 ### Coverage and the coverage bot
 
-[vitest.config.mts](vitest.config.mts) requires **at least 95% for each metric**: statements, branches, functions, and lines. These limits apply to the application total. A result below any limit makes `yarn test:coverage` and the required `quality / quality` CI job fail. Packaging, release, and Docker publication depend on the quality workflow.
+[vitest.config.mts](vitest.config.mts) requires **at least 99% of statements, functions, and lines and 96.5% of branches**. These limits apply to the application total. A result below any limit makes `yarn test:coverage` and the required `quality / quality` CI job fail. Packaging, release, and Docker publication depend on the quality workflow.
 
 Coverage includes application source files even when no test imports them. It excludes test files and TypeScript declaration files. Browser tests check the HTML startup scripts. Do not lower the limits or exclude application code to make a change pass. Add tests for the missing behavior.
 
-The pinned `davelosert/vitest-coverage-report-action` posts an Application coverage comment on pull requests from this repository. It updates the same comment on later runs. It shows the four totals, the 95% targets, and coverage for changed files. It also writes a GitHub Actions job summary. Fork and Dependabot pull requests receive the summary because their tokens cannot write comments.
+The pinned `davelosert/vitest-coverage-report-action` posts an Application coverage comment on pull requests from this repository. It updates the same comment on later runs. It shows the four totals, the targets, and coverage for changed files. It also writes a GitHub Actions job summary. Fork and Dependabot pull requests receive the summary because their tokens cannot write comments.
 
 The reporting job reads the coverage artifact. It does not install dependencies or execute application code. The test job keeps read-only permissions. Vitest produces reports even when tests fail. The reporting job also runs after a failed quality job. The test exit status enforces the limits; the bot displays the results.
 
@@ -103,6 +103,12 @@ Use Vitest and React Testing Library for logic, hooks, and components. Test visi
 Production browser tests use local REST, GraphQL, image, subtitle, and video fixtures from `tests/browser/fixtures.cjs` and `tests/browser/fixture.webm`. The WebM fixture contains a generated blue image. Install request interception before navigation. Unexpected external requests must fail the test.
 
 Playwright writes HTML reports to `playwright-report/`. Browser runners write failure data to `test-results/`. The Chrome 68 runner downloads Chromium snapshot `561732` into `/tmp/cccbib-chrome68` and checks that it reports version 68. Set `CHROME68_CACHE` for another cache directory or `CHROME68_EXECUTABLE_PATH` for an existing binary. Linux needs DejaVu fonts.
+
+## Phones and tablets
+
+The layout changes at three widths: up to 599 px (phone, one tile per row), up to 900 px (tablet, two tiles per row, menu bar at the top, or at the bottom with the Menu Position setting) and up to 1279 px (landscape tablet, side menu and smaller tiles). A phone held sideways (up to 500 px high) shows three tiles in a slimmer bar. Everything else is the TV layout. The TV is 1920 px wide and never uses the small-screen rules.
+
+To look at it, run `yarn start`, open the page in Chrome, press `Ctrl+Shift+M` for the device toolbar and pick a phone or tablet. The rotate button next to the size fields switches between portrait and landscape, and the layout follows without a reload. Dragging the window edge works as well. The browser tests in `tests/browser/app.spec.ts` check the same sizes and a live rotation (the describes `on a phone`, `tiles by screen width`, `screens on small widths`, `player controls on small screens` and `rotating a phone or a tablet`).
 
 ## webOS Simulator on Linux
 

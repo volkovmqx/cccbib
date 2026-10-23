@@ -51,10 +51,8 @@ export const SUBTITLE_SIZES = [
 ];
 
 
-export const PREVIEW_VIDEO_OPTIONS = [
+export const PREVIEW_IMAGE_OPTIONS = [
   { code: 'on', name: 'On' },
-  { code: 'mute', name: 'Mute' },
-  { code: 'still', name: 'Still' },
   { code: 'none', name: 'Off' },
 ];
 
@@ -70,6 +68,15 @@ export const THEME_MODES = [
   { code: 'tinted', name: 'Tinted' },
   { code: 'ambient', name: 'Ambient Glow' },
   { code: 'lighttinted', name: 'Light Tinted' },
+  { code: 'ember', name: 'Ember' },
+  { code: 'sunset', name: 'Sunset' },
+  { code: 'frost', name: 'Frost' },
+  { code: 'paper', name: 'Paper' },
+  { code: 'nocturne', name: 'Nocturne' },
+  { code: 'abyss', name: 'Abyss' },
+  { code: 'cyberpunk', name: 'Cyberpunk' },
+  { code: 'terminal', name: 'Terminal' },
+  { code: 'chicago', name: 'Chicago' },
 ];
 
 export const ACCENT_COLORS = [
@@ -99,11 +106,30 @@ export const ACCENT_COLORS = [
 ];
 
 export const SPINNER_STYLES = [
-  { code: 'orbit', name: 'Orbit' },
+  { code: 'orbit', name: 'Twin Dots' },
+  { code: 'rocket', name: 'Rocket' },
+  { code: 'glider', name: 'Glider' },
   { code: 'ring', name: 'Simple Ring' },
   { code: 'dots', name: 'Dots' },
+  { code: 'spin', name: 'Spinning Dots' },
   { code: 'bars', name: 'Equalizer' },
   { code: 'pulse', name: 'Pulse' },
+  { code: 'squares', name: 'Twin Squares' },
+  { code: 'ball', name: 'Rolling Ball' },
+  { code: 'blocks', name: 'Step Blocks' },
+  { code: 'wheel', name: 'Busy Wheel' },
+  { code: 'retro', name: 'Retro Bar' },
+  { code: 'boot', name: 'Boot Bar' },
+  { code: 'wave', name: 'Wavy Bar' },
+  { code: 'terminal', name: 'Terminal' },
+  { code: 'ascii', name: 'ASCII' },
+  { code: 'binary', name: 'Binary' },
+  { code: 'defrag', name: 'Defrag' },
+  { code: 'tape', name: 'Tape Reels' },
+  { code: 'drive', name: 'Drive LEDs' },
+  { code: 'chase', name: 'Chasing Dots' },
+  { code: 'gears', name: 'Gears' },
+  { code: 'hourglass', name: 'Hourglass' },
 ];
 
 export const LOADER_STYLES = [
@@ -126,6 +152,19 @@ export const CORNER_STYLES = [
   { code: 'square', name: 'Square', radii: [0, 0, 0, 0] },
   { code: 'classic', name: 'Classic', radii: [4, 8, 12, 16] },
   { code: 'round', name: 'Round', radii: [8, 14, 22, 30] },
+];
+
+const borderOption = (width: number) => ({
+  code: width,
+  name: width === 5 ? 'Normal (5px)' : `${width}px`,
+});
+
+export const BORDER_WIDTHS = [1, 2, 3, 4, 5, 6, 8].map(borderOption);
+
+export const SCROLLBAR_SIZES = [
+  { code: 'normal', name: 'Normal' },
+  { code: 'large', name: 'Large' },
+  { code: 'hidden', name: 'Hidden' },
 ];
 
 export const RAIL_STYLES = [
@@ -152,21 +191,37 @@ export const MENU_COLORS = [
   { code: 'accent', name: 'Accent' },
 ];
 
+export const NAV_INDICATORS = [
+  { code: 'off', name: 'Off' },
+  { code: 'line', name: 'Line' },
+  { code: 'border', name: 'Border' },
+  { code: 'contrast', name: 'Contrast' },
+];
+
 export const ICON_VARIANTS = [
   { code: 'dynamic', name: 'Dynamic' },
   { code: 'outlined', name: 'Outlined' },
   { code: 'filled', name: 'Filled' },
 ];
 
-export const SETTINGS_ENTRIES = [
-  { code: 'icon', name: 'Gear icon' },
-  { code: 'logo', name: 'CCCBib logo' },
+export const MENU_POSITIONS = [
+  { code: 'top', name: 'Top' },
+  { code: 'bottom', name: 'Bottom' },
+];
+
+export const LOGO_BUTTONS = [
+  { code: 'off', name: 'Off' },
+  { code: 'settings', name: 'Settings' },
+  { code: 'home', name: 'Home' },
 ];
 
 const scaleOption = (scale: number) => ({
   code: scale,
   name: scale === 1 ? 'Normal (100%)' : `${Math.round(scale * 100)}%`,
 });
+
+export const TEXT_SCALE_BASE = 1.2;
+export const ICON_SCALE_BASE = 1.1;
 
 export const SCALE_OPTIONS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5].map(scaleOption);
 
@@ -201,6 +256,16 @@ export const OSD_BUTTON_SHAPES = [
   { code: 'circle', name: 'Circle' },
 ];
 
+export const OSD_BACK_BUTTONS = [
+  { code: 'off', name: 'Off' },
+  { code: 'on', name: 'On' },
+];
+
+export const STATS_OPTIONS = [
+  { code: 'off', name: 'Off' },
+  { code: 'on', name: 'On' },
+];
+
 export const OSD_IDLE_BUTTONS = [
   { code: 'icon', name: 'Icon Only' },
   { code: 'outline', name: 'Outline' },
@@ -224,8 +289,9 @@ export const SUBTITLE_COLORS = [
 
 export const SUBTITLE_BACKGROUNDS = [
   { code: 'auto', name: 'Auto' },
-  { code: 'dark', name: 'Dark Box' },
-  { code: 'light', name: 'Light Box' },
+  { code: 'dark', name: 'Dark' },
+  { code: 'light', name: 'Light' },
+  { code: 'theme', name: 'Themed' },
   { code: 'outline', name: 'Outline' },
 ];
 
@@ -233,20 +299,29 @@ export const SYSTEM_FONT_STACK = "system-ui, -apple-system, BlinkMacSystemFont, 
 
 export const UI_FONTS = [
   { code: 'default', name: 'System', family: null },
+  { code: 'console', name: 'Inconsolata', family: 'Inconsolata', scale: 1.15 },
+  { code: 'plex-mono', name: 'IBM Plex Mono', family: 'IBM Plex Mono' },
+  { code: 'fira-code', name: 'Fira Code', family: 'Fira Code' },
+  { code: 'space-mono', name: 'Space Mono', family: 'Space Mono' },
+  { code: 'silkscreen', name: 'Silkscreen', family: 'Silkscreen', scale: 0.85 },
+  { code: 'vt323', name: 'VT323', family: 'VT323', scale: 1.15 },
+  { code: 'jersey10', name: 'Jersey 10', family: 'Jersey 10', scale: 1.1 },
+  { code: 'tiny5', name: 'Tiny5', family: 'Tiny5' },
+  { code: 'geist-pixel', name: 'Geist Pixel', family: 'Geist Pixel' },
   { code: 'inter', name: 'Inter', family: 'Inter' },
   { code: 'poppins', name: 'Poppins', family: 'Poppins' },
   { code: 'open-sans', name: 'Open Sans', family: 'Open Sans' },
   { code: 'space-grotesk', name: 'Space Grotesk', family: 'Space Grotesk' },
   { code: 'lexend', name: 'Lexend', family: 'Lexend' },
-  { code: 'atkinson', name: 'Atkinson Hyperlegible Next', family: 'Atkinson Hyperlegible Next' },
+  { code: 'atkinson', name: 'Atkinson Hyperlegible Next', family: 'Atkinson Hyperlegible Next', scale: 1.1 },
   { code: 'andika', name: 'Andika', family: 'Andika' },
-  { code: 'comic-neue', name: 'Comic Neue', family: 'Comic Neue' },
-  { code: 'opendyslexic', name: 'OpenDyslexic', family: 'OpenDyslexic' },
+  { code: 'comic-neue', name: 'Comic Neue', family: 'Comic Neue', scale: 1.1 },
+  { code: 'opendyslexic', name: 'OpenDyslexic', family: 'OpenDyslexic', scale: 0.85 },
   { code: 'print', name: 'Merriweather', family: 'Merriweather' },
   { code: 'typewriter', name: 'Courier Prime', family: 'Courier Prime' },
-  { code: 'console', name: 'Inconsolata', family: 'Inconsolata' },
-  { code: 'silkscreen', name: 'Silkscreen', family: 'Silkscreen' },
 ];
+
+export const SUBTITLE_FONTS = [{ code: 'app', name: 'App' }, ...UI_FONTS];
 
 export const ASPECT_RATIOS = [
   { code: 'auto', name: 'Auto', objectFit: 'contain' as const },
@@ -262,21 +337,25 @@ export const SETTING_DEFAULTS = {
   subtitleFont: 'default',
   subtitleColor: '#AAF40D',
   subtitleBackground: 'auto',
-  previewVideo: 'on',
+  previewImage: 'on',
   remoteControl: 'off',
   themeMode: 'black',
   accentColor: '#AAF40D',
   uiFont: 'default',
   loaderStyle: 'voctocat',
   railStyle: 'transparent',
-  settingsEntry: 'icon',
+  logoButton: 'off',
+  menuPosition: 'top',
   iconVariant: 'outlined',
   glassSheen: 'gloss',
   glassTransparency: 'low',
   menuIconColor: 'grey',
   menuActiveColor: 'accent',
+  navIndicator: 'line',
   buttonStyle: 'accent',
   cornerStyle: 'classic',
+  borderWidth: 5,
+  scrollbarSize: 'normal',
   spinnerStyle: 'orbit',
   textScale: 1,
   tileScale: 1,
@@ -291,4 +370,6 @@ export const SETTING_DEFAULTS = {
   osdTimeMode: 'total',
   osdButtonShape: 'rounded',
   osdIdleButtons: 'icon',
+  osdBackButton: 'off',
+  statsForNerds: 'off',
 };

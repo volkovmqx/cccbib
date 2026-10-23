@@ -35,6 +35,21 @@ test('search debounces input, selects results, and moves focus with remote keys'
   fireEvent.keyDown(window, { key: 'Escape' }); expect(props.onClose).toHaveBeenCalledTimes(2);
 });
 
+test('search results follow a moving pointer and open on click', async () => {
+  const props = callbacks();
+  const results = [talk(), talk({ guid: 'second', title: 'Second', images: {} })];
+  vi.mocked(searchLectures).mockResolvedValue(results);
+  const view = render(<Search {...props} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  const second = screen.getByText('Second').closest('.listItem')!;
+  fireEvent.mouseMove(second, { clientX: 41, clientY: 61 });
+  expect(second).toHaveClass('listItem--selected');
+  fireEvent.mouseMove(view.container.querySelector('.listItem')!, { clientX: 41, clientY: 61 });
+  expect(second).toHaveClass('listItem--selected');
+  fireEvent.click(second); expect(props.onSelectEvent).toHaveBeenCalledWith(results[1]);
+});
+
 test('search uses cached results and Enter submits without the debounce delay', async () => {
   const view = render(<Search {...callbacks()} />);
   const input = screen.getByRole('textbox');
@@ -71,4 +86,17 @@ test('search ignores aborted and obsolete requests', async () => {
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'aborted' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(200); });
   expect(view.container.querySelector('.errorText')).not.toBeInTheDocument();
+});
+
+test('the left key leaves the results for the side menu even when the field is not focused', async () => {
+  const props = callbacks();
+  vi.mocked(searchLectures).mockResolvedValue([talk()]);
+  render(<Search {...props} />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  fireEvent.change(input, { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  input.blur();
+  input.setSelectionRange(3, 3);
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  expect(props.onFocusSidebar).toHaveBeenCalledTimes(1);
 });

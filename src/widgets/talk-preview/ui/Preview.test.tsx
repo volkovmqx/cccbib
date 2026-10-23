@@ -5,48 +5,37 @@ import { talk } from '../../../../tests/fixtures';
 import { setSetting } from '@/shared/config';
 
 beforeEach(() => {
-  vi.useFakeTimers(); vi.spyOn(document, 'hasFocus').mockReturnValue(true);
-  setSetting('language', 'deu'); setSetting('previewVideo', 'on');
+  vi.useFakeTimers();
+  setSetting('language', 'deu'); setSetting('previewImage', 'on');
 });
 
-test('preview delays video and poster loading and silences audio tracks in mute mode', () => {
-  const value = talk({ subtitles: [{ url: 'eng.vtt', language: 'eng', mimeType: 'text/vtt' }], videos: [talk().videos[0], { ...talk().videos[0], language: 'eng' }] });
-  const view = render(<Preview event={value} />);
+test('the preview shows the title and the picture, first small and then sharp, and never a video', () => {
+  const view = render(<Preview event={talk()} />);
   expect(screen.getByText('Test talk')).toBeVisible();
   expect(view.container.querySelector('video')).not.toBeInTheDocument();
-  act(() => { vi.advanceTimersByTime(300); });
-  const video = view.container.querySelector('video')!;
-  expect(video).toBeInTheDocument();
-  const poster = view.container.querySelectorAll('.previewBackdrop__img')[1];
-  expect(poster).toHaveStyle({ opacity: 0 });
-  fireEvent.load(poster); expect(poster).toHaveStyle({ opacity: 1 });
-  fireEvent.loadedMetadata(video);
-  act(() => { setSetting('previewVideo', 'mute'); });
-  const tracks = [{ enabled: true }]; Object.defineProperty(video, 'audioTracks', { value: tracks, configurable: true });
-  fireEvent.loadedMetadata(video); expect(tracks[0].enabled).toBe(false);
-  fireEvent.playing(video); fireEvent.error(video);
-  expect(video.getAttribute('src')).toContain('#t=');
-  act(() => { vi.advanceTimersByTime(120000); });
+  const pictures = () => view.container.querySelectorAll('.previewBackdrop__img');
+  expect(pictures()).toHaveLength(1);
+  act(() => { vi.advanceTimersByTime(250); });
+  expect(pictures()).toHaveLength(2);
+  expect(pictures()[1]).toHaveStyle({ opacity: 0 });
+  fireEvent.load(pictures()[1]);
+  expect(pictures()[1]).toHaveStyle({ opacity: 1 });
   expect(view.container.querySelector('video')).not.toBeInTheDocument();
-  view.rerender(<Preview event={talk({ guid: 'other', images: {}, videos: [], subtitles: undefined })} />);
-  act(() => { vi.advanceTimersByTime(300); });
-  expect(screen.getByText('No recording available')).toBeVisible();
-  act(() => { setSetting('previewVideo', 'none'); });
-  expect(screen.queryByText('No recording available')).not.toBeInTheDocument();
 });
 
-test('preview stops its decoder when disabled and supports still images', () => {
-  const value = talk();
-  const view = render(<Preview event={value} disableVideo />);
-  act(() => { vi.advanceTimersByTime(300); });
-  expect(view.container.querySelector('video')).not.toBeInTheDocument();
-  view.rerender(<Preview event={value} />);
-  act(() => { vi.advanceTimersByTime(300); });
-  const video = view.container.querySelector('video')!;
-  expect(video).toBeInTheDocument();
-  fireEvent.playing(video);
-  view.rerender(<Preview event={value} disableVideo />);
-  expect(video.pause).toHaveBeenCalled(); expect(video.load).toHaveBeenCalled();
-  act(() => { setSetting('previewVideo', 'still'); });
+test('a talk without a recording says so, and Off hides the picture and that note', () => {
+  const view = render(<Preview event={talk({ guid: 'other', images: {}, videos: [], subtitles: undefined })} />);
+  expect(screen.getByText('No recording available')).toBeVisible();
   expect(view.container.querySelector('.previewBackdrop')).toBeInTheDocument();
+  act(() => { setSetting('previewImage', 'none'); });
+  expect(view.container.querySelector('.previewBackdrop')).not.toBeInTheDocument();
+  expect(screen.queryByText('No recording available')).not.toBeInTheDocument();
+  view.rerender(<Preview event={talk()} />);
+  expect(view.container.querySelector('.previewBackdrop')).not.toBeInTheDocument();
+});
+
+test('the language, subtitle and aspect marks show when the talk has them', () => {
+  const value = talk({ subtitles: [{ url: 'eng.vtt', language: 'eng', mimeType: 'text/vtt' }], videos: [talk().videos[0], { ...talk().videos[0], language: 'eng' }] });
+  const view = render(<Preview event={value} />);
+  expect(view.container.querySelectorAll('.previewMeta__item').length).toBeGreaterThanOrEqual(5);
 });

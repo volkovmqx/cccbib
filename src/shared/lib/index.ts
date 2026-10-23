@@ -1,7 +1,12 @@
-export { useIdle, useListState, useWindowEvent } from './utils';
-export { preloadImages, useImagePreload } from './useImagePreload';
-export { useScrollIntoView } from './scrollHelpers';
+export { useDelayedFlag, useWindowEvent } from './utils';
+export { useImagePreload } from './useImagePreload';
+export { revealInList, scrollIntoView, useScrollIntoView } from './scrollHelpers';
 export { useListNavigation } from './useListNavigation';
+export { isPointerDriven, pointerMoved, useWheelNavigation } from './pointer';
+export { dragScrollbar, initScrollbars } from './scrollbars';
+export { useMediaQuery } from './useMediaQuery';
 export { useOnlineStatus } from './useOnlineStatus';
+export { isWebOS } from './platform';
+export { usePageTitle } from './pageTitle';
 export { applyOutputWindow, usesOutputWindow } from './videoWindow';
 export { getSubtitleLanguages, getSubtitleSources, loadSubtitleCues } from './subtitles';

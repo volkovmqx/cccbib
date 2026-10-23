@@ -44,7 +44,10 @@ export function useQuery<T>(key: string, query: string, variables: Variables,
     if (!listeners.has(key)) listeners.set(key, new Set());
     const subscribers = listeners.get(key)!;
     subscribers.add(notify);
-    return () => { subscribers.delete(notify); };
+    return () => {
+      subscribers.delete(notify);
+      if (subscribers.size === 0) listeners.delete(key);
+    };
   }, [key]);
   const data = useSyncExternalStore(subscribe, () => cache.get(key) as T | undefined);
   const [error, setError] = useState<Error | null>(null);

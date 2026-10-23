@@ -1,7 +1,7 @@
 import type { Talk } from '@/entities/talk';
 import type { PageProps } from '@/shared/ui';
 import React, { useState, useEffect, useRef } from 'react';
-import { useWindowEvent } from '@/shared/lib';
+import { pointerMoved, useWindowEvent } from '@/shared/lib';
 import { formatSeconds } from '@/entities/talk';
 import { useScrollIntoView } from '@/shared/lib';
 import { searchLectures, getCachedSearch, normalizeQuery } from '../api/search';
@@ -134,7 +134,7 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
           />
         </div>
 
-        <div className="searchResults scrollable" ref={resultsContainerRef}>
+        <div className="searchResults scrollable" ref={resultsContainerRef} data-wheel="scroll" data-wheel-main>
           {loading && results.length === 0 && (
             <div className="center" style={{ height: 200 }}>
               <Spinner />
@@ -155,6 +155,7 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
                   ref={index === selectedIndex ? selectedItemRef : null}
                   className={`listItem ${index === selectedIndex ? 'listItem--selected' : ''}`}
                   onClick={() => onSelectEvent(event)}
+                  onMouseMove={(e) => { if (pointerMoved(e)) setSelectedIndex(index); }}
                 >
                   {event.images.thumbUrl && (
                     <img

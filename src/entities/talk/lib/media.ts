@@ -43,7 +43,7 @@ export function getVideo(videos: Recording[], preferredLanguage = 'deu'): [Recor
             priority = 3;
           } else if (isWebm) {
             priority = 2;
-          } else if (isMp4) {
+          } else {
             priority = 1;
           }
 
@@ -66,14 +66,6 @@ export function isOddAspect(videos: Recording[], preferredLanguage?: string) {
   const [recording] = getVideo(videos || [], preferredLanguage);
   if (!recording || !recording.width || !recording.height) return false;
   return Math.abs(recording.width / recording.height - 16 / 9) > 0.08;
-}
-
-export function getPreviewVideo(videos: Recording[], preferredLanguage: string) {
-  const [best] = getVideo(videos, preferredLanguage);
-  if (!best) return null;
-  const sameKind = videos.filter(v => v.url && v.width && v.mimeType === best.mimeType && v.language === best.language);
-  if (sameKind.length === 0) return best;
-  return sameKind.reduce((smallest, v) => (v.width! < smallest.width! ? v : smallest));
 }
 
 // webOS has a single hardware decoder, so a video has to be unloaded explicitly before the next one starts

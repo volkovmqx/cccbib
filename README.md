@@ -18,14 +18,17 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 
 ## Features
 
-- Browse conferences with video previews and search for talks.
-- Use the TV remote to navigate and control playback.
+- Browse conferences with preview pictures and search for talks. In a browser, a click on a conference name on the home page opens that conference with all its videos.
+- Use the TV remote to navigate and control playback. The Magic Remote pointer selects and its wheel scrolls lists like a page.
 - Save talks to the Watchlist and resume the 20 most recent talks in Continue Watching.
 - Select audio languages and subtitles when a talk provides them.
 - Choose from 9 app languages.
-- Change themes, accent colors, and fonts.
+- Choose from 15 themes, accent colors, 21 fonts, 24 loading animations, and the size of the scrollbars.
 - Select Auto, Zoom, or Stretch for the video aspect ratio.
+- Play videos from the CDN mirror that ranks best for your location and stay on it.
+- Show technical details of the playback with Stats for Nerds (mirror, resolution, buffer and connection).
 - Send commands through webOS launch parameters (see [Remote control](#remote-control)).
+- Use it in a browser on a phone: below 900 px the menu becomes a bar at the top (or at the bottom with the Menu Position setting), Settings stacks and the text scales with the screen width and your text size setting.
 
 ## Remote control
 
@@ -112,7 +115,7 @@ The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or ol
 
 Contributions are welcome. You can report bugs, add translations, improve documentation, write tests, or submit code changes.
 
-The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the 95% coverage requirement, the coverage bot, and deployment.
+The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the coverage requirements, the coverage bot, and deployment.
 
 ## Contributors
 

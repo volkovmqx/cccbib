@@ -38,6 +38,7 @@ export function useControlsVisibility({ selectorOpen, playing }: { selectorOpen:
 
   const focusButton = useCallback((id: string) => updateFocus({ area: 'buttons', id }), [updateFocus]);
   const focusProgress = useCallback(() => updateFocus({ area: 'progress', id: null }), [updateFocus]);
+  const focusBack = useCallback(() => updateFocus({ area: 'back', id: null }), [updateFocus]);
 
   useEffect(() => {
     if (!playing) {
@@ -50,6 +51,6 @@ export function useControlsVisibility({ selectorOpen, playing }: { selectorOpen:
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  return { visible, focus, show, hide, focusButton, focusProgress };
+  return { visible, focus, show, hide, focusButton, focusProgress, focusBack };
 }
 
