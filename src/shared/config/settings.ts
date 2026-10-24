@@ -11,8 +11,9 @@ const LEGACY: Partial<Record<SettingKey, { key: string; map: Record<string, stri
   spinnerStyle: { key: 'loaderStyle', map: { orbit: 'orbit', ring: 'ring', dots: 'dots' } },
   subtitleColor: { key: 'subtitleStyle', map: { green: '#AAF40D', white: '#FFFFFF', black: '#000000' } },
   logoButton: { key: 'settingsEntry', map: { icon: 'off', logo: 'settings' } },
-  previewImage: { key: 'previewVideo', map: { on: 'on', mute: 'on', still: 'on', off: 'on', none: 'none' } },
 };
+
+const VALUE_ALIASES: Partial<Record<SettingKey, Record<string, string>>> = { previewVideo: { off: 'still' } };
 
 function parseStored(raw: string): unknown {
   try { return JSON.parse(raw); } catch { return raw; }
@@ -50,7 +51,8 @@ function readStored<K extends SettingKey>(key: K): Settings[K] {
       return ((legacyRaw !== null && legacy.map[String(parseStored(legacyRaw))]) || fallback) as Settings[K];
     }
     const stored = parseStored(raw);
-    return typeof stored === typeof fallback ? stored as Settings[K] : fallback;
+    const parsed = VALUE_ALIASES[key]?.[String(stored)] || stored;
+    return typeof parsed === typeof fallback ? parsed as Settings[K] : fallback;
   } catch { return fallback; }
 }
 

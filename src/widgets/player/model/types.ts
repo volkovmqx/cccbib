@@ -9,6 +9,7 @@ export interface PlayerButton {
   align: string;
   label: string;
   icon: ReactNode;
+  activeIcon?: ReactNode;
   onPress: () => void;
   disabled?: boolean;
 }

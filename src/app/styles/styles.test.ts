@@ -209,18 +209,39 @@ test('the home rows scroll like a page inside the area below the preview', () =>
   expect(property('.embla__container_vertical', 'height')).toBe('');
 });
 
+test('an opaque cover of the page colour hides the preview video until it plays, also on the glow themes', () => {
+  expect([property('.previewCover', 'position'), property('.previewCover', 'width'), property('.previewCover', 'height')]).toEqual(['absolute', '100%', '100%']);
+  expect(property('.previewCover', 'background')).toBe('var(--bg)');
+  expect(property("html[data-canvas='glow'] .previewCover", 'background')).toBe(property("html[data-canvas='glow'] .previewOverlay", 'background'));
+});
+
+test('the skip icons turn into their filled version on hover and remote focus, but not while the button is disabled', () => {
+  expect(property('.playerUI__icon', 'display')).toBe('contents');
+  expect(property('.playerUI__icon--active', 'display')).toBe('none');
+  expect(property('.playerUI__button:not(:disabled):hover .playerUI__icon--idle', 'display')).toBe('none');
+  expect(property('.playerUI__button--focused .playerUI__icon--idle', 'display')).toBe('none');
+  expect(property('.playerUI__button:not(:disabled):hover .playerUI__icon--active', 'display')).toBe('contents');
+  expect(property('.playerUI__button--focused .playerUI__icon--active', 'display')).toBe('contents');
+});
+
+test('the conference grid hides its native scrollbar and shows the same full height bar while it scrolls', () => {
+  expect(property('.conferenceView__container::-webkit-scrollbar', 'width')).toBe('0');
+  expect(property('.conferenceView__container[data-scrolling] + .pageScroll', 'opacity')).toBe('1');
+  expect(Number(property('.pageScroll', 'z-index'))).toBeGreaterThan(Number(property('.title', 'z-index')));
+});
+
 test('the home bar runs along the right edge of the whole screen and shows only while the rows scroll', () => {
   expect(property('.embla__viewport.homeRows::-webkit-scrollbar', 'width')).toBe('0');
-  expect(property('.homeScroll', 'position')).toBe('fixed');
-  for (const edge of ['top', 'right', 'bottom']) expect(property('.homeScroll', edge), edge).toBe('0');
-  expect(property('.homeScroll', 'opacity')).toBe('0');
-  expect(property('.homeRows[data-scrolling] + .homeScroll', 'opacity')).toBe('1');
-  expect(property('.homeScroll', 'pointer-events')).toBe('');
-  expect(property('.homeScroll:hover', 'opacity')).toBe('1');
-  expect(property('.homeScroll', 'width')).toBe(property('::-webkit-scrollbar', 'width'));
-  expect(property('.homeScroll__thumb', 'background')).toBe(property('[data-scrolling]::-webkit-scrollbar-thumb', 'background-color'));
-  expect(property('.homeScroll__thumb', 'right')).toBe(`calc((${'var(--scrollbar-hit)'} - var(--scrollbar-width)) / 2)`);
-  expect(property('.homeScroll:hover .homeScroll__thumb', 'right')).toBe('calc((var(--scrollbar-hit) - var(--scrollbar-grab)) / 2)');
+  expect(property('.pageScroll', 'position')).toBe('fixed');
+  for (const edge of ['top', 'right', 'bottom']) expect(property('.pageScroll', edge), edge).toBe('0');
+  expect(property('.pageScroll', 'opacity')).toBe('0');
+  expect(property('.homeRows[data-scrolling] + .pageScroll', 'opacity')).toBe('1');
+  expect(property('.pageScroll', 'pointer-events')).toBe('');
+  expect(property('.pageScroll:hover', 'opacity')).toBe('1');
+  expect(property('.pageScroll', 'width')).toBe(property('::-webkit-scrollbar', 'width'));
+  expect(property('.pageScroll__thumb', 'background')).toBe(property('[data-scrolling]::-webkit-scrollbar-thumb', 'background-color'));
+  expect(property('.pageScroll__thumb', 'right')).toBe(`calc((${'var(--scrollbar-hit)'} - var(--scrollbar-width)) / 2)`);
+  expect(property('.pageScroll:hover .pageScroll__thumb', 'right')).toBe('calc((var(--scrollbar-hit) - var(--scrollbar-grab)) / 2)');
 });
 
 test('a loading animation on a highlighted row is drawn in the colours of that row', () => {
@@ -300,7 +321,7 @@ test('nothing in the side menu can scroll it sideways because the logo and the l
 test('the Home preview box is a widescreen box in the top right corner that is large enough to see the video', () => {
   const width = parseFloat(property(':root', '--preview-width'));
   const height = parseFloat(property(':root', '--preview-height'));
-  expect(width).toBe(1452);
+  expect(width).toBe(1742);
   expect(Math.abs(width / height - 16 / 9)).toBeLessThan(0.005);
   expect([property('.preview', 'position'), property('.preview', 'top'), property('.preview', 'right')]).toEqual(['fixed', '0', '0']);
   expect(property('.previewOverlay', 'height')).toBe('var(--preview-height)');
@@ -308,8 +329,8 @@ test('the Home preview box is a widescreen box in the top right corner that is l
 
 test('the fade over the preview picture is a mask that is strong at the left and the bottom and ends early at the top right, so the glow of a theme stays out of the free part', () => {
   const mask = property('.previewOverlay', '-webkit-mask-image');
-  expect(mask).toContain('#000 60%, rgba(0, 0, 0, 0.5) 72%, transparent 84%');
-  expect(mask).toContain('#000 40%, rgba(0, 0, 0, 0.5) 58%, transparent 76%');
+  expect(mask).toContain('#000 calc(100% - var(--preview-width) * 0.46), rgba(0, 0, 0, 0.5) calc(100% - var(--preview-width) * 0.31), transparent calc(100% - var(--preview-width) * 0.17)');
+  expect(mask).toContain('#000 46%, rgba(0, 0, 0, 0.5) 64%, transparent 82%');
   expect(property('.previewOverlay', 'background')).toBe('var(--bg)');
   expect(property("html[data-canvas='glow'] .previewOverlay", 'background')).toBe('var(--canvas), var(--bg)');
   expect(css).not.toContain('.previewOverlay::after');
@@ -319,6 +340,11 @@ test('the side menu cannot be reached through the player of a screen and the lay
   expect(property('.appShell--playing .appShell__nav', 'pointer-events')).toBe('none');
   expect(declarations('.appShell--playing')).toBe('');
   expect(property('.appShell--fullscreen .appShell__main', 'margin-left')).toBe('0');
+});
+
+test('the preview video is placed in the top right corner of the preview so that its box can take the shape of the video', () => {
+  expect([property('.preview .player', 'position'), property('.preview .player', 'top'), property('.preview .player', 'right')]).toEqual(['absolute', '0', '0']);
+  expect([property('.preview', 'position'), property('.preview', 'top'), property('.preview', 'right')]).toEqual(['fixed', '0', '0']);
 });
 
 test('the stats panel sits at the top right, ignores the pointer, and stays readable on every theme', () => {
@@ -434,5 +460,8 @@ test('the cat on the About page moves only while it is marked as moving, because
 test('the tab list and the page of Settings are separate layers, one shared layer shows stale pictures on the TV', () => {
   expect(property('.settingsView__tabs', 'will-change')).toBe('transform');
   expect(property('.settingsView__content', 'will-change')).toBe('transform');
+  expect(property('.searchInput', 'will-change')).toBe('transform');
+  expect(property('.searchResults', 'will-change')).toBe('transform');
+  for (const selector of ['.popularView__list', '.eventsListView__list', '.watchlistView__list', '.conferenceView__container']) expect(property(selector, 'will-change'), selector).toBe('transform');
 });
 

@@ -1,6 +1,6 @@
-/* Only the accent and the theme colours are used, a wide loader sets --w and --h next to --s */
+/* Only the accent and the theme colours are used, a wide loader sets --w and --h next to --s, the start screen scales them all with --boot-scale */
 .loading-spinner {
-  --s: 56px;
+  --s: calc(56px * var(--boot-scale, 1));
   position: absolute; top: 50%; left: 50%; width: var(--w, var(--s)); height: var(--h, var(--s));
   margin: calc(var(--h, var(--s)) / -2) 0 0 calc(var(--w, var(--s)) / -2);
 }
@@ -315,7 +315,7 @@
 @keyframes loader-sand-top { 0% { opacity: 1; } 65%, 100% { opacity: 0; } }
 @keyframes loader-sand-bottom { 0% { opacity: 0; } 65%, 100% { opacity: 1; } }
 
-.loader-rocket { --s: 96px; }
+.loader-rocket { --s: calc(96px * var(--boot-scale, 1)); }
 .loader-rocket svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
 .loader-rocket .body { fill: var(--text); }
 .loader-rocket .line, .loader-rocket .fire, .loader-rocket .port { fill: var(--accent); }

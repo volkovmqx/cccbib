@@ -1,13 +1,13 @@
 import { act, renderHook } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, test, vi } from 'vitest';
-import { useDelayedFlag, useWindowEvent } from './utils';
+import { useDelayedFlag, useIdle, useWindowEvent } from './utils';
 import { useMediaQuery } from './useMediaQuery';
 import { isWebOS } from './platform';
 import { useListNavigation } from './useListNavigation';
 import { useImagePreload } from './useImagePreload';
 import { useOnlineStatus } from './useOnlineStatus';
-import { scrollIntoView, useScrollIntoView } from './scrollHelpers';
+import { scrollIntoView } from './scrollHelpers';
 import { pointerMoved, useWheelNavigation } from './pointer';
 
 test('window listeners use the latest callback and remove listeners on unmount', () => {
@@ -19,6 +19,30 @@ test('window listeners use the latest callback and remove listeners on unmount',
   expect(first).toHaveBeenCalledTimes(1); expect(second).toHaveBeenCalledTimes(1);
   unmount(); window.dispatchEvent(new Event('resize'));
   expect(second).toHaveBeenCalledTimes(1);
+});
+
+test('idle state follows input, focus, visibility, and its timeout', () => {
+  vi.useFakeTimers();
+  const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+  const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+  const { result, unmount } = renderHook(() => useIdle(100));
+  expect(result.current).toBe(false);
+  act(() => { vi.advanceTimersByTime(100); });
+  expect(result.current).toBe(true);
+  for (const name of ['keydown', 'mousemove', 'focus']) {
+    act(() => { window.dispatchEvent(new Event(name)); });
+    expect(result.current).toBe(false);
+    act(() => { window.dispatchEvent(new Event('blur')); });
+    expect(result.current).toBe(true);
+  }
+  act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(result.current).toBe(false);
+  hidden.mockReturnValue(true);
+  act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(result.current).toBe(true);
+  unmount();
+  hasFocus.mockReturnValue(false);
+  expect(renderHook(() => useIdle(100)).result.current).toBe(true);
 });
 
 test('list navigation wraps selection, transfers focus, and handles both back keys', () => {
@@ -77,8 +101,7 @@ test('online status and scroll helpers follow browser state', () => {
   scrollIntoView({ current: null }, null);
   scrollIntoView({ current: item }, null);
   expect(item.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
-  const hook = renderHook(({ deps }) => useScrollIntoView({ current: item }, null, deps, 'center'), { initialProps: { deps: 0 as number | number[] } });
-  hook.rerender({ deps: [1] });
+  scrollIntoView({ current: item }, null, 'center');
   expect(item.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
 });
 

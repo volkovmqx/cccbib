@@ -142,8 +142,8 @@ test('home rows scroll natively and the remote moves the selected row to the top
 test('the home bar can be grabbed, pressing and dragging its thumb scrolls the rows', async () => {
   const view = render(<Home {...props()} />); await tick();
   const rowsView = scroller(view.container);
-  const bar = view.container.querySelector('.homeScroll') as HTMLElement;
-  const thumb = view.container.querySelector('.homeScroll__thumb') as HTMLElement;
+  const bar = view.container.querySelector('.pageScroll') as HTMLElement;
+  const thumb = view.container.querySelector('.pageScroll__thumb') as HTMLElement;
   expect(thumb.style.height).toBe('0%');
   layout(rowsView);
   Object.defineProperty(rowsView, 'clientHeight', { configurable: true, value: 700 });
@@ -168,8 +168,8 @@ test('the home bar can be grabbed, pressing and dragging its thumb scrolls the r
 test('the home bar thumb follows the scrolled rows along the whole screen height', async () => {
   const view = render(<Home {...props()} />); await tick();
   const rowsView = scroller(view.container);
-  const thumb = view.container.querySelector('.homeScroll__thumb') as HTMLElement;
-  expect(view.container.querySelector('.homeScroll')).toHaveAttribute('aria-hidden', 'true');
+  const thumb = view.container.querySelector('.pageScroll__thumb') as HTMLElement;
+  expect(view.container.querySelector('.pageScroll')).toHaveAttribute('aria-hidden', 'true');
   layout(rowsView);
   Object.defineProperty(rowsView, 'clientHeight', { configurable: true, value: 700 });
   Object.defineProperty(rowsView, 'scrollHeight', { configurable: true, value: 2800 });
@@ -475,8 +475,8 @@ test('rows away from the screen are only a title on a skeleton again, and the ro
 test('the grip of the home bar keeps its size while it is held and fits the rows again when it is let go', async () => {
   const view = render(<Home {...props()} />); await tick();
   const rowsView = scroller(view.container);
-  const bar = view.container.querySelector('.homeScroll') as HTMLElement;
-  const thumb = view.container.querySelector('.homeScroll__thumb') as HTMLElement;
+  const bar = view.container.querySelector('.pageScroll') as HTMLElement;
+  const thumb = view.container.querySelector('.pageScroll__thumb') as HTMLElement;
   layout(rowsView);
   Object.defineProperty(rowsView, 'clientHeight', { configurable: true, value: 700 });
   Object.defineProperty(rowsView, 'scrollHeight', { configurable: true, value: 2800 });

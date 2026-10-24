@@ -5,7 +5,7 @@ import { pointerMoved, useWindowEvent } from '@/shared/lib';
 import { IconCheck, IconChevronDown } from '@tabler/icons-react';
 import { NavIcon, isFilled } from '@/shared/ui';
 import {
-  LANGUAGES, UI_LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_COLORS, SUBTITLE_BACKGROUNDS, PREVIEW_IMAGE_OPTIONS, REMOTE_CONTROL_OPTIONS,
+  LANGUAGES, UI_LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_COLORS, SUBTITLE_BACKGROUNDS, PREVIEW_VIDEO_OPTIONS, REMOTE_CONTROL_OPTIONS,
   THEME_MODES, ACCENT_COLORS, UI_FONTS, SUBTITLE_FONTS, LOADER_STYLES, SPINNER_STYLES, RAIL_STYLES, GLASS_SHEEN, GLASS_TRANSPARENCY, MENU_COLORS, NAV_INDICATORS, ICON_VARIANTS, LOGO_BUTTONS, MENU_POSITIONS, BUTTON_STYLES, CORNER_STYLES, BORDER_WIDTHS, SCROLLBAR_SIZES, SCALE_OPTIONS, TEXT_SCALE_OPTIONS, OSD_SCALE_OPTIONS, OSD_OPACITY_OPTIONS, OSD_MENU_OPACITY_OPTIONS, OSD_HANDLES, OSD_BAR_COLORS, OSD_TIME_MODES, OSD_BUTTON_SHAPES, OSD_IDLE_BUTTONS, OSD_BACK_BUTTONS, STATS_OPTIONS, ASPECT_RATIOS,
 } from '@/shared/config';
 import { revealInList, scrollIntoView, useMediaQuery } from '@/shared/lib';
@@ -63,7 +63,7 @@ const TABS: Tab[] = [
           { key: 'glassTransparency', title: 'Glass Transparency', description: 'How much of the page shows through the open glass menu. On this TV the text behind it is not blurred, so Low stays the easiest to read.', options: GLASS_TRANSPARENCY, showWhen: { railStyle: 'glass' } },
           { key: 'menuPosition', title: 'Menu Position', description: 'Where the menu sits on phones and tablets. Bottom is easier to reach with a thumb and moves the Settings tabs to the bottom as well.', options: MENU_POSITIONS, compactOnly: true },
           { key: 'logoButton', title: 'Logo Button', description: 'The CCCBib logo can be the button for Settings or for Home. It then replaces the gear or the home icon, so it is never both. Off keeps it as decoration, except on phones and tablets where it is the Home button.', options: LOGO_BUTTONS },
-          { key: 'iconVariant', title: 'Icon Variant', description: 'Dynamic shows outlined icons and fills the one you are on or focus. Applies to the side menu and the Settings tabs.', options: ICON_VARIANTS },
+          { key: 'iconVariant', title: 'Icon Variant', description: 'Dynamic shows outlined icons and fills the one you are on or focus. Applies to the side menu, the Settings tabs and the player controls.', options: ICON_VARIANTS },
           { key: 'menuIconColor', title: 'Icon Color', description: 'Color of the icons and names of the side menu items.', options: MENU_COLORS },
           { key: 'menuActiveColor', title: 'Selected Icon Color', description: 'Color of the item for the screen you are on.', options: MENU_COLORS },
           { key: 'navIndicator', title: 'Indicator', description: 'How the item of the screen you are on is marked in the side menu. Line is a bar on the left, Border frames the item and Contrast fills it with a contrasting color.', options: NAV_INDICATORS },
@@ -117,7 +117,7 @@ const TABS: Tab[] = [
         title: 'Video',
         rows: [
           { key: 'aspectRatio', title: 'Aspect Ratio', description: 'Zoom crops and Stretch distorts to fill the screen, which helps with old 4:3 recordings.', options: ASPECT_RATIOS },
-          { key: 'previewImage', title: 'Preview Image', description: 'Shows the picture of the selected talk while browsing.', options: PREVIEW_IMAGE_OPTIONS },
+          { key: 'previewVideo', title: 'Preview', description: 'What the top right of Home shows for the selected talk. Video plays a short clip, Mute plays it without sound and Off shows nothing.', options: PREVIEW_VIDEO_OPTIONS },
         ],
       },
       {
@@ -303,6 +303,17 @@ const columnsOf = (grid: HTMLElement | null) => {
   return Math.max(1, columns);
 };
 
+// Down on the last entry goes to the first and Up on the first goes to the last, in a grid within the same column
+const stepVertical = (index: number, direction: 1 | -1, count: number, columns: number) => {
+  if (columns === 1) return (index + direction + count) % count;
+  const next = index + direction * columns;
+  if (next >= 0 && next < count) return next;
+  const column = index % columns;
+  if (direction > 0) return column;
+  const candidate = Math.floor((count - 1) / columns) * columns + column;
+  return candidate < count ? candidate : candidate - columns;
+};
+
 const SettingsPicker = React.memo(function SettingsPicker({ row, index, gridRef, onPick, onHover, onClose }: { row: IndexedRow; index: number; gridRef: React.RefObject<HTMLDivElement | null>; onPick: (row: IndexedRow, index: number) => void; onHover: (index: number) => void; onClose: () => void }) {
   const t = useTranslation();
   const [current] = useSetting(row.action ? 'uiLanguage' : row.key);
@@ -486,8 +497,8 @@ const Settings = React.memo(function Settings({ onClose, onFocusSidebar, sidebar
       const columns = row.variant === 'swatch' ? columnsOf(modalGridRef.current) : 1;
       if (isBack || (e.key === 'ArrowLeft' && columns === 1)) setModal(null);
       else if (e.key === 'Enter') pickFromModal(row, index);
-      else if (e.key === 'ArrowDown' && index + columns < count) setModal({ row, index: index + columns });
-      else if (e.key === 'ArrowUp' && index - columns >= 0) setModal({ row, index: index - columns });
+      else if (e.key === 'ArrowDown') setModal({ row, index: stepVertical(index, 1, count, columns) });
+      else if (e.key === 'ArrowUp') setModal({ row, index: stepVertical(index, -1, count, columns) });
       else if (e.key === 'ArrowRight' && columns > 1 && index + 1 < count) setModal({ row, index: index + 1 });
       else if (e.key === 'ArrowLeft' && columns > 1 && index > 0) setModal({ row, index: index - 1 });
       return;
@@ -527,10 +538,10 @@ const Settings = React.memo(function Settings({ onClose, onFocusSidebar, sidebar
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (rowIndex < rows.length - 1) focusRow(rowIndex + 1);
+      focusRow((rowIndex + 1) % rows.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (rowIndex > 0) focusRow(rowIndex - 1);
+      focusRow((rowIndex - 1 + rows.length) % rows.length);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       if (choices && optionIndex > 0) setOptionIndex(optionIndex - 1);

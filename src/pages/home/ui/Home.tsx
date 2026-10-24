@@ -3,7 +3,7 @@ import type { PlaybackPageProps } from '@/shared/ui';
 import type { CarouselApi, HomeRow, TalkSelection } from '../model/types';
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback, useDeferredValue } from 'react';
 import { GET_RECENT_CONFERENCES, RECENT_KEY, mergeRecent } from '@/entities/conference';
-import { dragScrollbar, isWebOS, useMediaQuery, useWindowEvent } from '@/shared/lib';
+import { isWebOS, useMediaQuery, useWindowEvent } from '@/shared/lib';
 import { useQuery, graphqlRequest, updateQuery } from '@/shared/api';
 import { Preview } from '@/widgets/talk-preview';
 import { handleArrowLeft, handleArrowRight } from '../model/navigation';
@@ -11,7 +11,7 @@ import { EventCarousel } from './EventCarousel';
 import { Player } from '@/widgets/player';
 import { usePlaybackHistory } from '@/features/playback-history';
 import { saveHomeCache } from '@/entities/conference';
-import { LoadingScreen, Spinner } from '@/shared/ui';
+import { LoadingScreen, PageScrollbar, Spinner } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
 
 const CONFERENCES_PER_PAGE = 6;
@@ -21,7 +21,6 @@ const ROWS_BELOW = 3;
 const KEEP_ABOVE = 2;
 const KEEP_BELOW = 4;
 const CONTINUE_KEY = 'continueWatching';
-const THUMB_MIN_PERCENT = 8;
 export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen, onOpenConference }: Omit<PlaybackPageProps, 'onClose'> & { active: boolean; onReady: () => void; onOpenConference?: (conferenceId: string) => void }) {
   const t = useTranslation();
   const compact = useMediaQuery('(max-width: 900px)');
@@ -90,10 +89,6 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
   const lastVerticalNavRef = useRef(0);
   const previousPlaybackHistoryRef = useRef(playbackHistory);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const thumbRef = useRef<HTMLDivElement | null>(null);
-  const barRef = useRef<HTMLDivElement | null>(null);
-  const releaseBarRef = useRef<(() => void) | null>(null);
-  const draggingRef = useRef(false);
   const keyboardRowRef = useRef(false);
   const fetchedFromRef = useRef(-1);
 
@@ -157,42 +152,12 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
     setRowHeight((current) => (Math.abs(current - average) > 2 ? average : current));
   }, [rows.length, compact]);
 
-  const updateThumb = useCallback((scroller: HTMLElement) => {
-    const thumb = thumbRef.current;
-    if (!thumb) return;
-    const range = scroller.scrollHeight - scroller.clientHeight;
-    // The grip keeps its size while it is held, rows that load meanwhile would shrink it under the pointer
-    const height = draggingRef.current ? parseFloat(thumb.style.height) || 0 : range > 0 ? Math.max(THUMB_MIN_PERCENT, (scroller.clientHeight / scroller.scrollHeight) * 100) : 0;
-    if (!draggingRef.current) thumb.style.height = `${height}%`;
-    thumb.style.top = `${range > 0 ? (scroller.scrollTop / range) * (100 - height) : 0}%`;
-  }, []);
-
   const onScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const scroller = event.currentTarget;
     const list = scroller.firstElementChild;
     const average = list && list.children.length > 0 ? list.scrollHeight / list.children.length : 0;
     setScrollRow(average > 0 ? Math.floor(scroller.scrollTop / average) : 0);
-    updateThumb(scroller);
-  }, [updateThumb]);
-
-  useLayoutEffect(() => {
-    if (scrollerRef.current) updateThumb(scrollerRef.current);
-  }, [rows.length, updateThumb]);
-
-  useEffect(() => () => releaseBarRef.current?.(), []);
-
-  const onBarMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    const scroller = scrollerRef.current;
-    const bar = barRef.current;
-    const thumb = thumbRef.current;
-    if (!scroller || !bar || !thumb) return;
-    releaseBarRef.current?.();
-    draggingRef.current = true;
-    releaseBarRef.current = dragScrollbar(event, scroller, bar, thumb, () => {
-      draggingRef.current = false;
-      updateThumb(scroller);
-    });
-  }, [updateThumb]);
+  }, []);
 
   useEffect(() => {
     if (!data || Math.max(activeRow, scrollRow) + PREFETCH_ROWS < rows.length) return;
@@ -299,7 +264,7 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
       )}
       <div style={{ pointerEvents: playerIsOpen ? 'none' : 'auto' }}>
         <div className="fluidContainer">
-          {activeBrowseSelection.event && !compact && <Preview event={activeBrowseSelection.event} />}
+          {activeBrowseSelection.event && !compact && <Preview event={activeBrowseSelection.event} disableVideo={playerIsOpen} />}
           <div className="container">
             <div className="embla_vertical">
               <div className="embla__viewport homeRows" ref={scrollerRef} onScroll={onScroll} data-wheel="scroll" data-wheel-main>
@@ -346,9 +311,7 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
                   )}
                 </div>
               </div>
-              <div className="homeScroll" aria-hidden="true" ref={barRef} onMouseDown={onBarMouseDown}>
-                <div className="homeScroll__thumb" ref={thumbRef} />
-              </div>
+              <PageScrollbar scrollerRef={scrollerRef} watch={rows.length} />
             </div>
           </div>
         </div>

@@ -5,8 +5,8 @@
   --menu-scale: 1;
   --osd-scale: 1;
   --sidebar-width: calc(90px * var(--menu-scale, 1));
-  --preview-width: 1452px;
-  --preview-height: 817px;
+  --preview-width: 1742px;
+  --preview-height: 980px;
   --slide-width: calc(520px * var(--tile-scale, 1));
   --slide-height: 280px;
   --content-top: calc(399px + (var(--text-scale, 1) - 1) * 289px);
@@ -308,6 +308,8 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 20px 40px 30px var(--gutter);
+  /* Had issues without randomly mismatching remote control key presses on TV only. Don't remove! */
+  will-change: transform;
 }
 
 /* === LOADER/SKELETON === */
@@ -367,26 +369,27 @@ body {
   height: 0;
 }
 
-.homeScroll {
+.pageScroll {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 5;
+  z-index: 30;
   width: var(--scrollbar-hit);
   opacity: 0;
 }
 
-.homeRows[data-scrolling] + .homeScroll,
-.homeScroll:hover {
+.homeRows[data-scrolling] + .pageScroll,
+.conferenceView__container[data-scrolling] + .pageScroll,
+.pageScroll:hover {
   opacity: 1;
 }
 
-.homeScroll:hover {
+.pageScroll:hover {
   background: rgba(var(--text-rgb), 0.08);
 }
 
-.homeScroll__thumb {
+.pageScroll__thumb {
   position: absolute;
   right: calc((var(--scrollbar-hit) - var(--scrollbar-width)) / 2);
   left: calc((var(--scrollbar-hit) - var(--scrollbar-width)) / 2);
@@ -394,7 +397,7 @@ body {
   background: var(--accent);
 }
 
-.homeScroll:hover .homeScroll__thumb {
+.pageScroll:hover .pageScroll__thumb {
   right: calc((var(--scrollbar-hit) - var(--scrollbar-grab)) / 2);
   left: calc((var(--scrollbar-hit) - var(--scrollbar-grab)) / 2);
 }
@@ -569,6 +572,24 @@ body {
   transition: opacity 0.35s ease;
 }
 
+.previewCover {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+}
+
+.preview .player {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .container {
   background-color: var(--page-bg);
   width: calc(100% - var(--content-left) + var(--tile-gap));
@@ -587,8 +608,8 @@ body {
   height: var(--preview-height);
   background: var(--bg);
   -webkit-mask-image:
-    linear-gradient(90deg, #000 0%, #000 60%, rgba(0, 0, 0, 0.5) 72%, transparent 84%),
-    linear-gradient(0deg, #000 0%, #000 40%, rgba(0, 0, 0, 0.5) 58%, transparent 76%);
+    linear-gradient(90deg, #000 0%, #000 calc(100% - var(--preview-width) * 0.46), rgba(0, 0, 0, 0.5) calc(100% - var(--preview-width) * 0.31), transparent calc(100% - var(--preview-width) * 0.17)),
+    linear-gradient(0deg, #000 0%, #000 46%, rgba(0, 0, 0, 0.5) 64%, transparent 82%);
   z-index: 5;
   pointer-events: none;
 }
@@ -904,6 +925,21 @@ html[data-light='true'] .playerUI {
   margin-left: 1.6vw;
 }
 
+.playerUI__icon {
+  display: contents;
+}
+
+.playerUI__icon--active,
+.playerUI__button:not(:disabled):hover .playerUI__icon--idle,
+.playerUI__button--focused .playerUI__icon--idle {
+  display: none;
+}
+
+.playerUI__button:not(:disabled):hover .playerUI__icon--active,
+.playerUI__button--focused .playerUI__icon--active {
+  display: contents;
+}
+
 .playerUI__button svg {
   width: calc(32px * var(--icon-scale, 1) * var(--osd-scale, 1));
   height: calc(32px * var(--icon-scale, 1) * var(--osd-scale, 1));
@@ -1126,6 +1162,8 @@ html[data-osd-idle] .playerUI__button--focused {
 
 .searchInput {
   margin-bottom: 40px;
+  /* Had issues without randomly mismatching remote control key presses on TV only. Don't remove! */
+  will-change: transform;
 }
 
 .searchInput input {
@@ -1165,6 +1203,8 @@ html[data-osd-idle] .playerUI__button--focused {
   height: calc(100vh - 120px);
   overflow-y: auto;
   padding-right: 10px;
+  /* Had issues without randomly mismatching remote control key presses on TV only. Don't remove! */
+  will-change: transform;
 }
 
 /* === SIDEBAR === */
@@ -1431,6 +1471,11 @@ html[data-nav-indicator='contrast'] .sidebarItem--selected:not(.sidebarItem--hig
 }
 
 /* === CONFERENCE VIEW === */
+.conferenceView__container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .conferenceView__container {
   background-color: var(--page-bg);
   position: fixed;
@@ -1442,6 +1487,8 @@ html[data-nav-indicator='contrast'] .sidebarItem--selected:not(.sidebarItem--hig
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  /* Had issues without randomly mismatching remote control key presses on TV only. Don't remove! */
+  will-change: transform;
 }
 
 .conferenceView__header {
@@ -1776,6 +1823,7 @@ html[data-theme='chicago'] .settingsView__tabs {
   flex-direction: column;
   padding: 3rem 0;
   overflow-y: auto;
+  /* Had issues without randomly mismatching remote control key presses on TV only. Don't remove! */
   will-change: transform;
   background: var(--surface-alt);
   border-right: 1px solid var(--border-color);
@@ -1833,6 +1881,7 @@ html[data-theme='chicago'] .settingsView__tabs {
   min-width: 0;
   padding: 4rem 6rem 8rem 5rem;
   overflow-y: auto;
+  /* Had issues without randomly mismatching remote control key presses on TV only. Don't remove! */
   will-change: transform;
 }
 
@@ -2395,7 +2444,8 @@ html[data-shine='flat'][data-canvas='glow'][data-rail='transparent'] .sidebar--f
   background: rgba(var(--bg-rgb), 0.97);
 }
 
-html[data-canvas='glow'] .previewOverlay {
+html[data-canvas='glow'] .previewOverlay,
+html[data-canvas='glow'] .previewCover {
   background: var(--canvas), var(--bg);
   background-attachment: var(--canvas-fixed), scroll;
 }

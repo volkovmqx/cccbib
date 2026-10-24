@@ -7,7 +7,7 @@ import { useSetting } from '@/shared/config';
 import { GET_CONFERENCE } from '@/entities/conference';
 import { Preview } from '@/widgets/talk-preview';
 import { Player } from '@/widgets/player';
-import { LoadingScreen, Spinner } from '@/shared/ui';
+import { LoadingScreen, PageScrollbar, Spinner } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
 
 const GRID_TILE_WIDTH = 400;
@@ -249,7 +249,7 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
         </div>
       )}
       <div className="fluidContainer" style={{ display: playerIsOpen ? 'none' : 'block' }}>
-        {!compact && <Preview event={events[activeEvent]} />}
+        {!compact && <Preview event={events[activeEvent]} disableVideo={playerIsOpen} />}
         <div className="conferenceView__container scrollable" ref={containerRef} onScroll={handleScroll} data-wheel="scroll" data-wheel-main>
           <div className="conferenceView__header">
             <h2 className="conferenceView__title">{conference.title}</h2>
@@ -297,6 +297,7 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
             )}
           </div>
         </div>
+        <PageScrollbar scrollerRef={containerRef} watch={`${events.length}:${itemHeight}:${eventsPerRow}`} />
       </div>
     </>
   );

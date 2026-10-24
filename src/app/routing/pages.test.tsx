@@ -190,6 +190,31 @@ test('scrolling the conference with the wheel or the finger renders the rows in 
   expect(renderedTitles(view.container)).toContain('Talk 0');
 });
 
+test('the conference bar follows the scrolled grid, can be dragged and replaces the native scrollbar', () => {
+  layoutRows();
+  query.data = manyTalks(90);
+  const view = render(<Conference {...props()} conferenceId="conf" />);
+  const container = view.container.querySelector('.conferenceView__container') as HTMLElement;
+  const bar = view.container.querySelector('.pageScroll') as HTMLElement;
+  const thumb = view.container.querySelector('.pageScroll__thumb') as HTMLElement;
+  expect(bar).toHaveAttribute('aria-hidden', 'true');
+  expect(container.nextElementSibling).toBe(bar);
+  Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 2800 });
+  fireEvent.scroll(container);
+  expect(parseFloat(thumb.style.height)).toBe(25);
+  expect(parseFloat(thumb.style.top)).toBe(0);
+  container.scrollTop = 1050; fireEvent.scroll(container);
+  expect(parseFloat(thumb.style.top)).toBeCloseTo(37.5);
+  const rect = (top: number, height: number) => ({ top, bottom: top + height, left: 0, right: 10, width: 10, height, x: 0, y: top, toJSON: () => ({}) });
+  bar.getBoundingClientRect = () => rect(0, 1000);
+  thumb.getBoundingClientRect = () => rect(0, 250);
+  fireEvent.mouseDown(bar, { clientY: 100 });
+  fireEvent.mouseMove(window, { clientY: 400 });
+  expect(container.scrollTop).toBeCloseTo((300 / 750) * 2100);
+  fireEvent.mouseUp(window);
+  view.unmount();
+});
+
 test('a key after the conference was scrolled away from the selection starts at the row in view, and the selection scrolling along keeps its rows', () => {
   layoutRows();
   query.data = manyTalks(90);

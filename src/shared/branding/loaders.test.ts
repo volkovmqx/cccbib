@@ -19,7 +19,7 @@ test('loading animations take all their colours from the accent and the theme', 
   expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   expect(css).not.toMatch(/rgba?\(\s*\d/);
   expect(css).not.toMatch(/\b(?:white|black|red|green|blue|yellow|orange|purple|gray|grey)\b/);
-  const allowed = ['--s', '--w', '--h', '--d', '--accent', '--accent-rgb', '--text', '--text-rgb', '--bg'];
+  const allowed = ['--s', '--w', '--h', '--d', '--boot-scale', '--accent', '--accent-rgb', '--text', '--text-rgb', '--bg'];
   const used = [...new Set([...css.matchAll(/var\(\s*(--[\w-]+)/g)].map(match => match[1]))];
   expect(used.filter(name => !allowed.includes(name))).toEqual([]);
   for (const html of Object.values(entries)) expect(html).not.toMatch(/\b(?:fill|stroke|style|color)=/);

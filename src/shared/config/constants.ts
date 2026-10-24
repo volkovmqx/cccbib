@@ -51,8 +51,10 @@ export const SUBTITLE_SIZES = [
 ];
 
 
-export const PREVIEW_IMAGE_OPTIONS = [
-  { code: 'on', name: 'On' },
+export const PREVIEW_VIDEO_OPTIONS = [
+  { code: 'still', name: 'Picture' },
+  { code: 'on', name: 'Video' },
+  { code: 'mute', name: 'Mute' },
   { code: 'none', name: 'Off' },
 ];
 
@@ -337,7 +339,7 @@ export const SETTING_DEFAULTS = {
   subtitleFont: 'default',
   subtitleColor: '#AAF40D',
   subtitleBackground: 'auto',
-  previewImage: 'on',
+  previewVideo: 'still',
   remoteControl: 'off',
   themeMode: 'black',
   accentColor: '#AAF40D',

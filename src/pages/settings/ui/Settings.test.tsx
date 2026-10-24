@@ -269,6 +269,53 @@ test('the scrollbar row offers normal, large and hidden and stores the choice', 
   expect(getSetting('scrollbarSize')).toBe('hidden');
 });
 
+test('the rows of a tab wrap around: Down on the last row goes to the first and Up on the first goes to the last', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const key = (name: string) => fireEvent.keyDown(window, { key: name });
+  key('ArrowRight');
+  const rows = [...view.container.querySelectorAll('.settingsView__row')];
+  const focused = () => rows.findIndex((row) => row.classList.contains('settingsView__row--focused'));
+  expect(focused()).toBe(0);
+  key('ArrowUp');
+  expect(focused()).toBe(rows.length - 1);
+  key('ArrowDown');
+  expect(focused()).toBe(0);
+  for (let step = 0; step < rows.length - 1; step += 1) key('ArrowDown');
+  expect(focused()).toBe(rows.length - 1);
+  key('ArrowDown');
+  expect(focused()).toBe(0);
+});
+
+test('a picker list wraps around, and a picker grid wraps within its column even when the last row is not full', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const key = (name: string) => fireEvent.keyDown(window, { key: name });
+  const selectedIn = (selector: string, selected: string) => [...view.container.querySelectorAll(selector)].findIndex((item) => item.classList.contains(selected));
+
+  fireEvent.click(screen.getByText('Theme').closest('.settingsView__row')!.querySelector('.settingsView__select')!);
+  const count = view.container.querySelectorAll('.picker__item').length;
+  const at = () => selectedIn('.picker__item', 'picker__item--selected');
+  for (let guard = 0; guard < count && at() !== count - 1; guard += 1) key('ArrowDown');
+  expect(at()).toBe(count - 1);
+  key('ArrowDown'); expect(at()).toBe(0);
+  key('ArrowUp'); expect(at()).toBe(count - 1);
+  fireEvent.click(view.container.querySelector('.picker__overlay')!);
+
+  fireEvent.click(screen.getByText('Accent Color').closest('.settingsView__row')!.querySelector('.settingsView__select')!);
+  (view.container.querySelector('.picker__grid') as HTMLElement).style.gridTemplateColumns = '1fr 1fr 1fr 1fr 1fr';
+  const swatches = view.container.querySelectorAll('.picker__swatch').length;
+  const swatch = () => selectedIn('.picker__swatch', 'picker__swatch--selected');
+  expect(swatches % 5).not.toBe(0);
+  while (swatch() >= 5) key('ArrowUp');
+  const column = swatch();
+  key('ArrowUp');
+  const lastInColumn = (value: number) => { let found = value; for (let index = value; index < swatches; index += 5) found = index; return found; };
+  expect(swatch()).toBe(lastInColumn(column));
+  key('ArrowDown');
+  expect(swatch()).toBe(column);
+  key('ArrowRight'); key('ArrowUp');
+  expect(swatch()).toBe(lastInColumn(column + 1));
+});
+
 test('the tab list wraps around from its last tab to the first and back', () => {
   render(<Settings {...callbacks()} />);
   const key = (name: string) => fireEvent.keyDown(window, { key: name });

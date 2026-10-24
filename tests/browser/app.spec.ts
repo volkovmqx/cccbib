@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-const { fixture } = require('./fixtures.cjs') as { fixture: (url: string, body?: string) => { contentType: string; body: string | Buffer } | null };
+const { fixture, talk } = require('./fixtures.cjs') as { fixture: (url: string, body?: string) => { contentType: string; body: string | Buffer } | null; talk: Record<string, unknown> };
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/*', async route => {
@@ -91,6 +91,36 @@ async function start(page: Page, settings: Record<string, unknown>) {
 
 const size = (page: Page, selector: string, property: 'fontSize' | 'width' | 'height' | 'borderTopWidth') =>
   page.evaluate(([target, name]) => parseFloat(getComputedStyle(document.querySelector(target)!)[name as 'width']), [selector, property]);
+
+test('the player icons follow the icon style: outlined stays outlined, filled stays filled and dynamic fills them while hovered', async ({ page }) => {
+  const openPlayer = async (iconVariant: string) => {
+    await start(page, { iconVariant });
+    await page.locator('.sidebarItem').filter({ hasText: 'Search' }).click();
+    await page.getByRole('textbox').fill('fixture');
+    await page.locator('.searchResults .listItem').click();
+    await expect(page.locator('.playerUI__button').first()).toBeAttached();
+  };
+  const shown = (name: string) => page.getByRole('button', { name }).evaluate((button) => [...button.querySelectorAll('svg')].filter((svg) => svg.getBoundingClientRect().width > 0).map((svg) => (svg.getAttribute('class') || '').replace('tabler-icon tabler-icon-', '')));
+  await openPlayer('outlined');
+  await page.mouse.move(5, 500);
+  expect(await shown('Skip Back')).toEqual(['player-track-prev']);
+  await page.getByRole('button', { name: 'Skip Back' }).hover();
+  expect(await shown('Skip Back')).toEqual(['player-track-prev']);
+  await openPlayer('filled');
+  await page.mouse.move(5, 500);
+  expect(await shown('Skip Forward')).toEqual(['player-track-next-filled']);
+  expect(await shown('Pause')).toEqual(['player-pause-filled']);
+  await openPlayer('dynamic');
+  for (const [label, outline, filled] of [['Skip Back', 'player-track-prev', 'player-track-prev-filled'], ['Skip Forward', 'player-track-next', 'player-track-next-filled'], ['Pause', 'player-pause', 'player-pause-filled']]) {
+    const button = page.getByRole('button', { name: label });
+    await page.mouse.move(5, 500);
+    expect(await shown(label), label).toEqual([outline]);
+    await button.hover();
+    await expect.poll(() => shown(label), { message: label }).toEqual([filled]);
+    await page.mouse.move(5, 500);
+    await expect.poll(() => shown(label), { message: label }).toEqual([outline]);
+  }
+});
 
 test('player controls follow the text, icon, and controls size settings', async ({ page }) => {
   const measure = async (settings: Record<string, unknown>) => {
@@ -216,20 +246,24 @@ test('the page title names the app, then the open conference, then the talk, and
   await expect(page).toHaveTitle('CCCBib');
 });
 
+async function openLongConference(page: Page, count = 90) {
+  await start(page, {});
+  const lectures = Array.from({ length: count }, (_, index) => ({ guid: `many-${index}`, slug: `many-${index}`, title: `Many talk ${index}`, description: '', duration: 600, viewCount: 1, persons: [], conference_title: 'Big conference', images: { thumbUrl: 'https://static.media.ccc.de/fixture.svg', posterUrl: 'https://static.media.ccc.de/fixture.svg' }, videos: [], subtitles: [] }));
+  await page.route('https://media.ccc.de/graphql', async (route) => {
+    const body = route.request().postData() || '';
+    if (!/conference\(/.test(body) || /conferencesRecent|lectureSearch|lectureSubtitles/.test(body)) { await route.fallback(); return; }
+    await route.fulfill({ contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ data: { conference: { id: 'conference-0', title: 'Big conference', updatedAt: '2026-01-01', lectures: { nodes: lectures } } } }) });
+  });
+  await page.evaluate(() => (document.querySelector('[data-screen="events"]') as HTMLElement).click());
+  await page.locator('.eventsListView__list .listItem').first().click();
+  await expect(page.locator('.conferenceView__gridItem').first()).toBeVisible();
+}
+
 test.describe('a long conference', () => {
   for (const [width, height] of [[1280, 720], [390, 844]]) {
     test(`${width} by ${height}: scrolling far renders the rows in view instead of leaving the grid empty`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await start(page, {});
-      const lectures = Array.from({ length: 90 }, (_, index) => ({ guid: `many-${index}`, slug: `many-${index}`, title: `Many talk ${index}`, description: '', duration: 600, viewCount: 1, persons: [], conference_title: 'Big conference', images: { thumbUrl: 'https://static.media.ccc.de/fixture.svg', posterUrl: 'https://static.media.ccc.de/fixture.svg' }, videos: [], subtitles: [] }));
-      await page.route('https://media.ccc.de/graphql', async (route) => {
-        const body = route.request().postData() || '';
-        if (!/conference\(/.test(body) || /conferencesRecent|lectureSearch|lectureSubtitles/.test(body)) { await route.fallback(); return; }
-        await route.fulfill({ contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ data: { conference: { id: 'conference-0', title: 'Big conference', updatedAt: '2026-01-01', lectures: { nodes: lectures } } } }) });
-      });
-      await page.evaluate(() => (document.querySelector('[data-screen="events"]') as HTMLElement).click());
-      await page.locator('.eventsListView__list .listItem').first().click();
-      await expect(page.locator('.conferenceView__gridItem').first()).toBeVisible();
+      await openLongConference(page);
       const visibleTitles = () => page.evaluate(() => {
         const box = document.querySelector('.conferenceView__container')!.getBoundingClientRect();
         return [...document.querySelectorAll('.conferenceView__gridItem')].filter((item) => { const rect = item.getBoundingClientRect(); return rect.bottom > box.top + 20 && rect.top < box.bottom - 20; }).map((item) => item.querySelector('.conferenceView__gridItem__title')!.textContent);
@@ -243,6 +277,31 @@ test.describe('a long conference', () => {
       expect(await page.locator('.conferenceView__gridItem').count()).toBeLessThan(40);
     });
   }
+
+  test('the conference bar starts at the top of the screen like the home bar, follows the grid and can be dragged', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await openLongConference(page);
+    const box = (selector: string) => page.locator(selector).evaluate((element) => { const { top, bottom, left, right } = element.getBoundingClientRect(); return { top, bottom, left, right }; });
+    const grid = await box('.conferenceView__container');
+    const bar = await box('.pageScroll');
+    expect(grid.top).toBeGreaterThan(300);
+    expect(bar.top).toBe(0);
+    expect(bar.bottom).toBe(1080);
+    expect(bar.right).toBe(1920);
+    expect(await page.locator('.conferenceView__container').evaluate((element) => (element as HTMLElement).offsetWidth - element.clientWidth)).toBe(0);
+    await expect.poll(() => page.locator('.pageScroll').evaluate((element) => getComputedStyle(element).opacity)).toBe('0');
+    await page.evaluate(() => { document.querySelector('.conferenceView__container')!.scrollTop = 3000; });
+    await expect.poll(() => page.locator('.pageScroll').evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+    const thumb = (await box('.pageScroll__thumb'));
+    expect(thumb.top).toBeGreaterThan(0);
+    expect(thumb.bottom).toBeLessThan(1080);
+    const before = await page.locator('.conferenceView__container').evaluate((element) => element.scrollTop);
+    await page.mouse.move((thumb.left + thumb.right) / 2, (thumb.top + thumb.bottom) / 2);
+    await page.mouse.down();
+    await page.mouse.move((thumb.left + thumb.right) / 2, (thumb.top + thumb.bottom) / 2 + 200, { steps: 4 });
+    await page.mouse.up();
+    expect(await page.locator('.conferenceView__container').evaluate((element) => element.scrollTop)).toBeGreaterThan(before);
+  });
 });
 
 test('every loading animation is previewed in its popup in the accent colour and the chosen one is kept', async ({ page }) => {
@@ -320,18 +379,95 @@ test('marked text takes the accent colour and a readable text colour', async ({ 
   expect(colours).toEqual({ background: 'rgb(244, 67, 54)', color: 'rgb(255, 255, 255)' });
 });
 
-test('the preview shows the picture of the selected talk and never plays a video, and Off hides the picture', async ({ page }) => {
+test('the preview shows the picture by default, nothing when Off, and a muted video without any picture before it', async ({ page }) => {
   await start(page, {});
   await expect(page.locator('.carouselTitle').first()).toHaveText('Fixture conference 0');
   await expect(page.locator('.previewBackdrop__img').first()).toBeVisible();
   await page.waitForTimeout(1200);
   await expect(page.locator('.preview video')).toHaveCount(0);
-  await start(page, { previewImage: 'none' });
+  await start(page, { previewVideo: 'none' });
   await expect(page.locator('.carouselTitle').first()).toHaveText('Fixture conference 0');
   await expect(page.locator('.previewBackdrop')).toHaveCount(0);
-  await start(page, { previewVideo: 'mute' });
-  await expect(page.locator('.previewBackdrop__img').first()).toBeVisible();
   await expect(page.locator('.preview video')).toHaveCount(0);
+  await start(page, { previewVideo: 'mute' });
+  await expect(page.locator('.preview video')).toHaveCount(1);
+  await expect(page.locator('.previewBackdrop')).toHaveCount(0);
+  await expect(page.locator('.previewCover')).toHaveCount(0, { timeout: 10000 });
+  await expect(page.locator('.preview video')).toHaveCSS('visibility', 'visible');
+  await expect(page.locator('.previewBackdrop')).toHaveCount(0);
+  const box = (selector: string) => page.locator(selector).evaluate((element) => { const { left, top, right, bottom, width, height } = element.getBoundingClientRect(); return { left, top, right, bottom, width, height }; });
+  const area = await box('.preview');
+  const video = await box('.preview video');
+  expect(video.top).toBe(area.top);
+  expect(video.right).toBe(area.right);
+  expect(video.height).toBe(area.height);
+  expect(video.width / video.height).toBeCloseTo(4 / 3, 2);
+  expect(await page.locator('.preview video').evaluate((element) => (element as HTMLVideoElement).muted)).toBe(true);
+});
+
+const orientationCalls = (page: Page) => page.evaluate(() => (window as unknown as { __orientation: string[] }).__orientation);
+
+async function watchOrientation(page: Page) {
+  await page.addInitScript(() => {
+    const calls: string[] = [];
+    (window as unknown as { __orientation: string[] }).__orientation = calls;
+    Object.defineProperty(screen, 'orientation', {
+      configurable: true,
+      value: {
+        get type() { return innerWidth > innerHeight ? 'landscape-primary' : 'portrait-primary'; },
+        lock: (type: string) => { calls.push(`lock ${type}`); return Promise.resolve(); },
+        unlock: () => { calls.push('unlock'); },
+      },
+    });
+  });
+}
+
+async function playFirstTalk(page: Page) {
+  await expect(page.locator('.carouselTitle').first()).toHaveText('Fixture conference 0');
+  await page.locator('.embla__slide.active .embla__slide__img').click();
+  await expect(page.locator('.playerUI__button').first()).toBeAttached();
+}
+
+test.describe('on a real phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('the player turns an upright phone to landscape and gives the screen back when it closes', async ({ page }) => {
+    await watchOrientation(page);
+    await start(page, {});
+    expect(await orientationCalls(page)).toEqual([]);
+    await playFirstTalk(page);
+    expect(await orientationCalls(page)).toEqual(['lock landscape']);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.playerUI__button')).toHaveCount(0);
+    expect(await orientationCalls(page)).toEqual(['lock landscape', 'unlock']);
+  });
+});
+
+test.describe('on a real phone held sideways', () => {
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+
+  test('the player keeps the landscape the phone is in', async ({ page }) => {
+    await watchOrientation(page);
+    await start(page, {});
+    await playFirstTalk(page);
+    expect(await orientationCalls(page)).toEqual(['lock landscape-primary']);
+  });
+});
+
+test.describe('in a narrow desktop window', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('the player does not touch the orientation without a touch screen', async ({ page }) => {
+    await watchOrientation(page);
+    await start(page, {});
+    await playFirstTalk(page);
+    expect(await orientationCalls(page)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.playerUI__button')).toHaveCount(0);
+    expect(await orientationCalls(page)).toEqual([]);
+  });
 });
 
 test.describe('on a phone', () => {
@@ -1003,7 +1139,7 @@ test('the wheel scrolls the home rows like a page and the selection follows the 
   await page.mouse.move(900, 80);
   await page.mouse.wheel(0, 120);
   await expect.poll(scrollTop).toBeGreaterThan(first + 60);
-  const bar = page.locator('.homeScroll');
+  const bar = page.locator('.pageScroll');
   const opacity = () => bar.evaluate((element) => getComputedStyle(element).opacity);
   await page.mouse.wheel(0, 100);
   await expect.poll(opacity).toBe('1');
@@ -1011,7 +1147,7 @@ test('the wheel scrolls the home rows like a page and the selection follows the 
   expect(barBox.y).toBe(0);
   expect(barBox.x + barBox.width).toBe(1920);
   expect(barBox.height).toBe(1080);
-  const thumbBox = (await page.locator('.homeScroll__thumb').boundingBox())!;
+  const thumbBox = (await page.locator('.pageScroll__thumb').boundingBox())!;
   expect(thumbBox.y).toBeGreaterThanOrEqual(0);
   expect(thumbBox.height).toBeGreaterThan(8);
   expect(await rowsView.evaluate((element) => getComputedStyle(element, '::-webkit-scrollbar').width)).toBe('0px');
@@ -1056,6 +1192,46 @@ test('the settings tabs wrap around from the last tab to the first with the keys
   await expect(active).toContainText('Data & About');
   await page.keyboard.press('ArrowDown');
   await expect(active).toContainText('Appearance');
+});
+
+test('the search field and the results are compositor layers of their own, the TV shows stale frames on a page of one layer', async ({ page }) => {
+  await start(page, {});
+  await page.locator('.sidebarItem').filter({ hasText: 'Search' }).click();
+  await page.getByRole('textbox').fill('fixture');
+  await expect(page.locator('.searchResults .listItem')).toHaveCount(1);
+  const client = await page.context().newCDPSession(page);
+  const layered = new Set<number>();
+  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
+  await client.send('LayerTree.enable');
+  const { root } = await client.send('DOM.getDocument');
+  for (const selector of ['.searchInput', '.searchResults']) {
+    const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+    const { node } = await client.send('DOM.describeNode', { nodeId });
+    await expect.poll(() => layered.has(node.backendNodeId), { message: selector }).toBe(true);
+  }
+});
+
+test('the lists of Popular, Events and Watchlist and the conference grid are compositor layers of their own', async ({ page }) => {
+  await start(page, { watchlist: [talk] });
+  const client = await page.context().newCDPSession(page);
+  const layered = new Set<number>();
+  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
+  await client.send('LayerTree.enable');
+  const isLayer = async (selector: string) => {
+    const { root } = await client.send('DOM.getDocument');
+    const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+    const { node } = await client.send('DOM.describeNode', { nodeId });
+    await expect.poll(() => layered.has(node.backendNodeId), { message: selector }).toBe(true);
+  };
+  for (const [label, selector] of [['Popular', '.popularView__list'], ['Events', '.eventsListView__list'], ['Watchlist', '.watchlistView__list']]) {
+    await page.locator('.sidebarItem').filter({ hasText: label }).click();
+    await expect(page.locator(`${selector} .listItem`).first()).toBeVisible();
+    await isLayer(selector);
+  }
+  await page.locator('.sidebarItem').filter({ hasText: 'Events' }).click();
+  await page.locator('.eventsListView__list .listItem').first().click();
+  await expect(page.locator('.conferenceView__gridItem').first()).toBeVisible();
+  await isLayer('.conferenceView__container');
 });
 
 test('the tab list and the page of Settings are compositor layers of their own and the page still scrolls', async ({ page }) => {
@@ -1171,7 +1347,7 @@ test('the scrollbar thumbs scale with the border width but stay thinner than the
     strip: getComputedStyle(document.documentElement, '::-webkit-scrollbar').width,
   }));
   expect(await sizes()).toEqual({ thumb: '2px', strip: '14px' });
-  expect(await page.locator('.homeScroll').evaluate((element) => getComputedStyle(element).width)).toBe('14px');
+  expect(await page.locator('.pageScroll').evaluate((element) => getComputedStyle(element).width)).toBe('14px');
   await page.locator('.sidebarItem').filter({ hasText: 'Settings' }).click();
   await expect(page.locator('.settingsView')).toBeVisible();
   await page.locator('.settingsView__row').filter({ has: page.locator('.settingsView__rowName', { hasText: /^Border Width$/ }) }).locator('.settingsView__select').click();
@@ -1182,7 +1358,7 @@ test('the scrollbar thumbs scale with the border width but stay thinner than the
 
 test('the scrollbar setting makes every scrollbar large or hides it', async ({ page }) => {
   await start(page, {});
-  const homeBar = () => page.locator('.homeScroll').evaluate((element) => getComputedStyle(element).width);
+  const homeBar = () => page.locator('.pageScroll').evaluate((element) => getComputedStyle(element).width);
   expect(await homeBar()).toBe('14px');
   await page.locator('.sidebarItem').filter({ hasText: 'Settings' }).click();
   await expect(page.locator('.settingsView')).toBeVisible();
@@ -1213,12 +1389,12 @@ test('the home bar can be grabbed and dragged with the pointer', async ({ page }
   expect(max).toBeGreaterThan(300);
   await page.mouse.move(900, 400);
   await page.mouse.wheel(0, 60);
-  const thumb = page.locator('.homeScroll__thumb');
+  const thumb = page.locator('.pageScroll__thumb');
   await expect.poll(async () => (await thumb.boundingBox())!.height).toBeGreaterThan(8);
   const box = (await thumb.boundingBox())!;
   const x = 1920 - 7;
   await page.mouse.move(x, box.y + box.height / 2);
-  await expect.poll(() => page.locator('.homeScroll').evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  await expect.poll(() => page.locator('.pageScroll').evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
   await page.mouse.down();
   await page.mouse.move(x, 1070, { steps: 10 });
   await page.mouse.up();
@@ -1322,7 +1498,7 @@ test('the mouse focuses settings rows and options and the wheel scrolls the font
   await expect(page.locator('.picker')).toHaveCount(0);
 });
 
-test('stepping through a popup list with the keys keeps the next item in view and the end of the list shows its last item', async ({ page }) => {
+test('stepping through a popup list with the keys keeps the selection in view, wraps around at both ends and the end of the list shows its last item', async ({ page }) => {
   await start(page, {});
   await page.locator('.sidebarItem').filter({ hasText: 'Settings' }).click();
   const row = page.locator('.settingsView__row').filter({ has: page.locator('.settingsView__rowName', { hasText: /^Loading Animation$/ }) });
@@ -1331,22 +1507,36 @@ test('stepping through a popup list with the keys keeps the next item in view an
   const count = await items.count();
   const list = (await page.locator('.picker__list').boundingBox())!;
   const bounds = async (index: number) => (await items.nth(index).boundingBox())!;
+  const selectedNow = () => items.evaluateAll((all) => all.findIndex((item) => item.classList.contains('picker__item--selected')));
+  const insideList = async (index: number) => {
+    const current = await bounds(index);
+    expect(current.y).toBeGreaterThanOrEqual(list.y - 1);
+    expect(current.y + current.height).toBeLessThanOrEqual(list.y + list.height + 1);
+  };
   await page.mouse.move(list.x + list.width / 2, list.y + 20);
   await page.waitForTimeout(300);
   for (let step = 0; step < count + 2; step++) {
+    if (await selectedNow() === count - 1) break;
     await page.keyboard.press('ArrowDown');
     await page.waitForTimeout(60);
-    const selected = await items.evaluateAll((all) => all.findIndex((item) => item.classList.contains('picker__item--selected')));
-    const current = await bounds(selected);
-    expect(current.y).toBeGreaterThanOrEqual(list.y - 1);
-    expect(current.y + current.height).toBeLessThanOrEqual(list.y + list.height + 1);
+    const selected = await selectedNow();
+    await insideList(selected);
     if (selected > 3 && selected < count - 2) {
       const next = await bounds(selected + 1);
       expect(next.y + next.height).toBeLessThanOrEqual(list.y + list.height + 1);
     }
   }
+  expect(await selectedNow()).toBe(count - 1);
   const last = await bounds(count - 1);
   expect(last.y + last.height).toBeLessThanOrEqual(list.y + list.height + 1);
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(60);
+  expect(await selectedNow()).toBe(0);
+  await insideList(0);
+  await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(60);
+  expect(await selectedNow()).toBe(count - 1);
+  await insideList(count - 1);
   expect(await page.locator('.picker__list').evaluate((element) => getComputedStyle(element, '::-webkit-scrollbar-thumb').backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
 });
 

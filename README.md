@@ -18,7 +18,7 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 
 ## Features
 
-- Browse conferences with preview pictures and search for talks. In a browser, a click on a conference name on the home page opens that conference with all its videos.
+- Browse conferences with a preview picture of the selected talk, or a short video (with or without sound, switch it in Settings), and search for talks. In a browser, a click on a conference name on the home page opens that conference with all its videos.
 - Use the TV remote to navigate and control playback. The Magic Remote pointer selects and its wheel scrolls lists like a page.
 - Save talks to the Watchlist and resume the 20 most recent talks in Continue Watching.
 - Select audio languages and subtitles when a talk provides them.
@@ -28,7 +28,7 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 - Play videos from the CDN mirror that ranks best for your location and stay on it.
 - Show technical details of the playback with Stats for Nerds (mirror, resolution, buffer and connection).
 - Send commands through webOS launch parameters (see [Remote control](#remote-control)).
-- Use it in a browser on a phone: below 900 px the menu becomes a bar at the top (or at the bottom with the Menu Position setting), Settings stacks and the text scales with the screen width and your text size setting.
+- Use it in a browser on a phone: below 900 px the menu becomes a bar at the top (or at the bottom with the Menu Position setting), Settings stacks and the text scales with the screen width and your text size setting. On a real phone or tablet the player turns the screen to landscape while a talk plays and gives it back when you leave (browsers that can lock the orientation, not iOS Safari).
 
 ## Remote control
 

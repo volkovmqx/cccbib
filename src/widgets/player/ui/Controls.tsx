@@ -1,11 +1,15 @@
 import type { PlayerButton, Focus } from '../model/types';
 import React from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
+import { useSetting } from '@/shared/config';
 import { ProgressBar } from './ProgressBar';
+import { ButtonIcon, osdIcon } from './osdIcon';
 
 const GROUPS = ['left', 'center', 'right'];
 
 export const Controls = React.memo(function Controls({ title, buttons, back, focus, video, visible = true, onSeek }: { title: string; buttons: PlayerButton[]; back?: { label: string; onPress: () => void }; focus: Focus; video: HTMLVideoElement | null; visible?: boolean; onSeek: (seconds: number) => void }) {
+  const [iconVariant] = useSetting('iconVariant');
+  const backIcon = osdIcon(iconVariant, IconArrowLeft);
   return (
     <div className="playerUI">
       <div className="playerUI__cover" />
@@ -17,7 +21,7 @@ export const Controls = React.memo(function Controls({ title, buttons, back, foc
             className={`playerUI__button playerUI__back ${focus.area === 'back' ? 'playerUI__button--focused' : ''}`}
             onClick={back.onPress}
           >
-            <IconArrowLeft />
+            <ButtonIcon {...backIcon} />
           </button>
         )}
         <div className="playerUI__meta">
@@ -36,7 +40,7 @@ export const Controls = React.memo(function Controls({ title, buttons, back, foc
                 className={`playerUI__button ${focus.area === 'buttons' && focus.id === button.id ? 'playerUI__button--focused' : ''}`}
                 onClick={button.onPress}
               >
-                {button.icon}
+                <ButtonIcon icon={button.icon} activeIcon={button.activeIcon} />
               </button>
             ))}
           </div>

@@ -1,9 +1,8 @@
 import type { Talk } from '@/entities/talk';
 import type { PageProps } from '@/shared/ui';
-import React, { useState, useEffect, useRef } from 'react';
-import { pointerMoved, useWindowEvent } from '@/shared/lib';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { isPointerDriven, pointerMoved, revealInList, useWindowEvent } from '@/shared/lib';
 import { formatSeconds } from '@/entities/talk';
-import { useScrollIntoView } from '@/shared/lib';
 import { searchLectures, getCachedSearch, normalizeQuery } from '../api/search';
 import { Spinner } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
@@ -78,7 +77,13 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
     };
   }, [query, submitCount]);
 
-  useScrollIntoView(selectedItemRef, resultsContainerRef, selectedIndex);
+  // The list follows the selection at once, a smooth scroll lagged behind the keys and swept through all results when the selection wrapped around
+  useLayoutEffect(() => {
+    const container = resultsContainerRef.current;
+    if (isPointerDriven() || !container) return;
+    const tallest = Math.max(0, ...Array.from(container.querySelectorAll('.listItem'), (row) => row.getBoundingClientRect().height));
+    revealInList(selectedItemRef.current, container, tallest);
+  }, [selectedIndex, results]);
 
   useWindowEvent('keydown', (e) => {
     if (sidebarFocused) return;

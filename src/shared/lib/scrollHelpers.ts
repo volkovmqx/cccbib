@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { isPointerDriven } from './pointer';
 
 export function scrollIntoView(selectedItemRef: React.RefObject<HTMLElement | null>, _containerRef: React.RefObject<HTMLElement | null> | null, block: ScrollLogicalPosition = 'nearest') {
@@ -10,23 +9,16 @@ export function scrollIntoView(selectedItemRef: React.RefObject<HTMLElement | nu
   }
 }
 
-export function useScrollIntoView(selectedItemRef: React.RefObject<HTMLElement | null>, containerRef: React.RefObject<HTMLElement | null> | null, deps: React.DependencyList | number, block: ScrollLogicalPosition = 'nearest') {
-  const depArray = Array.isArray(deps) ? deps : [deps];
-
-  useEffect(() => {
-    scrollIntoView(selectedItemRef, containerRef, block);
-  }, [...depArray, block]);
-}
-
 const LOOKAHEAD_ITEMS = 1.5;
 
-export function revealInList(item: HTMLElement | null) {
-  const list = item?.parentElement;
+// With rows of different heights the margin has to follow the tallest row, otherwise the selection moves up the screen on a press that goes down
+export function revealInList(item: HTMLElement | null, scroller?: HTMLElement | null, rowHeight?: number) {
+  const list = scroller || item?.parentElement;
   if (!item || !list) return;
   const box = item.getBoundingClientRect();
-  const height = box.height;
+  const height = rowHeight || box.height;
   const top = box.top - list.getBoundingClientRect().top + list.scrollTop;
   const lead = isPointerDriven() ? 0 : height * LOOKAHEAD_ITEMS;
-  if (top - lead < list.scrollTop) list.scrollTop = top - lead;
+  if (top - lead < list.scrollTop) list.scrollTop = Math.max(0, top - lead);
   else if (top + height + lead > list.scrollTop + list.clientHeight) list.scrollTop = top + height + lead - list.clientHeight;
 }

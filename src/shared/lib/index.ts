@@ -1,12 +1,13 @@
-export { useDelayedFlag, useWindowEvent } from './utils';
+export { useDelayedFlag, useIdle, useWindowEvent } from './utils';
 export { useImagePreload } from './useImagePreload';
-export { revealInList, scrollIntoView, useScrollIntoView } from './scrollHelpers';
+export { revealInList, scrollIntoView } from './scrollHelpers';
 export { useListNavigation } from './useListNavigation';
 export { isPointerDriven, pointerMoved, useWheelNavigation } from './pointer';
 export { dragScrollbar, initScrollbars } from './scrollbars';
 export { useMediaQuery } from './useMediaQuery';
 export { useOnlineStatus } from './useOnlineStatus';
 export { isWebOS } from './platform';
+export { lockLandscape } from './orientation';
 export { usePageTitle } from './pageTitle';
 export { applyOutputWindow, usesOutputWindow } from './videoWindow';
 export { getSubtitleLanguages, getSubtitleSources, loadSubtitleCues } from './subtitles';

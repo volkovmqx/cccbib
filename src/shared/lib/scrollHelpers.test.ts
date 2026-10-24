@@ -26,6 +26,16 @@ test('a popup list keeps the next items in view below the selection and the prev
   revealInList(document.createElement('div'));
 });
 
+test('a list can be scrolled through a container that is not the parent of the items', () => {
+  const { list, item, place } = setup();
+  const wrapper = document.createElement('div');
+  wrapper.append(item);
+  list.append(wrapper);
+  place(340); revealInList(item, list);
+  expect(list.scrollTop).toBe(115);
+  expect(wrapper.scrollTop).toBe(0);
+});
+
 test('a selection that follows the pointer is only just brought into view', () => {
   const { list, item, place } = setup();
   pointerMoved({ nativeEvent: new Event('mousemove'), clientX: 9001, clientY: 9002 });

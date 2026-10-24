@@ -1,8 +1,8 @@
 import type { PlayerProps, PlayerButton, Selector } from '../model/types';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  IconWorld, IconBadgeCc, IconAspectRatio, IconPlayerTrackPrev, IconPlayerTrackNext,
-  IconPlayerPlayFilled, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled, IconBug,
+  IconWorld, IconWorldFilled, IconBadgeCc, IconBadgeCcFilled, IconAspectRatio, IconAspectRatioFilled, IconPlayerTrackPrev, IconPlayerTrackPrevFilled, IconPlayerTrackNext, IconPlayerTrackNextFilled,
+  IconPlayerPlay, IconPlayerPlayFilled, IconPlayerPause, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled, IconBug, IconBugFilled,
 } from '@tabler/icons-react';
 import { getVideo, releaseVideo } from '@/entities/talk';
 import { videoSources, rememberMirror } from '@/entities/talk';
@@ -11,7 +11,7 @@ import { LANGUAGE_NAMES, ASPECT_RATIOS } from '@/shared/config';
 import { useSetting } from '@/shared/config';
 import { useWatchlist } from '@/features/watchlist';
 import { useTranslation } from '@/shared/i18n';
-import { useDelayedFlag, usePageTitle, useWindowEvent } from '@/shared/lib';
+import { lockLandscape, useDelayedFlag, usePageTitle, useWindowEvent } from '@/shared/lib';
 import { usePlayerKeyboard } from '../model/usePlayerKeyboard';
 import { useControlsVisibility } from '../model/useControlsVisibility';
 import { Controls } from './Controls';
@@ -24,6 +24,7 @@ import { useOutputWindow } from '../model/useOutputWindow';
 import { useRemoteControl } from '../model/useRemoteControl';
 import { setNowPlayingReader } from '../model/nowPlaying';
 import { SelectorModal } from './SelectorModal';
+import { osdIcon } from './osdIcon';
 
 const TOAST_MS = 3000;
 const SOURCE_DELAY_MS = 200;
@@ -57,6 +58,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const [preferredSubtitleLanguage] = useSetting('subtitleLanguage');
   const [defaultAspect] = useSetting('aspectRatio');
   const [backSetting] = useSetting('osdBackButton');
+  const [iconVariant] = useSetting('iconVariant');
   const backButton = backSetting === 'on';
   const [statsSetting] = useSetting('statsForNerds');
   const statsEnabled = statsSetting === 'on';
@@ -85,6 +87,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     return () => document.documentElement.removeAttribute('data-player-closing');
   }, [closing]);
   const toggleStats = useCallback(() => setStatsOpen((open) => !open), []);
+  useEffect(() => lockLandscape(), []);
 
   const [languageChoice, setLanguageChoice] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState(defaultAspect);
@@ -496,36 +499,36 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const buttons = useMemo(() => {
     const list: PlayerButton[] = [];
     if (hasMultipleLanguages) {
-      list.push({ id: 'language', align: 'left', label: languageButtonLabel, icon: <IconWorld />, onPress: () => openSelector('language') });
+      list.push({ id: 'language', align: 'left', label: languageButtonLabel, ...osdIcon(iconVariant, IconWorld, IconWorldFilled), onPress: () => openSelector('language') });
     }
     if (hasSubtitles) {
       list.push({
         id: 'subtitle', align: 'left',
         label: subtitleLanguage === 'none' ? t('Subtitles Off') : t('Subtitles ({language})', { language: languageName(subtitleLanguage) }),
-        icon: <IconBadgeCc />, onPress: () => openSelector('subtitle'),
+        ...osdIcon(iconVariant, IconBadgeCc, IconBadgeCcFilled), onPress: () => openSelector('subtitle'),
       });
     }
     if (showAspect) {
-      list.push({ id: 'aspect', align: 'left', label: t('Aspect: {name}', { name: t(aspectName(aspectRatio)) }), icon: <IconAspectRatio />, onPress: () => openSelector('aspect') });
+      list.push({ id: 'aspect', align: 'left', label: t('Aspect: {name}', { name: t(aspectName(aspectRatio)) }), ...osdIcon(iconVariant, IconAspectRatio, IconAspectRatioFilled), onPress: () => openSelector('aspect') });
     }
-    list.push({ id: 'skipback', align: 'center', label: t('Skip Back'), icon: <IconPlayerTrackPrev />, onPress: () => seek(-10) });
+    list.push({ id: 'skipback', align: 'center', label: t('Skip Back'), ...osdIcon(iconVariant, IconPlayerTrackPrev, IconPlayerTrackPrevFilled), onPress: () => seek(-10) });
     list.push({
       id: 'playpause', align: 'center', label: playing ? t('Pause') : t('Play'),
-      icon: playing ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />, onPress: () => setPlaying((value) => !value),
+      ...(playing ? osdIcon(iconVariant, IconPlayerPause, IconPlayerPauseFilled) : osdIcon(iconVariant, IconPlayerPlay, IconPlayerPlayFilled)), onPress: () => setPlaying((value) => !value),
     });
-    list.push({ id: 'skipforward', align: 'center', label: t('Skip Forward'), icon: <IconPlayerTrackNext />, onPress: () => seek(10) });
+    list.push({ id: 'skipforward', align: 'center', label: t('Skip Forward'), ...osdIcon(iconVariant, IconPlayerTrackNext, IconPlayerTrackNextFilled), onPress: () => seek(10) });
     list.push(
-      { id: 'mute', align: 'right', label: isMuted ? t('Unmute') : t('Mute'), icon: isMuted ? <IconVolumeOff /> : <IconVolume />, onPress: toggleMute },
+      { id: 'mute', align: 'right', label: isMuted ? t('Unmute') : t('Mute'), ...osdIcon(iconVariant, isMuted ? IconVolumeOff : IconVolume), onPress: toggleMute },
       {
         id: 'watchlist', align: 'right', label: isInWatchlist ? t('In Watchlist') : t('Add to Watchlist'),
         icon: isInWatchlist ? <IconBookmarkFilled /> : <IconBookmark />, onPress: toggleWatchlist,
       },
     );
-    if (statsEnabled) list.push({ id: 'stats', align: 'right', label: t('Stats for Nerds'), icon: <IconBug />, onPress: toggleStats });
+    if (statsEnabled) list.push({ id: 'stats', align: 'right', label: t('Stats for Nerds'), ...osdIcon(iconVariant, IconBug, IconBugFilled), onPress: toggleStats });
     return list;
   }, [
     hasMultipleLanguages, hasSubtitles, languageButtonLabel, subtitleLanguage, aspectRatio,
-    playing, isMuted, isInWatchlist, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect, statsEnabled, toggleStats,
+    playing, isMuted, isInWatchlist, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect, statsEnabled, toggleStats, iconVariant,
   ]);
 
   const statsRows = usePlaybackStats({

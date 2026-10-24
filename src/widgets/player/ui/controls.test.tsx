@@ -138,3 +138,34 @@ test('a hidden progress bar leaves the media events alone and catches up when it
   fireEvent(video, new Event('timeupdate'));
   expect(screen.getByText('6:00')).toBeInTheDocument();
 });
+
+test('a button with a filled icon renders it next to the outline icon so the stylesheet can swap them on hover and focus', () => {
+  const buttons = [
+    { id: 'skipback', align: 'center', label: 'Skip Back', icon: <svg data-icon="outline" />, activeIcon: <svg data-icon="filled" />, onPress: vi.fn() },
+    { id: 'mute', align: 'right', label: 'Mute', icon: <svg data-icon="plain" />, onPress: vi.fn() },
+  ];
+  const view = render(<Controls title="Talk" buttons={buttons} focus={{ area: 'buttons', id: 'skipback' }} video={null} onSeek={vi.fn()} />);
+  const skip = screen.getByRole('button', { name: 'Skip Back' });
+  expect(skip.querySelector('.playerUI__icon--idle [data-icon="outline"]')).toBeInTheDocument();
+  expect(skip.querySelector('.playerUI__icon--active [data-icon="filled"]')).toBeInTheDocument();
+  const mute = screen.getByRole('button', { name: 'Mute' });
+  expect(mute.querySelector('[data-icon="plain"]')).toBeInTheDocument();
+  expect(mute.querySelector('.playerUI__icon')).not.toBeInTheDocument();
+  view.unmount();
+});
+
+test('the back arrow follows the icon style: plain, heavier when filled, and heavier only while hovered or focused when dynamic', () => {
+  const back = { label: 'Back', onPress: vi.fn() };
+  const render3 = (variant: string) => {
+    act(() => { setSetting('iconVariant', variant); });
+    return render(<Controls title="Talk" buttons={[]} back={back} focus={{ area: 'none', id: null }} video={null} onSeek={vi.fn()} />);
+  };
+  const weights = (view: { container: HTMLElement }) => [...view.container.querySelectorAll('.playerUI__back svg')].map((svg) => (svg as SVGElement).style.strokeWidth);
+  const outlined = render3('outlined'); expect(weights(outlined)).toEqual(['']); outlined.unmount();
+  const filled = render3('filled'); expect(weights(filled)).toEqual(['2.8']); filled.unmount();
+  const dynamic = render3('dynamic'); expect(weights(dynamic)).toEqual(['', '2.8']);
+  expect(dynamic.container.querySelector('.playerUI__back .playerUI__icon--active')).toBeInTheDocument();
+  dynamic.unmount();
+  act(() => { setSetting('iconVariant', 'outlined'); });
+});
+

@@ -38,6 +38,43 @@ function setup(options: { event?: ReturnType<typeof talk>; startAt?: number } = 
 const tick = async (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 const command = (value: RemoteCommand) => act(() => { dispatchCommand(value); });
 
+test('on a phone or tablet the player turns the screen to landscape and gives it back when it closes', async () => {
+  const orientation = { type: 'portrait-primary', lock: vi.fn().mockResolvedValue(undefined), unlock: vi.fn() };
+  Object.defineProperty(window.screen, 'orientation', { value: orientation, configurable: true });
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(hover: none) and (pointer: coarse)', media: query, addListener() {}, removeListener() {} }));
+  Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true });
+  const view = setup();
+  await tick(0);
+  expect(orientation.lock).toHaveBeenCalledWith('landscape');
+  expect(orientation.unlock).not.toHaveBeenCalled();
+  view.unmount();
+  expect(orientation.unlock).toHaveBeenCalledTimes(1);
+  vi.unstubAllGlobals();
+  Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true });
+});
+
+test('the player buttons follow the icon style, and the bookmark stays an outline until the talk is in the watchlist', () => {
+  const view = setup();
+  const icons = (name: string) => [...screen.getByRole('button', { name }).querySelectorAll('svg')].map((svg) => svg.getAttribute('class')!.replace('tabler-icon tabler-icon-', ''));
+  act(() => { setSetting('iconVariant', 'outlined'); });
+  expect(icons('Pause')).toEqual(['player-pause']);
+  expect(icons('Skip Back')).toEqual(['player-track-prev']);
+  expect(icons('Add to Watchlist')).toEqual(['bookmark']);
+  act(() => { setSetting('iconVariant', 'filled'); });
+  expect(icons('Pause')).toEqual(['player-pause-filled']);
+  expect(icons('Skip Forward')).toEqual(['player-track-next-filled']);
+  expect(icons('Mute')).toEqual(['volume']);
+  expect(icons('Add to Watchlist')).toEqual(['bookmark']);
+  act(() => { setSetting('iconVariant', 'dynamic'); });
+  expect(icons('Pause')).toEqual(['player-pause', 'player-pause-filled']);
+  expect(icons('Add to Watchlist')).toEqual(['bookmark']);
+  fireEvent.click(screen.getByRole('button', { name: 'Add to Watchlist' }));
+  expect(icons('In Watchlist')).toEqual(['bookmark-filled']);
+  act(() => { setSetting('iconVariant', 'outlined'); });
+  expect(icons('In Watchlist')).toEqual(['bookmark-filled']);
+  view.unmount();
+});
+
 test('player controls playback, watchlist, seeking, mute, and closes after completion', async () => {
   const view = setup(); const video = view.video();
   expect(readNowPlaying()?.event.guid).toBe('talk');
