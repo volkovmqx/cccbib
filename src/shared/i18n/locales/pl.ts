@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Pasek przewijania",
   "Hidden": "Ukryty",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "Pasek przewijania list i stron. Pojawia się podczas przewijania i powiększa się pod wskaźnikiem. Duży pozostaje widoczny i łatwo go chwycić, albo ukryj go całkowicie.",
-  "Rocket": "Rakieta",
+  "Fairy Dust": "Fairy Dust",
 };

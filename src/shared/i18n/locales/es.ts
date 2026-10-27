@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Barra de desplazamiento",
   "Hidden": "Oculta",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "La barra de desplazamiento de listas y páginas. Aparece al desplazarse y se agranda bajo el puntero. Una grande permanece visible y es fácil de agarrar, o puedes ocultarla por completo.",
-  "Rocket": "Cohete",
+  "Fairy Dust": "Fairy Dust",
 };

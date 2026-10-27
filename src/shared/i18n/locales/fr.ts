@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Barre de défilement",
   "Hidden": "Masquée",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "La barre de défilement des listes et des pages. Elle apparaît pendant le défilement et grossit sous le pointeur. Une grande barre reste visible et se saisit facilement, ou masquez-la complètement.",
-  "Rocket": "Fusée",
+  "Fairy Dust": "Fairy Dust",
 };

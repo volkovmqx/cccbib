@@ -109,7 +109,7 @@ export const ACCENT_COLORS = [
 
 export const SPINNER_STYLES = [
   { code: 'orbit', name: 'Twin Dots' },
-  { code: 'rocket', name: 'Rocket' },
+  { code: 'rocket', name: 'Fairy Dust' },
   { code: 'glider', name: 'Glider' },
   { code: 'ring', name: 'Simple Ring' },
   { code: 'dots', name: 'Dots' },

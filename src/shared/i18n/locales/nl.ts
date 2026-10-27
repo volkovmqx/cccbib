@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Scrollbalk",
   "Hidden": "Verborgen",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "De scrollbalk van lijsten en pagina's. Hij verschijnt tijdens het scrollen en wordt groter onder de aanwijzer. Een grote blijft zichtbaar en is makkelijk te pakken, of verberg hem helemaal.",
-  "Rocket": "Raket",
+  "Fairy Dust": "Fairy Dust",
 };

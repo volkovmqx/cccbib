@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Barra di scorrimento",
   "Hidden": "Nascosta",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "La barra di scorrimento di elenchi e pagine. Compare mentre scorri e si ingrandisce sotto il puntatore. Una grande resta visibile ed è facile da afferrare, oppure nascondila del tutto.",
-  "Rocket": "Razzo",
+  "Fairy Dust": "Fairy Dust",
 };

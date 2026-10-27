@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Barra de rolagem",
   "Hidden": "Oculta",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "A barra de rolagem de listas e páginas. Aparece ao rolar e aumenta sob o ponteiro. Uma grande fica sempre visível e é fácil de agarrar, ou oculte-a por completo.",
-  "Rocket": "Foguete",
+  "Fairy Dust": "Fairy Dust",
 };

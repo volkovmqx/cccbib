@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Posuvník",
   "Hidden": "Skrytý",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "Posuvník seznamů a stránek. Zobrazí se při posouvání a zvětší se pod ukazatelem. Velký zůstává viditelný a snadno se chytá, nebo ho úplně skryjte.",
-  "Rocket": "Raketa",
+  "Fairy Dust": "Fairy Dust",
 };

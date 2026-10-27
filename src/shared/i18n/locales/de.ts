@@ -289,5 +289,5 @@ export default {
   "Scrollbar": "Bildlaufleiste",
   "Hidden": "Ausgeblendet",
   "The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.": "Die Bildlaufleiste von Listen und Seiten. Sie erscheint beim Scrollen und wird größer, sobald der Zeiger darüber ist. Eine große bleibt sichtbar und lässt sich leicht greifen, oder blende sie ganz aus.",
-  "Rocket": "Rakete",
+  "Fairy Dust": "Fairy Dust",
 };
