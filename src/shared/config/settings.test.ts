@@ -13,6 +13,8 @@ test.each([
   ['previewVideo', 'previewVideo', '"off"', 'still'],
   ['previewVideo', 'previewVideo', '"none"', 'none'],
   ['previewVideo', 'previewVideo', '5', 'still'],
+  ['scanlines', 'scanlines', '"crt"', 'grille'],
+  ['scanlines', 'scanlines', '"tube"', 'tube'],
   ['themeMode', 'themeMode', 'dark', 'dark'],
   ['textScale', 'textScale', '1.5', 1.2],
   ['textScale', 'textScale', '"bad"', 1],

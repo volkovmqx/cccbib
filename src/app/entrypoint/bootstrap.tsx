@@ -1,5 +1,6 @@
 import '../styles/fonts.css';
 import '../styles/styles.css';
+import '@/shared/branding/pixelIcons.css';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { initAppearance } from '@/shared/config';

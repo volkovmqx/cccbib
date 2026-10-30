@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
 import { SETTING_DEFAULTS } from '@/shared/config/constants';
 import { computeAppearance } from '@/shared/config/appearance';
 
-const css = ['src/app/styles/styles.css', 'src/shared/branding/canvases.css']
+const css = ['src/app/styles/styles.css', 'src/shared/branding/canvases.css', 'src/shared/branding/pixelIcons.css']
   .map((file) => readFileSync(join(process.cwd(), file), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
 const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
   selectors: match[1].split(',').map((selector) => selector.trim()),
@@ -35,6 +35,109 @@ test('every theme with a canvas paints it behind the page and lists one fixed at
   }
   expect(property("html[data-canvas='glow'] .previewOverlay", 'background-attachment')).toBe('var(--canvas-fixed), scroll');
   expect(css).not.toMatch(/data-theme='ambient'\]\s+\./);
+});
+
+const FILTERS = ['lines', 'grille', 'trinitron', 'pixels', 'dots', 'tube', 'pulse'];
+const filter = (code: string) => `html[data-scanlines='${code}'] #scanlines`;
+const PULSE_BAND = "html[data-scanlines='pulse'][data-scan-pulse] #scanlines .scanBand";
+
+test('the screen filters are off until chosen, sit above the page and below the player, and never take a click', () => {
+  expect(property('#scanlines', 'display')).toBe('none');
+  for (const code of FILTERS) {
+    expect(property(filter(code), 'display'), code).toBe('block');
+    expect(property(filter(code), 'pointer-events'), code).toBe('none');
+    expect(property(filter(code), 'position'), code).toBe('fixed');
+  }
+  const above = +property(filter('lines'), 'z-index');
+  expect(above).toBeGreaterThan(+property('.appShell__nav', 'z-index'));
+  expect(above).toBeLessThan(+property('.player-fullscreen-container', 'z-index'));
+  expect(declarations(filter('lines'))).not.toContain('radial-gradient');
+});
+
+test('every still filter is one layer of gradients, so it costs the TV nothing, and a bare colour layer never breaks a background list', () => {
+  const section = css.slice(css.indexOf('/* === SCREEN FILTERS === */'), css.indexOf('The TV repaints the highlighted tile'));
+  expect(section).not.toMatch(/animation|@keyframes|mix-blend-mode|backdrop-filter|filter:/);
+  for (const code of FILTERS.filter((name) => name !== 'pulse')) {
+    const background = property(filter(code), 'background');
+    expect(background, code).toMatch(/gradient|var\(--scan/);
+    expect(background, code).not.toMatch(/(^|,\s*)rgba?\([^)]*\)\s*,\s*(var|linear|radial|repeating)/);
+  }
+  expect(property(filter('grille'), 'background')).toBe('var(--scan-stripes), var(--scan-lines), var(--scan-tube)');
+  expect(declarations(filter('trinitron'))).toContain('0 34% / 100% 2px');
+  expect(declarations(filter('trinitron'))).toContain('0 66% / 100% 2px');
+  expect(property(filter('pixels'), 'background')).toContain('to right');
+  expect(declarations(filter('dots'))).toContain('/ 6px 6px');
+  expect(property(filter('tube'), 'border-radius')).toBe('3.4vw');
+  expect(property(filter('tube'), 'box-shadow')).toContain('0 0 0 3.4vw #000');
+});
+
+test('dark themes get a soft glow in the middle and a vignette, light themes only the vignette, because black cannot be darkened', () => {
+  expect(property('#scanlines', '--scan-tube')).toContain('rgba(var(--accent-rgb), 0.08)');
+  expect(property('#scanlines', '--scan-tube')).toContain('rgba(0, 0, 0, 0.55)');
+  expect(property("html[data-light='true'] #scanlines", '--scan-tube')).toContain('rgba(0, 0, 0, 0.16)');
+  expect(property("html[data-light='true'] #scanlines", '--scan-tube')).not.toContain('--accent-rgb');
+});
+
+test('only the Pulse line moves, as a real element that exists only while it travels and that the page steps along', () => {
+  expect(property('#scanlines .scanBand', 'display')).toBe('none');
+  expect(property(PULSE_BAND, 'display')).toBe('block');
+  expect(property(PULSE_BAND, 'height')).toBe('120px');
+  expect(property(PULSE_BAND, 'transform')).toBe('translateY(-120px)');
+  expect(property(PULSE_BAND, 'will-change')).toBe('transform');
+  expect(css).not.toMatch(/html\[data-scanlines='pulse'\] #scanlines \.scanBand/);
+});
+
+test('the Pulse line stays away for people who asked for reduced motion', () => {
+  const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)', css.indexOf('/* === SCREEN FILTERS === */')));
+  expect(reduced).toContain(PULSE_BAND);
+  expect(reduced).toMatch(/display:\s*none/);
+});
+
+test('the Terminal theme adds a glow, a prompt before row titles and a slowly blinking block cursor behind the page titles', () => {
+  expect(property("html[data-theme='terminal'] body", 'text-shadow')).toContain('var(--accent-rgb)');
+  expect(property("html[data-theme='terminal'] .carouselTitle::before", 'content')).toBe("'>\\00a0'");
+  expect(property("html[data-theme='terminal'] .settingsView__groupTitle::before", 'content')).toBe("'# '");
+  for (const title of ['.conferenceView__title', '.settingsView__tabsTitle']) {
+    const cursor = `html[data-theme='terminal'] ${title}::after`;
+    expect(property(cursor, 'animation'), title).toBe('terminalCursor 1.2s step-end infinite');
+    expect(property(cursor, 'background'), title).toBe('var(--accent)');
+  }
+});
+
+const kebab = (name: string) => name.replace(/^Icon/, '').replace(/Filled$/, '').replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+const sourceFiles = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
+  const path = `${dir}/${entry.name}`;
+  if (entry.isDirectory()) return sourceFiles(path);
+  return /\.tsx?$/.test(entry.name) && !entry.name.includes('.test.') ? [path] : [];
+});
+
+test('every Tabler icon the app draws has a pixel art version for the Pixelated icon variant', () => {
+  const used = new Set<string>();
+  for (const file of sourceFiles('src')) {
+    const source = readFileSync(join(process.cwd(), file), 'utf8');
+    for (const match of source.matchAll(/import\s*\{([^}]*)\}\s*from '@tabler\/icons-react'/g)) {
+      for (const name of match[1].split(',').map((part) => part.trim()).filter((part) => /^Icon[A-Z]/.test(part))) used.add(kebab(name));
+    }
+  }
+  expect(used.size).toBeGreaterThan(20);
+  for (const name of used) expect(declarations(`html[data-icons='pixelated'] .tabler-icon-${name}`), name).toContain('data:image/svg+xml');
+});
+
+test('a pixel icon is a mask of the pixel art in the colour of the text, drawn instead of the line icon, and nothing else is changed', () => {
+  expect(property("html[data-icons='pixelated'] .tabler-icon", 'background-color')).toBe('currentColor');
+  expect(property("html[data-icons='pixelated'] .tabler-icon", '-webkit-mask-image')).toBe('var(--pixel-icon)');
+  expect(property("html[data-icons='pixelated'] .tabler-icon", 'mask-image')).toBe('var(--pixel-icon)');
+  expect(property("html[data-icons='pixelated'] .tabler-icon", '-webkit-mask-size')).toBe('contain');
+  expect(property("html[data-icons='pixelated'] .tabler-icon > *", 'display')).toBe('none');
+  for (const match of css.matchAll(/(html\[data-icons='pixelated'\][^{]*)\{/g)) {
+    if (!match[1].includes('.playerUI__button')) expect(match[1]).toContain('.tabler-icon');
+  }
+});
+
+test('the player buttons keep their size while the focus moves when the icons are pixel art, so the pixels do not shimmer', () => {
+  expect(property('.playerUI__button--focused', 'transform')).toBe('scale(1.1)');
+  expect(property("html[data-icons='pixelated'] .playerUI__button--focused", 'transform')).toBe('none');
+  expect(property("html[data-icons='pixelated'] .playerUI__button:hover", 'transform')).toBe('none');
 });
 
 test('the Chicago theme draws Windows 95 style raised panels and buttons', () => {

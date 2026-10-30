@@ -175,6 +175,17 @@ export const RAIL_STYLES = [
   { code: 'glass', name: 'Glass' },
 ];
 
+export const SCANLINES = [
+  { code: 'off', name: 'Off' },
+  { code: 'lines', name: 'Lines' },
+  { code: 'grille', name: 'Grille' },
+  { code: 'trinitron', name: 'Trinitron' },
+  { code: 'pixels', name: 'Pixel Grid' },
+  { code: 'dots', name: 'Dots' },
+  { code: 'tube', name: 'Tube' },
+  { code: 'pulse', name: 'Pulse' },
+];
+
 export const GLASS_SHEEN = [
   { code: 'gloss', name: 'Shiny' },
   { code: 'flat', name: 'Flat' },
@@ -204,6 +215,7 @@ export const ICON_VARIANTS = [
   { code: 'dynamic', name: 'Dynamic' },
   { code: 'outlined', name: 'Outlined' },
   { code: 'filled', name: 'Filled' },
+  { code: 'pixelated', name: 'Pixelated' },
 ];
 
 export const MENU_POSITIONS = [
@@ -331,6 +343,8 @@ export const ASPECT_RATIOS = [
   { code: 'stretch', name: 'Stretch', objectFit: 'fill' as const },
 ];
 
+export const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((speed) => ({ code: speed, name: `${speed}\u00d7` }));
+
 export const SETTING_DEFAULTS = {
   uiLanguage: 'auto',
   language: 'deu',
@@ -358,12 +372,14 @@ export const SETTING_DEFAULTS = {
   cornerStyle: 'classic',
   borderWidth: 5,
   scrollbarSize: 'normal',
+  scanlines: 'off',
   spinnerStyle: 'orbit',
   textScale: 1,
   tileScale: 1,
   iconScale: 1,
   menuScale: 1,
   aspectRatio: 'auto',
+  playbackSpeed: 1,
   osdScale: 1,
   osdOpacity: 1,
   osdMenuOpacity: 1,

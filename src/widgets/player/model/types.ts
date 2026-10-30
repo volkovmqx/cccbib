@@ -2,7 +2,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Talk } from '@/entities/talk';
 import type { useControlsVisibility } from './useControlsVisibility';
 
-export type Selector = 'language' | 'subtitle' | 'aspect';
+export type Selector = 'language' | 'subtitle' | 'aspect' | 'speed';
 export interface Focus { area: 'none' | 'buttons' | 'progress' | 'back'; id: string | null }
 export interface PlayerButton {
   id: string;

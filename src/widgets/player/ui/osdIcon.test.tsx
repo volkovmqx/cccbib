@@ -16,6 +16,9 @@ test('Outlined shows the outline icon only, Filled the filled one, and Dynamic k
   expect(classes(dynamic.icon)).toEqual(['tabler-icon tabler-icon-player-pause']);
   expect(classes(dynamic.activeIcon)).toEqual(['tabler-icon tabler-icon-player-pause-filled']);
   expect(osdIcon('anything else', IconPlayerPause, IconPlayerPauseFilled).activeIcon).toBeUndefined();
+  const pixelated = osdIcon('pixelated', IconPlayerPause, IconPlayerPauseFilled);
+  expect(classes(pixelated.icon)).toEqual(['tabler-icon tabler-icon-player-pause']);
+  expect(pixelated.activeIcon).toBeUndefined();
 });
 
 test('an icon without a filled version gets a heavier line instead', () => {

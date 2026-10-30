@@ -44,6 +44,7 @@ test('navigation icons support filled, outlined, and dynamic states', () => {
   expect(isFilled('dynamic', true)).toBe(true);
   expect(isFilled('dynamic', false)).toBe(false);
   expect(isFilled('outlined', true)).toBe(false);
+  expect(isFilled('pixelated', true)).toBe(false);
   const view = render(<NavIcon name="search" filled={false} />);
   for (const name of ['search', 'popular']) {
     for (const filled of [true, false]) {

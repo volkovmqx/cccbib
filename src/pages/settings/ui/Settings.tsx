@@ -6,7 +6,7 @@ import { IconCheck, IconChevronDown } from '@tabler/icons-react';
 import { NavIcon, isFilled } from '@/shared/ui';
 import {
   LANGUAGES, UI_LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_COLORS, SUBTITLE_BACKGROUNDS, PREVIEW_VIDEO_OPTIONS, REMOTE_CONTROL_OPTIONS,
-  THEME_MODES, ACCENT_COLORS, UI_FONTS, SUBTITLE_FONTS, LOADER_STYLES, SPINNER_STYLES, RAIL_STYLES, GLASS_SHEEN, GLASS_TRANSPARENCY, MENU_COLORS, NAV_INDICATORS, ICON_VARIANTS, LOGO_BUTTONS, MENU_POSITIONS, BUTTON_STYLES, CORNER_STYLES, BORDER_WIDTHS, SCROLLBAR_SIZES, SCALE_OPTIONS, TEXT_SCALE_OPTIONS, OSD_SCALE_OPTIONS, OSD_OPACITY_OPTIONS, OSD_MENU_OPACITY_OPTIONS, OSD_HANDLES, OSD_BAR_COLORS, OSD_TIME_MODES, OSD_BUTTON_SHAPES, OSD_IDLE_BUTTONS, OSD_BACK_BUTTONS, STATS_OPTIONS, ASPECT_RATIOS,
+  THEME_MODES, ACCENT_COLORS, UI_FONTS, SUBTITLE_FONTS, LOADER_STYLES, SPINNER_STYLES, RAIL_STYLES, GLASS_SHEEN, GLASS_TRANSPARENCY, MENU_COLORS, NAV_INDICATORS, ICON_VARIANTS, LOGO_BUTTONS, MENU_POSITIONS, BUTTON_STYLES, CORNER_STYLES, BORDER_WIDTHS, SCROLLBAR_SIZES, SCANLINES, SCALE_OPTIONS, TEXT_SCALE_OPTIONS, OSD_SCALE_OPTIONS, OSD_OPACITY_OPTIONS, OSD_MENU_OPACITY_OPTIONS, OSD_HANDLES, OSD_BAR_COLORS, OSD_TIME_MODES, OSD_BUTTON_SHAPES, OSD_IDLE_BUTTONS, OSD_BACK_BUTTONS, STATS_OPTIONS, ASPECT_RATIOS, PLAYBACK_SPEEDS,
 } from '@/shared/config';
 import { revealInList, scrollIntoView, useMediaQuery } from '@/shared/lib';
 import { PLAYBACK_HISTORY_KEY } from '@/features/playback-history';
@@ -51,8 +51,9 @@ const TABS: Tab[] = [
           { key: 'uiLanguage', title: 'App Language', description: 'Language of menus and settings. Auto follows the language of your TV.', options: UI_LANGUAGES },
           { key: 'themeMode', title: 'Theme', description: 'The background style of the app.', options: THEME_MODES, variant: 'theme' },
           { key: 'accentColor', title: 'Accent Color', description: 'The highlight color used across the app.', options: ACCENT_COLORS, variant: 'swatch' },
-          { key: 'uiFont', title: 'Font', description: 'The font used across the app.', options: UI_FONTS, variant: 'font' },
+          { key: 'uiFont', title: 'Font', description: 'The font used across the app. System is a monospace font in the Terminal theme.', options: UI_FONTS, variant: 'font' },
           { key: 'scrollbarSize', title: 'Scrollbar', description: 'The scrollbar of lists and pages. It shows while you scroll and grows under the pointer. A large one stays visible and is easy to grab, or hide it completely.', options: SCROLLBAR_SIZES },
+          { key: 'scanlines', title: 'Screen Filter', description: 'A still overlay that makes the screen look like old hardware. Lines are fine dark lines, Grille adds colored stripes, Trinitron has vertical stripes with two thin wires, Pixel Grid shows the gaps between the pixels, Dots a shadow mask and Tube rounds the corners of the picture. Pulse sends a light line down the screen every half minute. Only Pulse moves, the others cost the TV nothing. Hidden while a talk plays.', options: SCANLINES },
         ],
       },
       {
@@ -63,7 +64,7 @@ const TABS: Tab[] = [
           { key: 'glassTransparency', title: 'Glass Transparency', description: 'How much of the page shows through the open glass menu. On this TV the text behind it is not blurred, so Low stays the easiest to read.', options: GLASS_TRANSPARENCY, showWhen: { railStyle: 'glass' } },
           { key: 'menuPosition', title: 'Menu Position', description: 'Where the menu sits on phones and tablets. Bottom is easier to reach with a thumb and moves the Settings tabs to the bottom as well.', options: MENU_POSITIONS, compactOnly: true },
           { key: 'logoButton', title: 'Logo Button', description: 'The CCCBib logo can be the button for Settings or for Home. It then replaces the gear or the home icon, so it is never both. Off keeps it as decoration, except on phones and tablets where it is the Home button.', options: LOGO_BUTTONS },
-          { key: 'iconVariant', title: 'Icon Variant', description: 'Dynamic shows outlined icons and fills the one you are on or focus. Applies to the side menu, the Settings tabs and the player controls.', options: ICON_VARIANTS },
+          { key: 'iconVariant', title: 'Icon Variant', description: 'Dynamic shows outlined icons and fills the one you are on or focus. Pixelated draws every icon as pixel art, also the small ones in the details. The others apply to the side menu, the Settings tabs and the player controls.', options: ICON_VARIANTS },
           { key: 'menuIconColor', title: 'Icon Color', description: 'Color of the icons and names of the side menu items.', options: MENU_COLORS },
           { key: 'menuActiveColor', title: 'Selected Icon Color', description: 'Color of the item for the screen you are on.', options: MENU_COLORS },
           { key: 'navIndicator', title: 'Indicator', description: 'How the item of the screen you are on is marked in the side menu. Line is a bar on the left, Border frames the item and Contrast fills it with a contrasting color.', options: NAV_INDICATORS },
@@ -117,6 +118,7 @@ const TABS: Tab[] = [
         title: 'Video',
         rows: [
           { key: 'aspectRatio', title: 'Aspect Ratio', description: 'Zoom crops and Stretch distorts to fill the screen, which helps with old 4:3 recordings.', options: ASPECT_RATIOS },
+          { key: 'playbackSpeed', title: 'Playback Speed', description: 'Speed at which a talk starts. In the player the speed button and the green key change it.', options: PLAYBACK_SPEEDS },
           { key: 'previewVideo', title: 'Preview', description: 'What the top right of Home shows for the selected talk. Video plays a short clip, Mute plays it without sound and Off shows nothing.', options: PREVIEW_VIDEO_OPTIONS },
         ],
       },

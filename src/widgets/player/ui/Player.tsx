@@ -2,12 +2,12 @@ import type { PlayerProps, PlayerButton, Selector } from '../model/types';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   IconWorld, IconWorldFilled, IconBadgeCc, IconBadgeCcFilled, IconAspectRatio, IconAspectRatioFilled, IconPlayerTrackPrev, IconPlayerTrackPrevFilled, IconPlayerTrackNext, IconPlayerTrackNextFilled,
-  IconPlayerPlay, IconPlayerPlayFilled, IconPlayerPause, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled, IconBug, IconBugFilled,
+  IconPlayerPlay, IconPlayerPlayFilled, IconPlayerPause, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled, IconBug, IconBugFilled, IconGauge, IconGaugeFilled,
 } from '@tabler/icons-react';
 import { getVideo, releaseVideo } from '@/entities/talk';
 import { videoSources, rememberMirror } from '@/entities/talk';
 import { getSavedPlaybackPosition, removePlaybackHistoryItem } from '@/features/playback-history';
-import { LANGUAGE_NAMES, ASPECT_RATIOS } from '@/shared/config';
+import { LANGUAGE_NAMES, ASPECT_RATIOS, PLAYBACK_SPEEDS } from '@/shared/config';
 import { useSetting } from '@/shared/config';
 import { useWatchlist } from '@/features/watchlist';
 import { useTranslation } from '@/shared/i18n';
@@ -21,6 +21,7 @@ import { Spinner } from '@/shared/ui';
 import { usePlaybackPosition } from '../model/usePlaybackPosition';
 import { useSubtitleManagement } from '../model/useSubtitleManagement';
 import { useOutputWindow } from '../model/useOutputWindow';
+import { usePlaybackSpeed } from '../model/usePlaybackSpeed';
 import { useRemoteControl } from '../model/useRemoteControl';
 import { setNowPlayingReader } from '../model/nowPlaying';
 import { SelectorModal } from './SelectorModal';
@@ -42,6 +43,7 @@ const CLOSE_RELEASE_MS = 300;
 
 const windowRatio = () => (window.innerWidth && window.innerHeight ? window.innerWidth / window.innerHeight : 16 / 9);
 const aspectName = (code: string) => (ASPECT_RATIOS.find((aspect) => aspect.code === code) || {}).name || code;
+const speedName = (code: number | string) => (PLAYBACK_SPEEDS.find((speed) => speed.code === Number(code)) || {}).name || `${code}\u00d7`;
 
 export const Player = React.memo(function Player({ event, conferenceTitle, onClose, startAt }: PlayerProps) {
   const t = useTranslation();
@@ -50,13 +52,16 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     language: t('Select Language'),
     subtitle: t('Select Subtitles'),
     aspect: t('Aspect Ratio'),
+    speed: t('Playback Speed'),
   };
   const selectorLabels: Partial<Record<Selector, (value: string) => string>> = {
     aspect: (value: string) => t(aspectName(value)),
+    speed: speedName,
   };
   const [preferredAudioLanguage] = useSetting('language');
   const [preferredSubtitleLanguage] = useSetting('subtitleLanguage');
   const [defaultAspect] = useSetting('aspectRatio');
+  const [defaultSpeed] = useSetting('playbackSpeed');
   const [backSetting] = useSetting('osdBackButton');
   const [iconVariant] = useSetting('iconVariant');
   const backButton = backSetting === 'on';
@@ -91,6 +96,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   const [languageChoice, setLanguageChoice] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState(defaultAspect);
+  const [speed, setSpeed] = useState(defaultSpeed);
   const [selector, setSelector] = useState<Selector | null>(null);
   const [selectorIndex, setSelectorIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -408,6 +414,12 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   useOutputWindow(videoElement, aspectRatio);
 
+  const speedUnsupported = useCallback(() => {
+    setSpeed(1);
+    showToast(t('Playback speed is not available on this device'));
+  }, [showToast, t]);
+  usePlaybackSpeed(videoElement, speed, speedUnsupported);
+
   usePageTitle(event.title);
 
   useEffect(() => {
@@ -428,9 +440,10 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     language: availableLanguages,
     subtitle: subtitleOptions,
     aspect: ASPECT_RATIOS.map((aspect) => aspect.code),
+    speed: PLAYBACK_SPEEDS.map((option) => String(option.code)),
   }), [availableLanguages, subtitleOptions]);
 
-  const currentValues = { language, subtitle: subtitleLanguage, aspect: aspectRatio };
+  const currentValues = { language, subtitle: subtitleLanguage, aspect: aspectRatio, speed: String(speed) };
 
   const openSelector = useCallback((name: Selector) => {
     const options = selectorOptions[name];
@@ -441,7 +454,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     }
     setSelectorIndex(Math.max(0, options.indexOf(currentValues[name])));
     setSelector(name);
-  }, [selectorOptions, language, subtitleLanguage, aspectRatio]);
+  }, [selectorOptions, language, subtitleLanguage, aspectRatio, speed]);
 
   const closeSelector = useCallback(() => {
     setSelector(null);
@@ -466,6 +479,9 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     } else if (name === 'aspect') {
       setAspectRatio(value);
       showToast(t('Aspect ratio: {name}', { name: t(aspectName(value)) }));
+    } else if (name === 'speed') {
+      setSpeed(Number(value));
+      showToast(t('Speed: {speed}', { speed: speedName(value) }));
     }
     closeSelector();
   }, [language, event.videos, recording, setSubtitleLanguage, showToast, closeSelector, t]);
@@ -511,6 +527,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     if (showAspect) {
       list.push({ id: 'aspect', align: 'left', label: t('Aspect: {name}', { name: t(aspectName(aspectRatio)) }), ...osdIcon(iconVariant, IconAspectRatio, IconAspectRatioFilled), onPress: () => openSelector('aspect') });
     }
+    list.push({ id: 'speed', align: 'left', label: t('Speed: {speed}', { speed: speedName(speed) }), ...osdIcon(iconVariant, IconGauge, IconGaugeFilled), onPress: () => openSelector('speed') });
     list.push({ id: 'skipback', align: 'center', label: t('Skip Back'), ...osdIcon(iconVariant, IconPlayerTrackPrev, IconPlayerTrackPrevFilled), onPress: () => seek(-10) });
     list.push({
       id: 'playpause', align: 'center', label: playing ? t('Pause') : t('Play'),
@@ -528,7 +545,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     return list;
   }, [
     hasMultipleLanguages, hasSubtitles, languageButtonLabel, subtitleLanguage, aspectRatio,
-    playing, isMuted, isInWatchlist, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect, statsEnabled, toggleStats, iconVariant,
+    playing, isMuted, isInWatchlist, speed, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect, statsEnabled, toggleStats, iconVariant,
   ]);
 
   const statsRows = usePlaybackStats({
@@ -536,7 +553,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     active: statsEnabled && statsOpen,
     context: {
       guid: event.guid, recording, duration: event.duration, sourceUrl: videoUrl || '', sourceIndex, sourceCount: sources.length,
-      aspect: aspectRatio, audioLanguage: recordingLanguage || language, subtitleLanguage, subtitleStatus, buffering, version: APP_VERSION,
+      aspect: aspectRatio, speed, audioLanguage: recordingLanguage || language, subtitleLanguage, subtitleStatus, buffering, version: APP_VERSION,
     },
   });
 
@@ -567,6 +584,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     else if (cmd === 'mute') setIsMuted((current) => (typeof value === 'boolean' ? value : !current));
     else if (cmd === 'stop') closePlayer();
     else if (cmd === 'aspect' && typeof value === 'string' && ASPECT_RATIOS.some((aspect) => aspect.code === value)) applySelection('aspect', value);
+    else if (cmd === 'speed' && PLAYBACK_SPEEDS.some((option) => option.code === Number(value))) applySelection('speed', String(Number(value)));
     else if (cmd === 'subtitle' && typeof value === 'string') setSubtitleLanguage(value);
     else if (cmd === 'language' && typeof value === 'string' && availableLanguages.includes(value)) applySelection('language', value);
     else if (cmd === 'seek') {

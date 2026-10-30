@@ -41,7 +41,7 @@ test('player keys control playback, seeking, mute, selectors, and exit', () => {
   key('ArrowUp'); expect(ctx.controls.focusButton).toHaveBeenCalledWith('playpause');
   key('ArrowLeft'); key('ArrowRight'); expect(ctx.seek).toHaveBeenCalledWith(-10); expect(ctx.seek).toHaveBeenCalledWith(10);
   key('', 113); expect(ctx.toggleMute).toHaveBeenCalled();
-  for (const [code, name] of [[799, 'subtitle'], [460, 'subtitle'], [403, 'language'], [457, 'language'], [405, 'aspect']] as const) {
+  for (const [code, name] of [[799, 'subtitle'], [460, 'subtitle'], [403, 'language'], [457, 'language'], [404, 'speed'], [405, 'aspect']] as const) {
     hook.rerender({ value: { ...ctx } }); key('', code); expect(ctx.openSelector).toHaveBeenLastCalledWith(name);
   }
   hook.rerender({ value: { ...ctx, hasMultipleLanguages: false, hasSubtitles: false } });

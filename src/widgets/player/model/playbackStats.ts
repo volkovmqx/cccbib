@@ -10,6 +10,7 @@ export interface StatsContext {
   sourceIndex: number;
   sourceCount: number;
   aspect: string;
+  speed: number;
   audioLanguage: string;
   subtitleLanguage: string;
   subtitleStatus: string;
@@ -40,14 +41,14 @@ function bitrateMbit(recording: Recording | null, duration: number) {
 
 // How many seconds of video arrived per second, the bytes themselves are not visible to the page
 // A seek or another buffered range is no download, so such a sample only starts over
-export function nextRate(previous: StatsRate | null, now: number, video: HTMLVideoElement): StatsRate {
+export function nextRate(previous: StatsRate | null, now: number, video: HTMLVideoElement, speed = 1): StatsRate {
   const { start, end } = bufferedRange(video);
   const time = video.currentTime;
   const base = { at: now, time, start, end, fill: 0 };
   if (!previous || now <= previous.at) return base;
   const elapsed = (now - previous.at) / 1000;
   const moved = time - previous.time;
-  if (start !== previous.start || moved < -0.5 || moved > elapsed * Math.max(1, video.playbackRate) + 1.5) return base;
+  if (start !== previous.start || moved < -0.5 || moved > elapsed * Math.max(1, video.playbackRate, speed) + 1.5) return base;
   const fill = Math.max(0, (end - previous.end) / elapsed);
   return { ...base, fill: fill < 0.01 ? 0 : fill };
 }
@@ -101,7 +102,7 @@ export function collectStats(video: HTMLVideoElement, context: StatsContext, rat
     { label: 'Buffer fill', value: fill },
     { label: 'Connection', value: connection && connection.downlink ? [`about ${connection.downlink} Mbit/s`, connection.effectiveType, connection.rtt ? `${connection.rtt} ms` : ''].filter(Boolean).join(', ') : 'not reported by this TV' },
     { label: 'Position', value: `${formatSeconds(video.currentTime)} / ${formatSeconds(Number.isFinite(video.duration) ? video.duration : context.duration)}` },
-    { label: 'State', value: `${state}, ${fixed(video.playbackRate, 2).replace(/\.?0+$/, '')}x, ${READY[video.readyState] || video.readyState}, network ${NETWORK[video.networkState] || video.networkState}` },
+    { label: 'State', value: `${state}, ${fixed(context.speed, 2).replace(/\.?0+$/, '')}x, ${READY[video.readyState] || video.readyState}, network ${NETWORK[video.networkState] || video.networkState}` },
     { label: 'Audio', value: `${context.audioLanguage || 'unknown'}, player volume ${Math.round(video.volume * 100)}%${video.muted ? ' (muted)' : ''}` },
     { label: 'Subtitles', value: subtitleState(video, context) },
     { label: 'Engine', value: `${chrome ? `Chrome ${chrome}` : 'unknown browser'}, app ${context.version}` },

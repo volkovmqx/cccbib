@@ -1,4 +1,5 @@
 import type { Settings, SettingKey } from './settings';
+import { syncScanlines } from './scanlines';
 import { SETTING_DEFAULTS, SYSTEM_FONT_STACK, UI_FONTS, CORNER_STYLES, TEXT_SCALE_BASE, ICON_SCALE_BASE } from './constants';
 import { getSetting, subscribeSettings } from './settings';
 
@@ -9,7 +10,7 @@ interface Palette { bg: string; surface: string; surfaceAlt: string; surfaceHove
 
 const BOOT_KEY = 'appearance_boot';
 const APPEARANCE_SETTINGS = [
-  'themeMode', 'accentColor', 'uiFont', 'loaderStyle', 'railStyle', 'glassSheen', 'glassTransparency', 'menuIconColor', 'menuActiveColor', 'navIndicator', 'buttonStyle', 'cornerStyle', 'borderWidth', 'scrollbarSize',
+  'themeMode', 'accentColor', 'uiFont', 'loaderStyle', 'railStyle', 'glassSheen', 'glassTransparency', 'menuIconColor', 'menuActiveColor', 'navIndicator', 'buttonStyle', 'cornerStyle', 'borderWidth', 'scrollbarSize', 'scanlines', 'iconVariant',
   'textScale', 'tileScale', 'iconScale', 'menuScale', 'menuPosition',
   'subtitleSize', 'subtitleFont', 'subtitleColor', 'subtitleBackground',
   'osdScale', 'osdOpacity', 'osdMenuOpacity', 'osdHandle', 'osdBarColor', 'osdButtonShape', 'osdIdleButtons',
@@ -25,11 +26,12 @@ const PALETTES: Record<string, Palette> = {
   nocturne: { bg: '#0c0e13', surface: '#1a1d22', surfaceAlt: '#12151d', surfaceHover: '#2c3036', text: '#f6f2ea', muted: '#b0aca2', dim: '#7c7a73', border: '#282b32' },
   abyss: { bg: '#06111c', surface: '#0f1f29', surfaceAlt: '#03101a', surfaceHover: '#1a2f38', text: '#eff7f6', muted: '#9fb7b8', dim: '#6d898c', border: '#1d3640' },
   cyberpunk: { bg: '#0a0713', surface: '#140f24', surfaceAlt: '#100b1e', surfaceHover: '#201939', text: '#f2f4ff', muted: '#b0aabf', dim: '#7a7491', border: '#2a2048' },
-  terminal: { bg: '#050b08', surface: '#0f1a14', surfaceAlt: '#09120d', surfaceHover: '#19291f', text: '#e8f6ee', muted: '#9db8a8', dim: '#68846f', border: '#1f3528' },
+  terminal: { bg: '#050b08', surface: '#0f1a14', surfaceAlt: '#09120d', surfaceHover: '#19291f', text: '#d6f8e1', muted: '#92bfa2', dim: '#628a70', border: '#1f3528' },
   chicago: { bg: '#c0c0c0', surface: '#dfdfdf', surfaceAlt: '#b3b3b3', surfaceHover: '#a5a5a5', text: '#000000', muted: '#2e2e2e', dim: '#575757', border: '#808080' },
   paper: { bg: '#f2ead9', surface: '#faf5ea', surfaceAlt: '#e9dfca', surfaceHover: '#e2d6bc', text: '#332a1f', muted: '#5d5245', dim: '#7d705d', border: '#d6c9ae' },
 };
 
+const TERMINAL_FONT = 'plex-mono';
 const LIGHT_THEMES = ['light', 'lighttinted', 'frost', 'paper', 'chicago'];
 const CANVAS_THEMES = ['ambient', 'ember', 'sunset', 'frost', 'paper', 'nocturne', 'abyss', 'cyberpunk', 'terminal', 'chicago'];
 
@@ -253,19 +255,20 @@ function subtitleVars({ subtitleColor, subtitleBackground, subtitleFont, uiFont 
 }
 
 export function computeAppearance(settings: Settings): { attrs: Record<string, string>; vars: Record<string, string> } {
-  const { themeMode, accentColor, uiFont, loaderStyle, railStyle, glassSheen, glassTransparency, textScale, tileScale, iconScale, menuScale } = settings;
+  const { themeMode, accentColor, loaderStyle, railStyle, glassSheen, glassTransparency, textScale, tileScale, iconScale, menuScale } = settings;
+  const uiFont = themeMode === 'terminal' && settings.uiFont === 'default' ? TERMINAL_FONT : settings.uiFont;
   const palette = paletteFor(themeMode, accentColor);
   const accent = accentVars(accentColor, isLightTheme(themeMode));
   const menuColor = (code: string) => (({ grey: palette.muted, white: '#ffffff', black: '#000000', accent: accent['--accent-text'] } as Record<string, string>)[code] || palette.muted);
   return {
-    attrs: { 'data-theme': themeMode, 'data-light': String(isLightTheme(themeMode)), 'data-canvas': CANVAS_THEMES.includes(themeMode) ? 'glow' : 'none', 'data-loader': loaderStyle, 'data-rail': railStyle, 'data-shine': glassSheen, 'data-glass-transparency': glassTransparency, 'data-nav-indicator': settings.navIndicator, 'data-menu-position': settings.menuPosition,
+    attrs: { 'data-theme': themeMode, 'data-light': String(isLightTheme(themeMode)), 'data-canvas': CANVAS_THEMES.includes(themeMode) ? 'glow' : 'none', 'data-loader': loaderStyle, 'data-rail': railStyle, 'data-shine': glassSheen, 'data-glass-transparency': glassTransparency, 'data-nav-indicator': settings.navIndicator, 'data-menu-position': settings.menuPosition, 'data-scanlines': settings.scanlines, 'data-icons': settings.iconVariant,
       'data-text-large': String(textScale * TEXT_SCALE_BASE >= 1.4), 'data-osd-handle': settings.osdHandle, 'data-osd-bar': settings.osdBarColor, 'data-osd-shape': settings.osdButtonShape, 'data-osd-idle': settings.osdIdleButtons },
     vars: {
       ...accent,
       '--accent-stroke': strokeColor(accentColor, palette, isLightTheme(themeMode)),
       '--gloss': isLightTheme(themeMode) ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.14)',
       ...paletteVars(palette),
-      ...subtitleVars(settings, accentColor, palette),
+      ...subtitleVars({ ...settings, uiFont }, accentColor, palette),
       ...buttonVars(settings, palette),
       '--osd-scale': String(settings.osdScale),
       '--osd-a1': String(+(0.92 * settings.osdOpacity).toFixed(3)),
@@ -296,6 +299,7 @@ export function applyAppearance() {
   const root = document.documentElement;
   Object.keys(appearance.attrs).forEach((name) => root.setAttribute(name, appearance.attrs[name]));
   root.setAttribute('data-subtitle-size', getSetting('subtitleSize'));
+  syncScanlines(appearance.attrs['data-scanlines']);
   Object.keys(appearance.vars).forEach((name) => root.style.setProperty(name, appearance.vars[name]));
 
   try {

@@ -23,8 +23,9 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 - Save talks to the Watchlist and resume the 20 most recent talks in Continue Watching.
 - Select audio languages and subtitles when a talk provides them.
 - Choose from 9 app languages.
-- Choose from 15 themes, accent colors, 21 fonts, 24 loading animations, and the size of the scrollbars.
+- Choose from 15 themes, accent colors, 21 fonts, 24 loading animations, line, filled or pixel art icons, eight screen filters (Lines, Grille, Trinitron, Pixel Grid, Dots and Tube are still and cost the TV nothing, Pulse sends one light line down the screen every half minute), and the size of the scrollbars.
 - Select Auto, Zoom, or Stretch for the video aspect ratio.
+- Change the playback speed from 0.5x to 2x with the speed button or the green key, or set the speed a talk starts at in Settings > Playback. The sound keeps playing at every speed on webOS 5.
 - Play videos from the CDN mirror that ranks best for your location and stay on it.
 - Show technical details of the playback with Stats for Nerds (mirror, resolution, buffer and connection).
 - Send commands through webOS launch parameters (see [Remote control](#remote-control)).
@@ -44,6 +45,7 @@ CCCBib takes its commands as webOS launch parameters so the TV needs no open por
 | `seek` | `to` (seconds) or `by` (seconds, negative goes back) |
 | `mute` | `value` true or false, without it the state toggles |
 | `aspect` | `value`: auto, zoom or stretch |
+| `speed` | `value`: 0.5, 0.75, 1, 1.25, 1.5, 1.75 or 2 |
 | `subtitle` | `value`: language code or none |
 | `language` | `value`: audio language code |
 | `add` | `link`, `links` (list of links) or `items` (list of `{link, position}` or `{link, percent}`). Adds to the watchlist. With a `position` (seconds) or `percent` the talk is also put on the in progress list (Continue Watching) |
@@ -109,7 +111,7 @@ The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or ol
 
 - &#9744; Add Speaker page.
 - ~~&#9744; Jeopardy Theme song when waiting for too long.~~
-- Playback speed is left out on purpose: webOS mutes the audio at any speed except 1x.
+- Playback speed on webOS goes through the TV's media service (`com.webos.media/setPlayRate`), because the web view mutes the sound at any other `playbackRate`.
 
 ## Contributing
 
@@ -126,6 +128,8 @@ The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced
 The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/shared/branding/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
 
 The animation ["Fairy Dust"](https://media.metaebene.me/media/fairydust/index.html) is based on the Fairy Dust logo of the Chaos events, developed in 1999 by Tim Pritlove and Marten Suhr and released under the [CC BY 4.0 License](https://creativecommons.org/licenses/by/4.0/).
+
+The Pixelated icon variant uses icons from [pixelarticons](https://github.com/halfmage/pixelarticons) by Gerrit Halfmann under the MIT License (`src/shared/branding/pixelarticons-LICENSE.txt`). The skip, wifi off and heart off icons are drawn on the same grid from its shapes.
 
 The TV navigation follows [Norigin Media's guide](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [Utkarsh Gupta's guide](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1). The remote button mapping uses the LG input keymapping overview by [Simon34545](https://github.com/Simon34545).
 

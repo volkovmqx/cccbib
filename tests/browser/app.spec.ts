@@ -150,6 +150,86 @@ test('player controls follow the text, icon, and controls size settings', async 
   expect(controls.button).toBeCloseTo(base.button * 1.5, 1);
 });
 
+test('the screen filter is off by default and every still filter lies over the page without taking a click', async ({ page }) => {
+  await start(page, { themeMode: 'black' });
+  expect(await page.locator('#scanlines').evaluate((element) => getComputedStyle(element).display)).toBe('none');
+  for (const code of ['lines', 'grille', 'trinitron', 'pixels', 'dots', 'tube']) {
+    await start(page, { themeMode: 'black', scanlines: code });
+    const overlay = await page.evaluate(() => {
+      const element = document.querySelector('#scanlines')!;
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return { display: style.display, pointerEvents: style.pointerEvents, width: Math.round(box.width), height: Math.round(box.height), image: style.backgroundImage, band: getComputedStyle(element.querySelector('.scanBand')!).display, hit: document.elementFromPoint(960, 540)?.id };
+    });
+    expect(overlay, code).toMatchObject({ display: 'block', pointerEvents: 'none', width: 1920, height: 1080, band: 'none' });
+    expect(overlay.image, code).toContain('gradient');
+    expect(overlay.hit, code).not.toBe('scanlines');
+  }
+  await start(page, { themeMode: 'black', scanlines: 'crt' });
+  expect(await page.evaluate(() => document.documentElement.getAttribute('data-scanlines'))).toBe('grille');
+});
+
+test('the Pulse sends one line down the screen shortly after it is chosen', async ({ page }) => {
+  await start(page, { themeMode: 'black', scanlines: 'pulse' });
+  const beam = () => page.evaluate(() => ({ shown: getComputedStyle(document.querySelector('#scanlines .scanBand')!).display !== 'none', on: document.documentElement.hasAttribute('data-scan-pulse') }));
+  expect(await beam()).toEqual({ shown: false, on: false });
+  await expect.poll(beam, { timeout: 4000 }).toEqual({ shown: true, on: true });
+  const first = await page.evaluate(() => getComputedStyle(document.querySelector('#scanlines .scanBand')!).transform);
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('#scanlines .scanBand')!).transform)).not.toBe(first);
+});
+
+test('with Pixelated icons the player buttons follow the size settings but do not grow while the focus moves', async ({ page }) => {
+  const widths = async (settings: Record<string, unknown>) => {
+    await start(page, { iconVariant: 'pixelated', ...settings });
+    await page.locator('.sidebarItem').filter({ hasText: 'Search' }).click();
+    await page.getByRole('textbox').fill('fixture');
+    await page.locator('.searchResults .listItem').click();
+    await page.locator('.playerUI__button').first().waitFor();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowRight');
+    return page.evaluate(() => ({
+      focused: document.querySelector('.playerUI__button--focused svg')!.getBoundingClientRect().width,
+      other: document.querySelector('.playerUI__button:not(.playerUI__button--focused) svg')!.getBoundingClientRect().width,
+      transform: getComputedStyle(document.querySelector('.playerUI__button--focused')!).transform,
+    }));
+  };
+  const normal = await widths({});
+  const large = await widths({ osdScale: 1.5, iconScale: 1.3 });
+  expect(normal.focused).toBeCloseTo(normal.other, 1);
+  expect(normal.transform).toBe('none');
+  expect(large.focused).toBeCloseTo(large.other, 1);
+  expect(large.focused).toBeGreaterThan(normal.focused * 1.5);
+});
+
+test('the Terminal theme sets the UI in IBM Plex Mono until another font is chosen', async ({ page }) => {
+  await start(page, { themeMode: 'terminal' });
+  await expect.poll(() => page.evaluate(() => document.fonts.check('16px "IBM Plex Mono"') && getComputedStyle(document.body).fontFamily.startsWith('"IBM Plex Mono"'))).toBe(true);
+  await start(page, { themeMode: 'terminal', uiFont: 'inter' });
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily.startsWith('Inter'))).toBe(true);
+  await start(page, { themeMode: 'black' });
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily.includes('IBM Plex Mono'))).toBe(false);
+});
+
+test('the Pixelated icon variant draws every icon as pixel art in the colour of its text and the others keep their lines', async ({ page }) => {
+  const sidebarIcon = () => page.locator('.sidebarItem__icon svg').first().evaluate((svg) => {
+    const style = getComputedStyle(svg);
+    const path = svg.firstElementChild!;
+    return { mask: style.webkitMaskImage, size: style.webkitMaskSize, fill: style.backgroundColor, color: style.color, pathShown: getComputedStyle(path).display !== 'none' };
+  });
+  await start(page, { iconVariant: 'outlined' });
+  expect(await sidebarIcon()).toMatchObject({ mask: 'none', pathShown: true });
+  await start(page, { iconVariant: 'pixelated' });
+  const pixel = await sidebarIcon();
+  expect(pixel.mask).toContain('data:image/svg+xml');
+  expect(pixel).toMatchObject({ size: 'contain', pathShown: false });
+  expect(pixel.fill).toBe(pixel.color);
+  await page.locator('.sidebarItem').filter({ hasText: 'Settings' }).click();
+  await page.locator('.settingsView__row').filter({ has: page.locator('.settingsView__rowName', { hasText: /^Icon Variant$/ }) }).getByText('Outlined', { exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-icons', 'outlined');
+  expect(await sidebarIcon()).toMatchObject({ mask: 'none', pathShown: true });
+});
+
 test('black theme popups stay black and tiles share one border width', async ({ page }) => {
   await start(page, { themeMode: 'black', accentColor: '#4CAF50' });
   const homeTile = '.embla__slide__img';
@@ -208,6 +288,20 @@ test('stats for nerds shows the playback details from the player controls and st
   await page.mouse.move(600, 400);
   await page.getByRole('button', { name: 'Stats for Nerds' }).click();
   await expect(panel).toHaveCount(0);
+});
+
+test('the speed button changes how fast the talk plays and the start speed comes from the settings', async ({ page }) => {
+  await start(page, { playbackSpeed: 1.5 });
+  await page.locator('.sidebarItem').filter({ hasText: 'Search' }).click();
+  await page.getByRole('textbox').fill('fixture');
+  await page.locator('.searchResults .listItem').click();
+  const video = page.locator('video.player-video');
+  await expect(video).toBeVisible();
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.playbackRate)).toBe(1.5);
+  await page.getByRole('button', { name: 'Speed: 1.5\u00d7' }).click();
+  await page.locator('.picker__item', { hasText: '0.75\u00d7' }).click();
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.playbackRate)).toBe(0.75);
+  await expect(page.getByRole('button', { name: 'Speed: 0.75\u00d7' })).toBeVisible();
 });
 
 test('the subtitle font App follows the font chosen for the app', async ({ page }) => {
@@ -1321,7 +1415,11 @@ test('the wheel scrolls the settings page without moving through its rows but st
   const control = (await row.locator('.settingsView__select').boundingBox())!;
   const cursor = { x: control.x + control.width / 2, y: control.y + control.height / 2 };
   expect(await content.evaluate((element) => element.scrollTop)).toBe(0);
-  await page.mouse.wheel(0, 900);
+  const distance = await page.evaluate((cursorY) => {
+    const target = document.querySelectorAll('.settingsView__row')[8].getBoundingClientRect();
+    return Math.round(target.top + target.height / 2 - cursorY);
+  }, cursor.y);
+  await page.mouse.wheel(0, distance);
   await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect(row).not.toHaveClass(/settingsView__row--focused/);
   const underCursor = (position: { x: number; y: number }) => page.evaluate(({ x, y }) => {

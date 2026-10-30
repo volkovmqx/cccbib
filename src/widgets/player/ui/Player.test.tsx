@@ -26,6 +26,7 @@ beforeEach(() => {
   vi.spyOn(HTMLVideoElement.prototype, 'videoWidth', 'get').mockReturnValue(640);
   vi.spyOn(HTMLVideoElement.prototype, 'videoHeight', 'get').mockReturnValue(480);
   for (const [key, value] of [['language', 'deu'], ['subtitleLanguage', 'none'], ['aspectRatio', 'auto'], ['uiLanguage', 'en']] as const) setSetting(key, value);
+  setSetting('playbackSpeed', 1);
   subtitle.status = 'idle'; subtitle.available = true; subtitle.options = ['none', 'eng'];
   window.innerWidth = 1920; window.innerHeight = 1080;
 });
@@ -392,4 +393,45 @@ test('the controls show the title of the talk and not its description', async ()
   expect(view.container.querySelector('.playerUI__title')).toHaveTextContent('Test talk');
   expect(view.container.querySelector('.playerUI__subtitle')).toBeNull();
   expect(view.container).not.toHaveTextContent('Talk description');
+});
+
+test('the speed button, the green key and the remote command set the playback rate', async () => {
+  const view = setup(); const video = view.video();
+  await tick(200);
+  expect(screen.getByRole('button', { name: 'Speed: 1\u00d7' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^Speed:/ }));
+  expect(screen.getByText('Playback Speed')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('1.5\u00d7'));
+  expect(video.playbackRate).toBe(1.5);
+  expect(screen.getByRole('button', { name: 'Speed: 1.5\u00d7' })).toBeInTheDocument();
+  fireEvent.keyDown(window, { keyCode: 404 });
+  expect(view.container.querySelector('.picker__item--current')).toHaveTextContent('1.5\u00d7');
+  fireEvent.keyDown(window, { key: 'Escape' });
+  command({ cmd: 'speed', value: 0.75 }); expect(video.playbackRate).toBe(0.75);
+  command({ cmd: 'speed', value: '2' }); expect(video.playbackRate).toBe(2);
+  command({ cmd: 'speed', value: 3 }); command({ cmd: 'speed' }); expect(video.playbackRate).toBe(2);
+});
+
+test('a talk starts at the speed from the settings and keeps it when the language changes', async () => {
+  setSetting('playbackSpeed', 1.25);
+  const view = setup({ event: talk({ videos: [talk().videos[0], { ...talk().videos[0], url: 'https://static.media.ccc.de/eng.webm', language: 'eng' }] }) });
+  await tick(200);
+  expect(view.video().playbackRate).toBe(1.25);
+  fireEvent.click(screen.getByRole('button', { name: 'German' }));
+  fireEvent.click(screen.getByText('English'));
+  await tick(200);
+  expect(view.video().getAttribute('src')).toContain('eng.webm');
+  expect(view.video().playbackRate).toBe(1.25);
+});
+
+test('a TV that refuses the speed goes back to normal speed with a notice', async () => {
+  vi.stubGlobal('PalmServiceBridge', class { onservicecallback = (_message: string) => {}; call() { this.onservicecallback('{"returnValue":false}'); } cancel() {} });
+  setup();
+  await tick(200);
+  fireEvent.click(screen.getByRole('button', { name: /^Speed:/ }));
+  fireEvent.click(screen.getByText('2\u00d7'));
+  await tick(11000);
+  expect(screen.getByText('Playback speed is not available on this device')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Speed: 1\u00d7' })).toBeInTheDocument();
+  vi.unstubAllGlobals();
 });

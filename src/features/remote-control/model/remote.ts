@@ -6,7 +6,7 @@ type Entry = { command: RemoteCommand; at: number };
 
 
 const APP_COMMANDS = ['play', 'add', 'remove', 'progress', 'progress-set', 'progress-clear'];
-const PLAYER_COMMANDS = ['pause', 'resume', 'toggle', 'seek', 'mute', 'aspect', 'subtitle', 'language', 'stop'];
+const PLAYER_COMMANDS = ['pause', 'resume', 'toggle', 'seek', 'mute', 'aspect', 'speed', 'subtitle', 'language', 'stop'];
 const BACKLOG_MS = 20000;
 const STARTUP_DUPLICATE_MS = 3000;
 

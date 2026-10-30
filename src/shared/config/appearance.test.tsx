@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { SETTING_DEFAULTS, MENU_POSITIONS, THEME_MODES, ACCENT_COLORS, MENU_COLORS, NAV_INDICATORS, BUTTON_STYLES, BORDER_WIDTHS, CORNER_STYLES, UI_FONTS } from './constants';
+import { SETTING_DEFAULTS, MENU_POSITIONS, THEME_MODES, ACCENT_COLORS, MENU_COLORS, NAV_INDICATORS, BUTTON_STYLES, BORDER_WIDTHS, CORNER_STYLES, UI_FONTS, SCANLINES, ICON_VARIANTS } from './constants';
 import { buttonColors, computeAppearance, initAppearance, paletteFor } from './appearance';
 import { getSetting, setSetting, subscribeSettings, useSetting } from './settings';
 import type { Settings } from './settings';
@@ -219,6 +219,35 @@ test('the scrollbar size changes the strip, the thumb, the grown thumb and the c
   expect(sizes('hidden')).toEqual(['0px', '0px', '0px', 'transparent']);
   expect(sizes('unknown')).toEqual(sizes('normal'));
   expect(SETTING_DEFAULTS.scrollbarSize).toBe('normal');
+});
+
+test('the screen filter setting reaches the page as an attribute, off by default, and changing it updates the page at once', () => {
+  expect(SCANLINES.map((option) => option.code)).toEqual(['off', 'lines', 'grille', 'trinitron', 'pixels', 'dots', 'tube', 'pulse']);
+  expect(SETTING_DEFAULTS.scanlines).toBe('off');
+  for (const scanlines of SCANLINES.map((option) => option.code)) expect(computeAppearance({ ...SETTING_DEFAULTS, scanlines }).attrs['data-scanlines']).toBe(scanlines);
+  const stop = initAppearance();
+  expect(document.documentElement.getAttribute('data-scanlines')).toBe('off');
+  act(() => { setSetting('scanlines', 'trinitron'); });
+  expect(document.documentElement.getAttribute('data-scanlines')).toBe('trinitron');
+  stop();
+});
+
+test('the icon variant reaches the page as an attribute and Pixelated is one of the choices', () => {
+  expect(ICON_VARIANTS.map((option) => option.code)).toEqual(['dynamic', 'outlined', 'filled', 'pixelated']);
+  for (const iconVariant of ICON_VARIANTS.map((option) => option.code)) expect(computeAppearance({ ...SETTING_DEFAULTS, iconVariant }).attrs['data-icons']).toBe(iconVariant);
+  const stop = initAppearance();
+  act(() => { setSetting('iconVariant', 'pixelated'); });
+  expect(document.documentElement.getAttribute('data-icons')).toBe('pixelated');
+  stop();
+});
+
+test('the Terminal theme shows a monospace font while the font is System, any other choice wins and other themes keep the system font', () => {
+  const vars = (themeMode: string, uiFont: string) => computeAppearance({ ...SETTING_DEFAULTS, themeMode, uiFont }).vars;
+  expect(vars('terminal', 'default')['--ui-font']).toMatch(/^'IBM Plex Mono', /);
+  expect(vars('terminal', 'inter')['--ui-font']).toMatch(/^'Inter', /);
+  expect(vars('terminal', 'default')['--ui-font']).not.toBe(vars('black', 'default')['--ui-font']);
+  expect(vars('black', 'default')['--ui-font']).not.toContain('IBM Plex Mono');
+  expect(computeAppearance({ ...SETTING_DEFAULTS, themeMode: 'terminal', subtitleFont: 'app' }).vars['--sub-font']).toMatch(/^'IBM Plex Mono', /);
 });
 
 test('the pixel fonts and the dyslexia font are evened out to the size of the others, in the text and the subtitles', () => {

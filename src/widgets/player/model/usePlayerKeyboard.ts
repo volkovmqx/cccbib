@@ -115,6 +115,9 @@ function handleKey(e: KeyboardEvent, ref: React.RefObject<KeyboardContext>) {
   } else if ((e.keyCode === 403 || e.keyCode === 457) && ctx.hasMultipleLanguages) {
     e.preventDefault();
     open('language');
+  } else if (e.keyCode === 404) {
+    e.preventDefault();
+    open('speed');
   } else if (e.keyCode === 405) {
     e.preventDefault();
     open('aspect');

@@ -269,6 +269,32 @@ test('the scrollbar row offers normal, large and hidden and stores the choice', 
   expect(getSetting('scrollbarSize')).toBe('hidden');
 });
 
+test('the screen filter row offers the still filters and the Pulse and stores the choice', () => {
+  const view = render(<Settings {...callbacks()} />);
+  const row = screen.getByText('Screen Filter').closest('.settingsView__row') as HTMLElement;
+  expect(getSetting('scanlines')).toBe('off');
+  fireEvent.click(row.querySelector('.settingsView__select')!);
+  expect([...view.container.querySelectorAll('.picker__item')].map((item) => item.textContent)).toEqual(['Off', 'Lines', 'Grille', 'Trinitron', 'Pixel Grid', 'Dots', 'Tube', 'Pulse']);
+  fireEvent.click(screen.getByText('Trinitron'));
+  expect(getSetting('scanlines')).toBe('trinitron');
+  fireEvent.click(row.querySelector('.settingsView__select')!);
+  fireEvent.click(screen.getByText('Pulse'));
+  expect(getSetting('scanlines')).toBe('pulse');
+});
+
+test('the playback speed row offers seven speeds and stores the choice', () => {
+  const view = render(<Settings {...callbacks()} />);
+  fireEvent.click(screen.getByText('Playback', { selector: '.settingsView__tab *, .settingsView__tab' }));
+  const row = screen.getByText('Playback Speed').closest('.settingsView__row') as HTMLElement;
+  expect(row).toHaveTextContent('1\u00d7');
+  fireEvent.click(row.querySelector('.settingsView__select')!);
+  const items = [...view.container.querySelectorAll('.picker__item')].map((item) => item.textContent);
+  expect(items).toEqual(['0.5\u00d7', '0.75\u00d7', '1\u00d7', '1.25\u00d7', '1.5\u00d7', '1.75\u00d7', '2\u00d7']);
+  expect(getSetting('playbackSpeed')).toBe(1);
+  fireEvent.click(screen.getByText('1.5\u00d7'));
+  expect(getSetting('playbackSpeed')).toBe(1.5);
+});
+
 test('the rows of a tab wrap around: Down on the last row goes to the first and Up on the first goes to the last', () => {
   const view = render(<Settings {...callbacks()} />);
   const key = (name: string) => fireEvent.keyDown(window, { key: name });

@@ -9,5 +9,5 @@ export { useOnlineStatus } from './useOnlineStatus';
 export { isWebOS } from './platform';
 export { lockLandscape } from './orientation';
 export { usePageTitle } from './pageTitle';
-export { applyOutputWindow, usesOutputWindow } from './videoWindow';
+export { applyOutputWindow, applyPlayRate, usesOutputWindow } from './webos';
 export { getSubtitleLanguages, getSubtitleSources, loadSubtitleCues } from './subtitles';

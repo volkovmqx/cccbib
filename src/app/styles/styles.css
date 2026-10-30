@@ -954,6 +954,11 @@ html[data-light='true'] .playerUI {
   transform: scale(1.1);
 }
 
+html[data-icons='pixelated'] .playerUI__button:hover,
+html[data-icons='pixelated'] .playerUI__button--focused {
+  transform: none;
+}
+
 .playerUI__button:disabled {
   opacity: 0.4;
   pointer-events: none;
@@ -1780,6 +1785,37 @@ html[data-theme='chicago'] .settingsView__tabs {
   box-shadow: inset -2px 0 #808080, inset -3px 0 #ffffff;
 }
 
+/* === THEME TERMINAL === */
+html[data-theme='terminal'] body {
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.3);
+}
+
+html[data-theme='terminal'] .carouselTitle::before {
+  content: '>\00a0';
+  color: var(--accent-text);
+}
+
+html[data-theme='terminal'] .settingsView__groupTitle::before {
+  content: '# ';
+  color: var(--accent-text);
+}
+
+html[data-theme='terminal'] .conferenceView__title::after,
+html[data-theme='terminal'] .settingsView__tabsTitle::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 0.85em;
+  margin-left: 0.3em;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.6);
+  animation: terminalCursor 1.2s step-end infinite;
+}
+
+@keyframes terminalCursor {
+  50% { opacity: 0; }
+}
+
 /* === SETTINGS VIEW === */
 .settingsView {
   flex-direction: row;
@@ -2453,6 +2489,98 @@ html[data-canvas='glow'] .previewCover {
 html[data-canvas='glow'] .conferenceView__header {
   background-image: var(--canvas);
   background-attachment: fixed;
+}
+
+/* === SCREEN FILTERS === */
+#scanlines {
+  --scan-lines: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.24) 2px, rgba(0, 0, 0, 0.24) 3px);
+  --scan-stripes: repeating-linear-gradient(to right, rgba(255, 40, 40, 0.07) 0, rgba(255, 40, 40, 0.07) 1px, rgba(40, 255, 40, 0.07) 1px, rgba(40, 255, 40, 0.07) 2px, rgba(60, 60, 255, 0.07) 2px, rgba(60, 60, 255, 0.07) 3px);
+  --scan-tube: radial-gradient(ellipse at center, rgba(var(--accent-rgb), 0.08) 0, rgba(var(--accent-rgb), 0) 62%), radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+  display: none;
+}
+
+html[data-light='true'] #scanlines {
+  --scan-tube: radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.16) 100%);
+}
+
+html[data-scanlines='lines'] #scanlines,
+html[data-scanlines='grille'] #scanlines,
+html[data-scanlines='trinitron'] #scanlines,
+html[data-scanlines='pixels'] #scanlines,
+html[data-scanlines='dots'] #scanlines,
+html[data-scanlines='tube'] #scanlines,
+html[data-scanlines='pulse'] #scanlines {
+  display: block;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5000;
+  pointer-events: none;
+}
+
+html[data-scanlines='lines'] #scanlines,
+html[data-scanlines='pulse'] #scanlines {
+  background: var(--scan-lines);
+}
+
+html[data-scanlines='grille'] #scanlines {
+  background: var(--scan-stripes), var(--scan-lines), var(--scan-tube);
+}
+
+html[data-scanlines='trinitron'] #scanlines {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)) 0 34% / 100% 2px no-repeat,
+    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)) 0 66% / 100% 2px no-repeat,
+    repeating-linear-gradient(to right, rgba(255, 40, 40, 0.1) 0, rgba(255, 40, 40, 0.1) 1px, rgba(40, 255, 40, 0.1) 1px, rgba(40, 255, 40, 0.1) 2px, rgba(60, 60, 255, 0.1) 2px, rgba(60, 60, 255, 0.1) 3px, rgba(0, 0, 0, 0.14) 3px, rgba(0, 0, 0, 0.14) 4px),
+    var(--scan-tube);
+}
+
+html[data-scanlines='pixels'] #scanlines {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.3) 2px, rgba(0, 0, 0, 0.3) 3px),
+    repeating-linear-gradient(to right, transparent 0, transparent 2px, rgba(0, 0, 0, 0.3) 2px, rgba(0, 0, 0, 0.3) 3px);
+}
+
+html[data-scanlines='dots'] #scanlines {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(255, 40, 40, 0.14) 0, rgba(255, 40, 40, 0.14) 22%, transparent 27%) 0 0 / 6px 6px,
+    radial-gradient(circle at 75% 30%, rgba(40, 255, 40, 0.14) 0, rgba(40, 255, 40, 0.14) 22%, transparent 27%) 0 0 / 6px 6px,
+    radial-gradient(circle at 50% 78%, rgba(60, 60, 255, 0.14) 0, rgba(60, 60, 255, 0.14) 22%, transparent 27%) 0 0 / 6px 6px,
+    linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.18)),
+    var(--scan-tube);
+}
+
+html[data-scanlines='tube'] #scanlines {
+  border-radius: 3.4vw;
+  background: var(--scan-lines), var(--scan-tube);
+  box-shadow: inset 0 0 0 2px rgba(var(--text-rgb), 0.16), inset 0 0 7vw rgba(0, 0, 0, 0.6), 0 0 0 3.4vw #000;
+}
+
+#scanlines .scanBand {
+  display: none;
+}
+
+html[data-scanlines='pulse'][data-scan-pulse] #scanlines .scanBand {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 120px;
+  background:
+    linear-gradient(rgba(var(--accent-rgb), 0.5), rgba(var(--accent-rgb), 0.5)) bottom / 100% 2px no-repeat,
+    linear-gradient(to bottom, transparent, rgba(var(--accent-rgb), 0.08));
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.3);
+  transform: translateY(-120px);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-scanlines='pulse'][data-scan-pulse] #scanlines .scanBand {
+    display: none;
+  }
 }
 
 /* The TV repaints the highlighted tile on every frame of a fade, which is a third of its work while browsing */

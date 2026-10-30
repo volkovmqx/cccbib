@@ -11,7 +11,7 @@ const fakeVideo = (overrides: Record<string, unknown> = {}) => ({
 }) as unknown as HTMLVideoElement;
 const context = (overrides: Partial<StatsContext> = {}): StatsContext => ({
   guid: 'guid-1', recording: { url: 'u', mimeType: 'video/mp4', language: 'deu', width: 1920, height: 1080, size: 100 }, duration: 600,
-  sourceUrl: 'https://ffmuc.media.ccc.de/events/x/h264-hd/talk_hd.mp4', sourceIndex: 0, sourceCount: 4, aspect: 'auto', audioLanguage: 'deu',
+  sourceUrl: 'https://ffmuc.media.ccc.de/events/x/h264-hd/talk_hd.mp4', sourceIndex: 0, sourceCount: 4, aspect: 'auto', speed: 1, audioLanguage: 'deu',
   subtitleLanguage: 'none', subtitleStatus: 'idle', buffering: false, version: '1.2.3', ...overrides,
 });
 const rate = (at: number, time: number, start: number, end: number, fill = 0) => ({ at, time, start, end, fill });
@@ -53,6 +53,8 @@ test('a seek is no download: jumping around the video or into another buffered r
   expect(nextRate(forward, 3000, fakeVideo({ currentTime: 941, buffered: ranges([0, 972]) })).fill).toBe(3);
   expect(nextRate(before, 3000, fakeVideo({ currentTime: 103, buffered: ranges([0, 150]), playbackRate: 2 })).fill).toBe(10);
   expect(nextRate(before, 3000, fakeVideo({ currentTime: 106, buffered: ranges([0, 150]), playbackRate: 2 })).fill).toBe(0);
+  expect(nextRate(before, 3000, fakeVideo({ currentTime: 103, buffered: ranges([0, 150]) }), 2).fill).toBe(10);
+  expect(nextRate(before, 3000, fakeVideo({ currentTime: 106, buffered: ranges([0, 150]) }), 2).fill).toBe(0);
 });
 
 test('the file format is read from the folder or the extension of the address', () => {
@@ -86,8 +88,8 @@ test('the stats list the mirror, file, resolution, buffer, and state of the play
 test('the stats say what is unknown instead of guessing', () => {
   vi.stubGlobal('navigator', { ...navigator, userAgent: 'Other' });
   const rows = collectStats(
-    fakeVideo({ videoWidth: 0, videoHeight: 0, duration: NaN, paused: true, muted: true, readyState: 9, networkState: 9, buffered: ranges([0, 100], [200, 210]), playbackRate: 1.5, getVideoPlaybackQuality: () => ({ totalVideoFrames: 1000, droppedVideoFrames: 12 }) }),
-    context({ recording: { url: 'u', mimeType: 'video/mp4', language: 'deu', width: 720, height: 576 }, sourceUrl: 'https://cdn.media.ccc.de/x.mp4', buffering: true, sourceIndex: 3 }), null);
+    fakeVideo({ videoWidth: 0, videoHeight: 0, duration: NaN, paused: true, muted: true, readyState: 9, networkState: 9, buffered: ranges([0, 100], [200, 210]), getVideoPlaybackQuality: () => ({ totalVideoFrames: 1000, droppedVideoFrames: 12 }) }),
+    context({ recording: { url: 'u', mimeType: 'video/mp4', language: 'deu', width: 720, height: 576 }, sourceUrl: 'https://cdn.media.ccc.de/x.mp4', buffering: true, sourceIndex: 3, speed: 1.5 }), null);
   expect(value(rows, 'Mirror')).toBe('cdn.media.ccc.de (direct)');
   expect(value(rows, 'Bitrate')).toBe('unknown');
   expect(value(rows, 'Resolution')).toBe('waiting for the video (listed 720x576)');
@@ -125,8 +127,8 @@ test('the stats are read once a second while the panel is open and cleared when 
 
 test('the stats describe a video that has not started: no size, no listed size, buffering and a direct CDN source', () => {
   const rows = collectStats(
-    fakeVideo({ videoWidth: 0, videoHeight: 0, buffered: ranges([0, 10]), playbackRate: 1.5, readyState: 9, networkState: 9, muted: true }),
-    context({ recording: { url: 'u', mimeType: 'video/webm', language: 'deu' }, buffering: true, sourceUrl: 'https://cdn.media.ccc.de/x/talk.webm', audioLanguage: '', subtitleLanguage: 'eng' }),
+    fakeVideo({ videoWidth: 0, videoHeight: 0, buffered: ranges([0, 10]), readyState: 9, networkState: 9, muted: true }),
+    context({ recording: { url: 'u', mimeType: 'video/webm', language: 'deu' }, buffering: true, sourceUrl: 'https://cdn.media.ccc.de/x/talk.webm', audioLanguage: '', subtitleLanguage: 'eng', speed: 1.5 }),
     rate(1, 100, 0, 10),
   );
   expect(value(rows, 'Resolution')).toBe('waiting for the video');
