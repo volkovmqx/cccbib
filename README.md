@@ -41,7 +41,7 @@ The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or ol
 ## Roadmap
 
 - &#9744; Add Speaker page.
-- Tag Filtering? 
+- &#9744; Tag Filtering. 
 - ~~&#9744; Jeopardy Theme song when waiting for too long.~~
 - Playback speed on webOS goes through the TV's media service (`com.webos.media/setPlayRate`), because the web view mutes the sound at any other `playbackRate`.
 
