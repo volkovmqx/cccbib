@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/volkovmqx/cccbib)](LICENSE)
 [![LG Homebrew](https://img.shields.io/badge/LG%20Homebrew-install-ff69b4)](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/)
 
-[media.ccc.de](https://media.ccc.de) media library application for webOS. Some call it the Netflix for Hackers. Others call it even nicer things so you should try it out and watch some smart talks.
+[media.ccc.de](https://media.ccc.de) media library application for webOS. Some call it the Netflix for Hackers. Others call it even nicer things, so you should try it out and watch some smart talks!
 
 ![Home screen](.github/screenshots/screenshot1.png)
 
@@ -24,7 +24,7 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 - A lot of customization! Themes yeah, Baby!
 - Show technical details. Stats for Nerds!
 - Control the app with webOS [launch commands](https://github.com/volkovmqx/cccbib/wiki/Remote-control) and publish what is playing to Home Assistant over [MQTT](https://github.com/volkovmqx/cccbib/wiki/Home-Assistant-over-MQTT).
-- Use it in a browser on a phone or tablet. 
+- Use it in a browser on a phone or tablet. Like [here](https://tv.media.ccc.de)! 
 
 ## Installation
 
