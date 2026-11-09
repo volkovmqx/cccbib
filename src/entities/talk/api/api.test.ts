@@ -11,6 +11,7 @@ test('API conversion supplies arrays, languages, and recording types', () => {
   const sources = [{ recording_url: 'video', mime_type: 'video/webm' }, { recording_url: 'subtitle', mime_type: 'application/x-subrip' }, { recording_url: 'ignored', mime_type: '' }];
   const rest = fromRest({ guid: 'g', title: 'Title', recordings: sources, original_language: 'deu' });
   expect(rest.videos[0].language).toBe('deu');
+  expect(fromRest({ guid: 'g', title: 'Title', recordings: [{ recording_url: 'video', mime_type: 'video/mp4', size: 103 }] }).videos[0].size).toBe(103);
   expect(rest.subtitles?.[0].language).toBe('eng');
   expect(fromRest({ guid: 'g', title: 'Title', duration: 20 })).toMatchObject({ duration: 20, persons: [], videos: [], subtitles: [] });
   const source = { ...value.videos[0], language: '' };
@@ -68,4 +69,11 @@ test('mirror selection preserves direct URLs and remembers a working mirror', ()
   expect(videoSources(cdn)[0]).toBe('https://ftp.agdsn.de/ccc/file.webm');
   vi.mocked(Math.random).mockReturnValue(0);
   expect(new Set(videoSources(cdn)).size).toBe(4);
+});
+
+test('remote recordings without a URL or without subtitles are dropped quietly', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ guid: 'g', title: 'Title', length: 10, recordings: [{ mime_type: 'video/webm' }, { recording_url: 'https://media.ccc.de/ok.webm', mime_type: 'video/webm' }] })));
+  const result = await fetchTalk('media.ccc.de/v/talk');
+  expect(result.videos.map(video => video.url)).toEqual(['https://media.ccc.de/ok.webm']);
+  expect(result.subtitles ?? []).toEqual([]);
 });

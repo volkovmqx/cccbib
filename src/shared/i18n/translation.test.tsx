@@ -31,3 +31,49 @@ test('language initialization and hooks follow language changes', () => {
   expect(document.documentElement.lang).toBe('de');
   stop(); unmount();
 });
+
+test('number formatters are built once per language', () => {
+  const build = vi.spyOn(Intl, 'NumberFormat');
+  expect([formatNumber('nl', 1234), formatNumber('nl', 5678), formatNumber('nl', 90)]).toEqual(['1.234', '5.678', '90']);
+  expect(build).toHaveBeenCalledTimes(1);
+  build.mockRestore();
+});
+
+test('an empty entry in the browser language list is skipped', () => {
+  vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['', 'fr']);
+  expect(detectLanguage()).toBe('fr');
+});
+
+test('a language is loaded when it is first used, until then the English text shows, and watchers are told', async () => {
+  vi.resetModules();
+  const fresh = await import('./translation');
+  const { setSetting: setFresh } = await import('@/shared/config');
+  setFresh('uiLanguage', 'de');
+  expect(fresh.translate('de', 'Loading')).toBe('Loading');
+  const view = renderHook(() => fresh.useTranslation());
+  expect(view.result.current('Loading')).toBe('Loading');
+  const first = fresh.loadLanguage('de');
+  expect(fresh.loadLanguage('de')).toBe(first);
+  await act(async () => { await first; });
+  expect(fresh.translate('de', 'Loading')).toBe('Wird geladen');
+  expect(view.result.current('Loading')).toBe('Wird geladen');
+  await fresh.loadLanguage('de');
+  await fresh.loadLanguage('en');
+  await fresh.loadLanguage('xx');
+  expect(fresh.translate('xx', 'Loading')).toBe('Loading');
+});
+
+test('the language of the saved setting is loaded at start and when it changes', async () => {
+  vi.resetModules();
+  const fresh = await import('./translation');
+  const { setSetting: setFresh } = await import('@/shared/config');
+  setFresh('uiLanguage', 'fr');
+  const stop = fresh.initLanguage();
+  expect(document.documentElement.lang).toBe('fr');
+  await fresh.loadActiveLanguage();
+  expect(fresh.translate('fr', 'Loading')).not.toBe('Loading');
+  act(() => { setFresh('uiLanguage', 'it'); });
+  await fresh.loadActiveLanguage();
+  expect(fresh.translate('it', 'Loading')).not.toBe('Loading');
+  stop();
+});

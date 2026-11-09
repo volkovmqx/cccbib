@@ -1,5 +1,6 @@
 import type { Settings, SettingKey } from './settings';
-import { SETTING_DEFAULTS, SYSTEM_FONT_STACK, UI_FONTS, CORNER_STYLES } from './constants';
+import { syncScanlines } from './scanlines';
+import { SETTING_DEFAULTS, SYSTEM_FONT_STACK, UI_FONTS, CORNER_STYLES, TEXT_SCALE_BASE, ICON_SCALE_BASE } from './constants';
 import { getSetting, subscribeSettings } from './settings';
 
 interface RGB { r: number; g: number; b: number }
@@ -9,8 +10,8 @@ interface Palette { bg: string; surface: string; surfaceAlt: string; surfaceHove
 
 const BOOT_KEY = 'appearance_boot';
 const APPEARANCE_SETTINGS = [
-  'themeMode', 'accentColor', 'uiFont', 'loaderStyle', 'railStyle', 'glassSheen', 'glassTransparency', 'menuIconColor', 'menuActiveColor', 'buttonStyle', 'cornerStyle',
-  'textScale', 'tileScale', 'iconScale', 'menuScale',
+  'themeMode', 'accentColor', 'uiFont', 'loaderStyle', 'railStyle', 'glassSheen', 'glassTransparency', 'menuIconColor', 'menuActiveColor', 'navIndicator', 'buttonStyle', 'cornerStyle', 'borderWidth', 'scrollbarSize', 'scanlines', 'iconVariant',
+  'textScale', 'tileScale', 'iconScale', 'menuScale', 'menuLayout', 'menuPosition',
   'subtitleSize', 'subtitleFont', 'subtitleColor', 'subtitleBackground',
   'osdScale', 'osdOpacity', 'osdMenuOpacity', 'osdHandle', 'osdBarColor', 'osdButtonShape', 'osdIdleButtons',
 ];
@@ -19,7 +20,24 @@ const PALETTES: Record<string, Palette> = {
   black: { bg: '#000000', surface: '#17171a', surfaceAlt: '#0e0e11', surfaceHover: '#212126', text: '#ffffff', muted: '#909296', dim: '#666666', border: '#2a2a30' },
   dark: { bg: '#141517', surface: '#25262b', surfaceAlt: '#1a1b1e', surfaceHover: '#2c2e33', text: '#ffffff', muted: '#909296', dim: '#666666', border: '#373a40' },
   light: { bg: '#f4f5f7', surface: '#ffffff', surfaceAlt: '#e6e8ec', surfaceHover: '#e0e3e8', text: '#1a1b1e', muted: '#5c5f66', dim: '#868e96', border: '#ced4da' },
+  eris: { bg: '#0d0906', surface: '#20150c', surfaceAlt: '#150d07', surfaceHover: '#362213', text: '#fff4ea', muted: '#bfa994', dim: '#85725f', border: '#3a2615' },
+  cyberpunk: { bg: '#0a0713', surface: '#140f24', surfaceAlt: '#100b1e', surfaceHover: '#201939', text: '#f2f4ff', muted: '#b0aabf', dim: '#7a7491', border: '#2a2048' },
+  kallisti: { bg: '#0e0800', surface: '#1a1100', surfaceAlt: '#130c00', surfaceHover: '#2a1b00', text: '#ffbf40', muted: '#c99530', dim: '#8d6a22', border: '#3d2a00' },
+  bbs: { bg: '#0000aa', surface: '#000088', surfaceAlt: '#000066', surfaceHover: '#0000cc', text: '#ffffff', muted: '#55ffff', dim: '#aaaaaa', border: '#00aaaa' },
+  btx: { bg: '#000000', surface: '#000060', surfaceAlt: '#00002e', surfaceHover: '#0000b0', text: '#ffffff', muted: '#00ffff', dim: '#b0b0b0', border: '#0000ff' },
+  terminal: { bg: '#050b08', surface: '#0f1a14', surfaceAlt: '#09120d', surfaceHover: '#19291f', text: '#d6f8e1', muted: '#92bfa2', dim: '#628a70', border: '#1f3528' },
+  chicago: { bg: '#c0c0c0', surface: '#dfdfdf', surfaceAlt: '#b3b3b3', surfaceHover: '#a5a5a5', text: '#000000', muted: '#2e2e2e', dim: '#575757', border: '#808080' },
+  aqua: { bg: '#ececec', surface: '#ffffff', surfaceAlt: '#f4f4f4', surfaceHover: '#dce6f2', text: '#1b1b1b', muted: '#3d3d3d', dim: '#6a6a6a', border: '#9b9b9b' },
+  oldschool: { bg: '#e4e4e4', surface: '#ffffff', surfaceAlt: '#f0f0f0', surfaceHover: '#d0d0d0', text: '#000000', muted: '#333333', dim: '#595959', border: '#808080' },
+  aero: { bg: '#5aa9ee', surface: '#ffffff', surfaceAlt: '#eaf2fc', surfaceHover: '#cfe3f8', text: '#06142a', muted: '#0e2744', dim: '#1a4166', border: '#2c6db5' },
+  luna: { bg: '#ece9d8', surface: '#ffffff', surfaceAlt: '#f4f1e4', surfaceHover: '#e1ddc8', text: '#000000', muted: '#3d3d3a', dim: '#6b6a62', border: '#aca899' },
+  paper: { bg: '#f2ead9', surface: '#faf5ea', surfaceAlt: '#e9dfca', surfaceHover: '#e2d6bc', text: '#332a1f', muted: '#5d5245', dim: '#7d705d', border: '#d6c9ae' },
 };
+
+const TERMINAL_FONT = 'plex-mono';
+const OLDSCHOOL_FONT_STACK = "'Times New Roman', Times, 'Liberation Serif', serif";
+const LIGHT_THEMES = ['light', 'lighttinted', 'paper', 'chicago', 'luna', 'aero', 'aqua', 'oldschool'];
+const CANVAS_THEMES = ['ambient', 'eris', 'paper', 'cyberpunk', 'terminal', 'kallisti', 'bbs', 'btx', 'chicago', 'luna', 'aero', 'aqua'];
 
 const hexToRgb = (hex: string) => {
   const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -120,7 +138,7 @@ function lightTintedPalette(accentColor: string) {
   };
 }
 
-export const isLightTheme = (themeMode: string) => themeMode === 'light' || themeMode === 'lighttinted';
+export const isLightTheme = (themeMode: string) => LIGHT_THEMES.includes(themeMode);
 
 function paletteVars(palette: Palette) {
   return {
@@ -144,9 +162,30 @@ const contrastRatio = (a: string, b: string) => {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 };
 
+function strokeColor(accentColor: string, palette: Palette, isLight: boolean) {
+  const { h, s, l } = rgbToHsl(hexToRgb(accentColor));
+  let lightness = isLight ? Math.min(l, 38) : Math.max(l, 48);
+  let color = toHex(hslToRgb(h, s, lightness));
+  for (let step = 0; step < 50 && (contrastRatio(color, palette.surfaceHover) < 3 || contrastRatio(color, palette.bg) < 3); step++) {
+    lightness = clamp(lightness + (isLight ? -2 : 2), 0, 100);
+    color = toHex(hslToRgb(h, s, lightness));
+  }
+  return color;
+}
+
 const readableOn = (color: string, background: string) => (
   contrastRatio(color, background) >= 3 ? color : (luminance(hexToRgb(background)) > 0.4 ? '#000000' : '#ffffff')
 );
+
+const bestContrast = (background: string) => (contrastRatio('#000000', background) >= contrastRatio('#ffffff', background) ? '#000000' : '#ffffff');
+
+function navIndicatorVars({ menuActiveColor }: Settings, activeColor: string, accent: string, palette: Palette) {
+  const fill = menuActiveColor === 'accent' ? palette.text : accent;
+  return {
+    '--nav-fill': fill,
+    '--nav-fill-fg': contrastRatio(activeColor, fill) >= 3 ? activeColor : bestContrast(fill),
+  };
+}
 
 export function buttonColors(style: string, accentColor: string, palette: Palette) {
   const accent = toHex(hexToRgb(accentColor));
@@ -175,7 +214,9 @@ function buttonVars(settings: Settings, palette: Palette) {
   const radii = (CORNER_STYLES.find((corner) => corner.code === settings.cornerStyle) || CORNER_STYLES[1]).radii;
   return {
     '--btn-bg': fill,
+    '--btn-bg-rgb': rgbString(hexToRgb(fill)),
     '--btn-fg': text,
+    '--btn-fg-rgb': rgbString(hexToRgb(text)),
     '--focus-ring': ring,
     '--border-radius-sm': `${radii[0]}px`,
     '--border-radius-md': `${radii[1]}px`,
@@ -189,46 +230,68 @@ const fontStack = (code: string) => {
   return font && font.family ? `'${font.family}', ${SYSTEM_FONT_STACK}` : SYSTEM_FONT_STACK;
 };
 
-function subtitleVars({ subtitleColor, subtitleBackground, subtitleFont }: Settings, accentColor: string) {
+function scrollbarVars({ scrollbarSize, borderWidth }: Settings) {
+  const thin = Math.max(2, Math.round(borderWidth / 2));
+  const [hit, width, grab] = ({ large: [28, 12, 20], hidden: [0, 0, 0] } as Record<string, number[]>)[scrollbarSize] || [14, thin, 8];
+  return {
+    '--scrollbar-hit': `${hit}px`,
+    '--scrollbar-width': `${width}px`,
+    '--scrollbar-grab': `${grab}px`,
+    '--scrollbar-rest': scrollbarSize === 'large' ? 'rgba(var(--text-rgb), 0.3)' : 'transparent',
+  };
+}
+
+const fontScale = (code: string) => UI_FONTS.find((f) => f.code === code)?.scale ?? 1;
+
+function subtitleVars({ subtitleColor, subtitleBackground, subtitleFont, uiFont }: Settings, accentColor: string, palette: Palette) {
   const color = toHex(hexToRgb(subtitleColor === 'accent' ? accentColor : subtitleColor));
   const darkText = luminance(hexToRgb(color)) < 0.1;
   const background = subtitleBackground === 'auto' ? (darkText ? 'light' : 'dark') : subtitleBackground;
   const outline = darkText ? '#fff' : '#000';
+  const font = subtitleFont === 'app' ? uiFont : subtitleFont;
   return {
     '--sub-color': color,
-    '--sub-bg': background === 'light' ? 'rgba(255, 255, 255, 0.9)' : background === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'transparent',
+    '--sub-bg': background === 'light' ? 'rgba(255, 255, 255, 0.9)' : background === 'dark' ? 'rgba(0, 0, 0, 0.8)' : background === 'theme' ? `rgba(${rgbString(hexToRgb(palette.surface))}, 0.9)` : 'transparent',
     '--sub-shadow': background === 'outline' ? `0 0 4px ${outline}, 0 0 4px ${outline}, 1px 1px 3px ${outline}` : 'none',
-    '--sub-font': fontStack(subtitleFont),
+    '--sub-font': fontStack(font),
+    '--sub-scale': String(fontScale(font)),
   };
 }
 
 export function computeAppearance(settings: Settings): { attrs: Record<string, string>; vars: Record<string, string> } {
-  const { themeMode, accentColor, uiFont, loaderStyle, railStyle, glassSheen, glassTransparency, textScale, tileScale, iconScale, menuScale } = settings;
+  const { themeMode, accentColor, loaderStyle, railStyle, glassSheen, glassTransparency, textScale, tileScale, iconScale, menuScale } = settings;
+  const uiFont = themeMode === 'terminal' && settings.uiFont === 'default' ? TERMINAL_FONT : settings.uiFont;
+  const serif = themeMode === 'oldschool' && settings.uiFont === 'default';
   const palette = paletteFor(themeMode, accentColor);
   const accent = accentVars(accentColor, isLightTheme(themeMode));
   const menuColor = (code: string) => (({ grey: palette.muted, white: '#ffffff', black: '#000000', accent: accent['--accent-text'] } as Record<string, string>)[code] || palette.muted);
   return {
-    attrs: { 'data-theme': themeMode, 'data-loader': loaderStyle, 'data-rail': railStyle, 'data-shine': glassSheen, 'data-glass-transparency': glassTransparency,
-      'data-text-large': String(textScale >= 1.4), 'data-osd-handle': settings.osdHandle, 'data-osd-bar': settings.osdBarColor, 'data-osd-shape': settings.osdButtonShape, 'data-osd-idle': settings.osdIdleButtons },
+    attrs: { 'data-theme': themeMode, 'data-light': String(isLightTheme(themeMode)), 'data-canvas': CANVAS_THEMES.includes(themeMode) ? 'glow' : 'none', 'data-loader': loaderStyle, 'data-rail': railStyle, 'data-shine': glassSheen, 'data-glass-transparency': glassTransparency, 'data-nav-indicator': settings.navIndicator, 'data-menu-layout': settings.menuLayout, 'data-menu-position': settings.menuPosition, 'data-scanlines': settings.scanlines, 'data-icons': settings.iconVariant,
+      'data-text-large': String(textScale * TEXT_SCALE_BASE >= 1.4), 'data-osd-handle': settings.osdHandle, 'data-osd-bar': settings.osdBarColor, 'data-osd-shape': settings.osdButtonShape, 'data-osd-idle': settings.osdIdleButtons },
     vars: {
       ...accent,
+      '--accent-stroke': strokeColor(accentColor, palette, isLightTheme(themeMode)),
       '--gloss': isLightTheme(themeMode) ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.14)',
       ...paletteVars(palette),
-      ...subtitleVars(settings, accentColor),
+      ...subtitleVars({ ...settings, uiFont }, accentColor, palette),
       ...buttonVars(settings, palette),
       '--osd-scale': String(settings.osdScale),
       '--osd-a1': String(+(0.92 * settings.osdOpacity).toFixed(3)),
       '--osd-a2': String(+(0.7 * settings.osdOpacity).toFixed(3)),
       '--osd-a3': String(+(0.25 * settings.osdOpacity).toFixed(3)),
-      '--osd-top': String(+(0.55 * settings.osdOpacity).toFixed(3)),
+      '--osd-top': String(+(0.7 * settings.osdOpacity).toFixed(3)),
       '--osd-menu': String(settings.osdMenuOpacity),
       '--menu-icon': menuColor(settings.menuIconColor),
       '--menu-active': menuColor(settings.menuActiveColor),
-      '--ui-font': fontStack(uiFont),
-      '--text-scale': String(textScale),
+      ...navIndicatorVars(settings, menuColor(settings.menuActiveColor), accent['--accent'], palette),
+      '--ui-font': serif ? OLDSCHOOL_FONT_STACK : fontStack(uiFont),
+      '--text-scale': String(+(textScale * TEXT_SCALE_BASE * (serif ? 1.1 : fontScale(uiFont))).toFixed(3)),
       '--tile-scale': String(tileScale),
-      '--icon-scale': String(iconScale),
+      '--icon-scale': String(+(iconScale * ICON_SCALE_BASE).toFixed(3)),
       '--menu-scale': String(menuScale),
+      '--border-width': `${settings.borderWidth}px`,
+      '--border-width-compact': `${Math.min(settings.borderWidth, Math.max(2, Math.round(settings.borderWidth * 0.6)))}px`,
+      ...scrollbarVars(settings),
     },
   };
 }
@@ -241,6 +304,7 @@ export function applyAppearance() {
   const root = document.documentElement;
   Object.keys(appearance.attrs).forEach((name) => root.setAttribute(name, appearance.attrs[name]));
   root.setAttribute('data-subtitle-size', getSetting('subtitleSize'));
+  syncScanlines(appearance.attrs['data-scanlines']);
   Object.keys(appearance.vars).forEach((name) => root.style.setProperty(name, appearance.vars[name]));
 
   try {

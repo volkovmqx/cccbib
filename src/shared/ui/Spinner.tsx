@@ -1,8 +1,8 @@
 import { useSetting } from '@/shared/config';
 import { useTranslation } from '@/shared/i18n';
-import { voctocat } from '@/shared/branding';
+import { loaderMarkup, voctocat } from '@/shared/branding';
 
-const MARKUP: Record<string, string> = { bars: '<i></i><i></i><i></i><i></i><i></i>' };
+const MARKUP: Record<string, string> = loaderMarkup;
 
 export const Spinner = ({ variant, size }: { variant?: string; size?: string }) => {
   const t = useTranslation();

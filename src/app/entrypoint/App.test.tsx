@@ -7,13 +7,21 @@ import type { Talk } from '@/entities/talk';
 import type { RemoteCommand } from '@/features/remote-control';
 import { talk } from '../../../tests/fixtures';
 
-const commands = vi.hoisted(() => ({ list: vi.fn() }));
-vi.mock('@/app/model', () => ({ LIST_COMMANDS: ['add', 'remove', 'progress', 'progress-set', 'progress-clear'], applyListCommand: commands.list }));
+const commands = vi.hoisted(() => ({ list: vi.fn(), setMqtt: vi.fn(), clearMqtt: vi.fn() }));
+vi.mock('@/app/model', () => ({ LIST_COMMANDS: ['add', 'remove', 'progress', 'progress-set', 'progress-clear'], applyListCommand: commands.list, setMqtt: commands.setMqtt, clearMqtt: commands.clearMqtt }));
 vi.mock('@/entities/talk', async importOriginal => ({ ...await importOriginal<typeof import('@/entities/talk')>(), fetchTalk: vi.fn() }));
-vi.mock('../routing/Screens', () => ({ Screens: (props: { selectedItem: string; onFocusSidebar: () => void; onSelectItem: (item: string) => void }) => <div>
+vi.mock('../routing/Screens', () => ({ Screens: (props: { selectedItem: string; onFocusSidebar: () => void; onSelectItem: (item: string) => void; setIsPlayerFullscreen: (value: boolean) => void }) => <div>
   <span>Screen {props.selectedItem}</span><button onClick={props.onFocusSidebar}>Focus sidebar</button><button onClick={() => props.onSelectItem('search')}>Open search</button>
+  <button onClick={() => props.setIsPlayerFullscreen(true)}>Play on screen</button><button onClick={() => props.setIsPlayerFullscreen(false)}>Stop on screen</button>
 </div> }));
-vi.mock('@/widgets/player', () => ({ Player: ({ event, onClose }: { event: Talk; onClose: () => void }) => <button onClick={onClose}>Close {event.title}</button> }));
+const mounted = vi.hoisted(() => ({ count: 0 }));
+vi.mock('@/widgets/player', async () => {
+  const { useState } = await import('react');
+  return { Player: ({ event, onClose, onClosing, startAt }: { event: Talk; onClose: () => void; onClosing?: () => void; startAt?: number }) => {
+    const [number] = useState(() => { mounted.count += 1; return mounted.count; });
+    return <><button onClick={onClose}>Close {event.title}</button><button onClick={onClosing}>Closing {event.title}</button><span>Player {number} start {String(startAt)}</span></>;
+  } };
+});
 const send = async (command: RemoteCommand) => act(async () => { dispatchCommand(command); });
 beforeEach(() => { vi.useFakeTimers(); vi.mocked(fetchTalk).mockResolvedValue(talk()); commands.list.mockReset(); });
 
@@ -32,6 +40,51 @@ test('app switches screens and moves sidebar focus', () => {
   expect(screen.getByText('Screen search')).toBeVisible();
 });
 
+test('the pointer moves focus between the side menu and the screen and the wheel steps through the focused one', () => {
+  const view = render(<App />);
+  const menu = () => view.container.querySelector('.sidebar')!;
+  fireEvent.mouseMove(view.container.querySelector('.appShell__nav')!, { clientX: 20, clientY: 300 });
+  expect(menu()).toHaveClass('sidebar--focused');
+  fireEvent.mouseMove(view.container.querySelector('.appShell__nav')!, { clientX: 20, clientY: 300 });
+  fireEvent.mouseMove(view.container.querySelector('.appShell__main')!, { clientX: 700, clientY: 300 });
+  expect(menu()).not.toHaveClass('sidebar--focused');
+  fireEvent.mouseMove(view.container.querySelector('.appShell__nav')!, { clientX: 21, clientY: 301 });
+  vi.setSystemTime(Date.now() + 500);
+  fireEvent(view.container.querySelector('.appShell__nav')!, new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }));
+  expect(view.container.querySelector('.sidebarItem--highlighted')).toHaveTextContent('Search');
+});
+
+test('a talk playing on a screen leaves the menu and the layout as they are, only a talk from outside replaces the screens', async () => {
+  const view = render(<App />);
+  const shell = view.container.querySelector('.appShell')!;
+  const nav = view.container.querySelector('.appShell__nav')!;
+  fireEvent.click(screen.getByText('Play on screen'));
+  expect(view.container.querySelector('.appShell__nav')).toBe(nav);
+  expect(shell).toHaveClass('appShell--playing');
+  expect(shell).not.toHaveClass('appShell--fullscreen');
+  fireEvent.click(screen.getByText('Stop on screen'));
+  expect(shell).not.toHaveClass('appShell--playing');
+  expect(view.container.querySelector('.appShell__nav')).toBe(nav);
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(shell).toHaveClass('appShell--fullscreen');
+  expect(view.container.querySelector('.appShell__nav')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Close Test talk'));
+  expect(view.container.querySelector('.appShell__nav')).toBeInTheDocument();
+});
+
+test('a wheel notch over the closed side menu expands it before stepping through it', () => {
+  const view = render(<App />);
+  const nav = view.container.querySelector('.appShell__nav')!;
+  const wheel = () => fireEvent(nav, new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }));
+  expect(view.container.querySelector('.sidebar')).not.toHaveClass('sidebar--focused');
+  wheel();
+  expect(view.container.querySelector('.sidebar')).toHaveClass('sidebar--focused');
+  expect(view.container.querySelector('.sidebarItem--highlighted')).toHaveTextContent('Home');
+  act(() => { vi.advanceTimersByTime(130); });
+  wheel();
+  expect(view.container.querySelector('.sidebarItem--highlighted')).toHaveTextContent('Search');
+});
+
 test('app opens remote talks, queues extras, updates the same talk, and restores its screen', async () => {
   vi.stubGlobal('__cccbibReady', vi.fn());
   const view = render(<App />);
@@ -44,13 +97,33 @@ test('app opens remote talks, queues extras, updates the same talk, and restores
   await send({ cmd: 'play', link: 'media.ccc.de/v/talk', start: 40, aspect: 'stretch' });
   expect(player).toHaveBeenCalledWith({ cmd: 'seek', to: 40 });
   expect(player).toHaveBeenCalledWith({ cmd: 'aspect', value: 'stretch' });
+  player.mockClear();
   await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(player.mock.calls.map(call => call[0].cmd)).toEqual(['resume']);
   vi.mocked(fetchTalk).mockResolvedValue(talk({ guid: 'other', title: 'Other' }));
   await send({ cmd: 'play', link: 'media.ccc.de/v/other' });
   expect(screen.getByText('Close Other')).toBeVisible();
   fireEvent.click(screen.getByText('Close Other'));
   expect(screen.getByText('Screen recent')).toBeVisible();
   stop();
+});
+
+test('a talk sent again while the same talk is closing starts a new player instead of resuming the closing one', async () => {
+  mounted.count = 0;
+  render(<App />);
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(screen.getByText('Player 1 start undefined')).toBeVisible();
+  fireEvent.click(screen.getByText('Closing Test talk'));
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk', start: 30 });
+  expect(screen.getByText('Player 2 start 30')).toBeVisible();
+  expect(screen.queryByText('Player 1 start undefined')).not.toBeInTheDocument();
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(screen.getByText('Player 2 start 30')).toBeVisible();
+  fireEvent.click(screen.getByText('Closing Test talk'));
+  fireEvent.click(screen.getByText('Close Test talk'));
+  expect(screen.getByText('Screen recent')).toBeVisible();
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(screen.getByText('Player 3 start undefined')).toBeVisible();
 });
 
 test('app displays remote failures and each list result and clears notices', async () => {
@@ -65,4 +138,35 @@ test('app displays remote failures and each list result and clears notices', asy
   }
   await act(async () => { await vi.advanceTimersByTimeAsync(3500); });
   expect(document.querySelector('.remote-notice')).not.toBeInTheDocument();
+});
+
+test('the mqtt command saves a valid broker with its login, clears it without an address and reports an invalid one', async () => {
+  render(<App />);
+  commands.setMqtt.mockReturnValueOnce(true).mockReturnValueOnce(false);
+  await send({ cmd: 'mqtt', url: 'ws://broker:9001', username: 'user', password: 'secret' });
+  expect(commands.setMqtt).toHaveBeenCalledWith('ws://broker:9001', 'user', 'secret');
+  expect(screen.getByText('MQTT broker saved')).toBeVisible();
+  await send({ cmd: 'mqtt', url: 'nonsense' });
+  expect(screen.getByText('Invalid MQTT broker address')).toBeVisible();
+  await send({ cmd: 'mqtt' });
+  expect(commands.clearMqtt).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('MQTT broker cleared')).toBeVisible();
+});
+
+test('only a talk to play brings the app to the front when it was running behind another app', async () => {
+  const activate = vi.fn();
+  vi.stubGlobal('webOSSystem', { activate });
+  render(<App />);
+  commands.list.mockResolvedValue({ kind: 'added', title: 'Result' });
+  await send({ cmd: 'add', link: 'media.ccc.de/v/talk' });
+  await send({ cmd: 'mqtt' });
+  expect(activate).not.toHaveBeenCalled();
+  vi.mocked(fetchTalk).mockRejectedValueOnce(Error('404'));
+  await send({ cmd: 'play', link: 'missing' });
+  expect(activate).not.toHaveBeenCalled();
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(activate).toHaveBeenCalledTimes(1);
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(activate).toHaveBeenCalledTimes(2);
+  vi.unstubAllGlobals();
 });

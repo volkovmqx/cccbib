@@ -75,3 +75,30 @@ test('PalmSystem launch and launch events use the same handler', () => {
   delete window.PalmSystem;
   remote.initRemote()();
 });
+
+test('the mqtt command is an app command that reaches the app from the launch parameters', () => {
+  const mqtt = { cmd: 'mqtt', url: 'ws://broker:9001', username: 'user', password: 'secret' };
+  expect(remote.parseCommand(mqtt)).toEqual(mqtt);
+  expect(remote.parseCommand('{"cmd":"mqtt"}')).toEqual({ cmd: 'mqtt' });
+  const app = vi.fn();
+  remote.onAppCommand(app);
+  vi.stubGlobal('PalmSystem', { launchParams: JSON.stringify(mqtt) });
+  remote.initRemote()();
+  expect(app).toHaveBeenCalledExactlyOnceWith(mqtt);
+  delete window.PalmSystem;
+});
+
+test('the password of an mqtt command is not kept in the key that ignores a duplicate start', () => {
+  const app = vi.fn();
+  remote.onAppCommand(app);
+  const stringify = vi.spyOn(JSON, 'stringify');
+  const launchParams = JSON.stringify({ cmd: 'mqtt', url: 'ws://broker:9001', username: 'user', password: 'hunter2' });
+  vi.stubGlobal('PalmSystem', { launchParams });
+  const stop = remote.initRemote();
+  document.dispatchEvent(new CustomEvent('webOSRelaunch', { detail: launchParams }));
+  stop();
+  expect(app).toHaveBeenCalledTimes(1);
+  expect(stringify.mock.results.map((result) => String(result.value)).filter((text) => text.includes('hunter2'))).toEqual([launchParams]);
+  stringify.mockRestore();
+  delete window.PalmSystem;
+});

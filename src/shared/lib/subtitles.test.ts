@@ -52,3 +52,9 @@ test('subtitle requests stop after cancellation', async () => {
   await expect(loadSubtitleCues(['aborted', 'never'], controller.signal)).rejects.toThrow('aborted');
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+test('a subtitle without a media type is recognised by its file ending', () => {
+  const plain = [{ url: 'https://cdn.media.ccc.de/t.vtt', language: 'eng' }, { url: 'https://cdn.media.ccc.de/t.srt', language: 'deu' }] as Parameters<typeof getSubtitleSources>[0];
+  expect(getSubtitleSources(plain, 'eng')).toEqual(['https://static.media.ccc.de/media/t.vtt']);
+  expect(getSubtitleSources(plain, 'deu')).toEqual(['https://media.ccc.de/srt/t.srt']);
+});

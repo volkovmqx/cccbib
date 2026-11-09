@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function useWindowEvent<K extends keyof WindowEventMap>(type: K, listener: (event: WindowEventMap[K]) => void) {
   const listenerRef = useRef(listener);
@@ -43,12 +43,13 @@ export function useIdle(idleMs: number) {
   return idle;
 }
 
-export function useListState<T>(initial: T[]): [T[], { setState: React.Dispatch<React.SetStateAction<T[]>>; shift: () => void; prepend: (...items: T[]) => void }] {
-  const [list, setList] = useState(initial);
-  const handlers = useMemo(() => ({
-    setState: setList,
-    shift: () => setList((current) => current.slice(1)),
-    prepend: (...items: T[]) => setList((current) => [...items, ...current]),
-  }), []);
-  return [list, handlers];
+export function useDelayedFlag(active: boolean, delayMs: number) {
+  const [elapsed, setElapsed] = useState(false);
+  useEffect(() => {
+    setElapsed(false);
+    if (!active) return undefined;
+    const timer = setTimeout(() => setElapsed(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [active, delayMs]);
+  return active && elapsed;
 }

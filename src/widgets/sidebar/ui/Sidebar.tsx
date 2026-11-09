@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useWindowEvent } from '@/shared/lib';
+import { pointerMoved, useMediaQuery, useWindowEvent } from '@/shared/lib';
 import { NavIcon, isFilled } from '@/shared/ui';
 import { CatIcon } from '@/shared/ui';
 import { Logo } from '@/shared/ui';
@@ -21,9 +21,11 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }: { selectedItem:
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const t = useTranslation();
-  const [settingsEntry] = useSetting('settingsEntry');
+  const [chosenLogoButton] = useSetting('logoButton');
+  const compact = useMediaQuery('(max-width: 900px)');
+  const logoButton = chosenLogoButton === 'off' && compact ? 'home' : chosenLogoButton;
   const [iconVariant] = useSetting('iconVariant');
-  const logoEntry = settingsEntry === 'logo';
+  const logoEntry = logoButton !== 'off';
 
   const menuItems: MenuItem[] = [
     { id: 'recent', label: t('Home') },
@@ -32,11 +34,12 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }: { selectedItem:
     { id: 'events', label: t('Events') },
     { id: 'watchlist', label: t('Watchlist') },
   ];
-  if (logoEntry) menuItems.unshift({ id: 'settings', brand: true, label: t('Settings') });
+  if (logoButton === 'home') menuItems[0] = { id: 'recent', brand: true, label: t('Home') };
+  if (logoButton === 'settings') menuItems.unshift({ id: 'settings', brand: true, label: t('Settings') });
   else menuItems.push({ id: 'settings', bottom: true, label: t('Settings') });
 
   // Calculate which item is selected based on selectedItem prop
-  useEffect(() => {
+  const syncSelectedIndex = () => {
     const index = menuItems.findIndex(item => item.id === selectedItem);
     if (index !== -1) {
       setSelectedIndex(index);
@@ -45,15 +48,21 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }: { selectedItem:
       const eventsIndex = menuItems.findIndex(item => item.id === 'events');
       setSelectedIndex(eventsIndex);
     }
-  }, [selectedItem]);
+  };
+  useEffect(syncSelectedIndex, [selectedItem]);
 
-  // Scroll selected item into view
   useEffect(() => {
-    if (selectedItemRef.current && containerRef.current && focused) {
-      selectedItemRef.current.scrollIntoView({
-        block: 'nearest'
-      });
-    }
+    if (!focused) syncSelectedIndex();
+  }, [focused]);
+
+  useEffect(() => {
+    const bar = containerRef.current;
+    const item = selectedItemRef.current;
+    if (!bar || !item || !focused) return;
+    const view = bar.getBoundingClientRect();
+    const box = item.getBoundingClientRect();
+    if (box.top < view.top) bar.scrollTop -= view.top - box.top;
+    else if (box.bottom > view.bottom) bar.scrollTop += box.bottom - view.bottom;
   }, [selectedIndex, focused]);
 
   // Switching right away would let the view react to this same keypress (Enter would start playback)
@@ -89,9 +98,11 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }: { selectedItem:
     return (
       <div
         key={item.id}
+        data-screen={item.id}
         ref={selectedIndex === index ? selectedItemRef : null}
         className={`sidebarItem ${isSelected ? 'sidebarItem--selected' : ''} ${isHighlighted ? 'sidebarItem--highlighted' : ''} ${item.bottom ? 'sidebarItem--bottom' : ''} ${item.brand ? 'sidebarItem--brand' : ''}`}
         onClick={() => onSelectItem(item.id)}
+        onMouseMove={(e) => { if (pointerMoved(e)) setSelectedIndex(index); }}
       >
         <div className={`sidebarItem__icon ${isSelected ? 'sidebarItem__icon--active' : ''}`}>
           {item.brand ? <CatIcon /> : <NavIcon name={item.id} size={36} filled={isFilled(iconVariant, isSelected || isHighlighted)} />}
@@ -106,7 +117,7 @@ export const Sidebar = ({ selectedItem, onSelectItem, focused }: { selectedItem:
   };
 
   return (
-    <div className={`sidebar ${focused ? 'sidebar--focused' : ''}`} ref={containerRef}>
+    <div className={`sidebar ${focused && !compact ? 'sidebar--focused' : ''}`} ref={containerRef}>
       {!logoEntry && (
         <div className="sidebar__brand" aria-hidden="true">
           <span className="sidebar__mark"><CatIcon /></span>

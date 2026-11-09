@@ -57,17 +57,21 @@ test('subtitle hook looks up missing metadata and ignores invalid saved choices'
   expect(hook.result.current.subtitleLanguage).toBe('eng');
 });
 
-test('unusable subtitle languages disappear and late responses do not create tracks', async () => {
+test('unusable subtitle languages disappear a few seconds after the start and late responses do not create tracks', async () => {
+  vi.useFakeTimers();
   const { video } = videoWithTrack();
   vi.mocked(loadSubtitleCues).mockRejectedValue(Error('404'));
   const hook = renderHook(() => useSubtitleManagement({ eventGuid: 'talk', eventSubtitles: sources, videoElement: video, preferredSubtitleLanguage: 'eng' }));
-  await act(async () => {});
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+  expect(vi.mocked(loadSubtitleCues).mock.calls.length).toBeLessThanOrEqual(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
   expect(hook.result.current.hasSubtitles).toBe(false);
   expect(hook.result.current.subtitleOptions).toEqual(['none']);
   hook.unmount();
   let resolve!: (cues: { start: number; end: number; text: string }[]) => void;
   vi.mocked(loadSubtitleCues).mockImplementation(() => new Promise(next => { resolve = next; }));
   const late = renderHook(() => useSubtitleManagement({ eventGuid: 'other', eventSubtitles: sources, videoElement: video, preferredSubtitleLanguage: 'eng' }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(4500); });
   late.unmount();
   await act(async () => { resolve([{ start: 1, end: 2, text: 'Late' }]); });
   expect(video.addTextTrack).not.toHaveBeenCalled();

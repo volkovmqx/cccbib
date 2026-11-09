@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { applyOutputWindow, computeOutputWindow, usesOutputWindow } from './videoWindow';
-import { media } from '../../../tests/fixtures';
+import { media } from '../../../../tests/fixtures';
 
 test('webOS output windows fit, crop, or stretch on both aspect orientations', () => {
   expect(computeOutputWindow('auto', 640, 480, 1920, 1080).output).toEqual({ x: 240, y: 0, width: 1440, height: 1080 });

@@ -2,18 +2,19 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Talk } from '@/entities/talk';
 import type { useControlsVisibility } from './useControlsVisibility';
 
-export type Selector = 'language' | 'subtitle' | 'aspect';
-export interface Focus { area: 'none' | 'buttons' | 'progress'; id: string | null }
+export type Selector = 'language' | 'subtitle' | 'aspect' | 'speed';
+export interface Focus { area: 'none' | 'buttons' | 'progress' | 'back'; id: string | null }
 export interface PlayerButton {
   id: string;
   align: string;
   label: string;
   icon: ReactNode;
+  activeIcon?: ReactNode;
   onPress: () => void;
   disabled?: boolean;
 }
-export interface PlayerProps { event: Talk; conferenceTitle?: string; onClose: () => void; startAt?: number }
-export interface NowPlaying { event: Talk; playing: boolean; position: number; duration: number }
+export interface PlayerProps { event: Talk; conferenceTitle?: string; onClose: () => void; onClosing?: () => void; startAt?: number }
+export interface NowPlaying { event: Talk; playing: boolean; running: boolean; position: number; duration: number; rate: number }
 export interface KeyboardContext {
   onClose: () => void;
   controls: ReturnType<typeof useControlsVisibility>;
@@ -25,6 +26,8 @@ export interface KeyboardContext {
   confirmSelector: (index: number) => void;
   closeSelector: () => void;
   buttons: PlayerButton[];
+  backButton: boolean;
+  hasControls?: boolean;
   hasMultipleLanguages: boolean;
   hasSubtitles: boolean;
   setPlaying: Dispatch<SetStateAction<boolean>>;

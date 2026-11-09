@@ -32,6 +32,7 @@ export const SEARCH_LECTURES = `
         mimeType
         language
         url
+        size
       }
       subtitles {
         mimeType

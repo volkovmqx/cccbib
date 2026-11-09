@@ -31,15 +31,3 @@ export function useImagePreload(images: (string | undefined)[], currentIndex: nu
     });
   }, [images, currentIndex, preloadCount]);
 }
-
-// Preloads a batch of images (for next conference row)
-export function preloadImages(urls: (string | undefined)[]) {
-  if (!urls || urls.length === 0) return;
-
-  urls.forEach(url => {
-    if (url) {
-      const img = new Image();
-      img.src = url;
-    }
-  });
-}

@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
+import { loadLanguage } from '@/shared/i18n/translation';
+
+// The app loads a language when it is used, the tests read all of them at once
+await Promise.all(['de', 'fr', 'es', 'it', 'nl', 'pt', 'pl', 'cs'].map(loadLanguage));
 
 HTMLElement.prototype.scrollIntoView = () => {};
 

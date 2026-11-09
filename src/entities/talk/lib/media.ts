@@ -43,7 +43,7 @@ export function getVideo(videos: Recording[], preferredLanguage = 'deu'): [Recor
             priority = 3;
           } else if (isWebm) {
             priority = 2;
-          } else if (isMp4) {
+          } else {
             priority = 1;
           }
 
@@ -74,6 +74,15 @@ export function getPreviewVideo(videos: Recording[], preferredLanguage: string) 
   const sameKind = videos.filter(v => v.url && v.width && v.mimeType === best.mimeType && v.language === best.language);
   if (sameKind.length === 0) return best;
   return sameKind.reduce((smallest, v) => (v.width! < smallest.width! ? v : smallest));
+}
+
+const WIDESCREEN = 16 / 9;
+
+// The TV draws the video plane into the box of its element and ignores object-fit, so the element takes the shape of the video inside the widescreen preview
+export function previewFit(ratio: number) {
+  if (!Number.isFinite(ratio) || ratio <= 0) return { width: '100%', height: '100%' };
+  const percent = (value: number) => `${+(value * 100).toFixed(2)}%`;
+  return ratio < WIDESCREEN ? { width: percent(ratio / WIDESCREEN), height: '100%' } : { width: '100%', height: percent(WIDESCREEN / ratio) };
 }
 
 // webOS has a single hardware decoder, so a video has to be unloaded explicitly before the next one starts

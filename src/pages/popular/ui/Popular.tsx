@@ -5,7 +5,7 @@ import { useQuery } from '@/shared/api';
 import { GET_RECENT_CONFERENCES, RECENT_KEY, mergeRecent } from '@/entities/conference';
 import { Player } from '@/widgets/player';
 import { ListView } from '@/shared/ui';
-import { formatSeconds } from '@/entities/talk';
+import { formatSeconds, useFocusedTalk } from '@/entities/talk';
 import { useTranslation, useLanguage, formatNumber } from '@/shared/i18n';
 
 const PopularView = React.memo(function PopularView({ onClose, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }: PlaybackPageProps) {
@@ -47,14 +47,13 @@ const PopularView = React.memo(function PopularView({ onClose, onFocusSidebar, s
     setIsPlayerFullscreen(true);
   }, [setIsPlayerFullscreen]);
 
-  const renderItem = useCallback((video: Talk) => (
+  const renderItem = useCallback((video: Talk, _index: number, near: boolean) => (
     <>
       {video.images.thumbUrl && (
         <img
-          src={video.images.thumbUrl}
-          alt={video.title}
+          src={near ? video.images.thumbUrl : undefined}
+          alt={near ? video.title : ''}
           className="popularView__thumbnail"
-          loading="lazy"
         />
       )}
       <div className="popularView__info">
@@ -72,6 +71,7 @@ const PopularView = React.memo(function PopularView({ onClose, onFocusSidebar, s
   ), [t, language]);
 
   const playerIsOpen = !!selectedVideo;
+  useFocusedTalk(videos[selectedIndex], !sidebarFocused && !playerIsOpen);
 
   return (
     <>
@@ -87,7 +87,7 @@ const PopularView = React.memo(function PopularView({ onClose, onFocusSidebar, s
           />
         </div>
       )}
-      <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
+      <div className={playerIsOpen ? 'pageUnderPlayer' : undefined}>
         <ListView
           title={t('Popular Videos')}
           items={videos}

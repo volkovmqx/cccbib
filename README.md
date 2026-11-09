@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/volkovmqx/cccbib)](LICENSE)
 [![LG Homebrew](https://img.shields.io/badge/LG%20Homebrew-install-ff69b4)](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/)
 
-[media.ccc.de](https://media.ccc.de) media library application for webOS.
+[media.ccc.de](https://media.ccc.de) media library application for webOS. Some call it the Netflix for Hackers. Others call it even nicer things, so you should try it out and watch some smart talks!
 
 ![Home screen](.github/screenshots/screenshot1.png)
 
@@ -18,85 +18,21 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 
 ## Features
 
-- Browse conferences with video previews and search for talks.
-- Use the TV remote to navigate and control playback.
-- Save talks to the Watchlist and resume the 20 most recent talks in Continue Watching.
-- Select audio languages and subtitles when a talk provides them.
-- Choose from 9 app languages.
-- Change themes, accent colors, and fonts.
-- Select Auto, Zoom, or Stretch for the video aspect ratio.
-- Send commands through webOS launch parameters (see [Remote control](#remote-control)).
+- Browse conferences with a preview of the selected talk (picture or short video) and search for talks.
+- Save talks to the Watchlist and resume the 20 most recent ones in Continue Watching.
+- Select audio languages and [subtitles](https://github.com/volkovmqx/cccbib/wiki/Subtitles) when a talk provides them. The app comes in 9 languages.
+- A lot of customization! Themes yeah, Baby!
+- Show technical details. Stats for Nerds!
+- Control the app with webOS [launch commands](https://github.com/volkovmqx/cccbib/wiki/Remote-control) and publish what is playing to Home Assistant over [MQTT](https://github.com/volkovmqx/cccbib/wiki/Home-Assistant-over-MQTT).
+- Use it in a browser on a phone or tablet. Like [here](https://tv.media.ccc.de)! 
 
-## Remote control
+## Installation
 
-CCCBib takes its commands as webOS launch parameters so the TV needs no open port. It is off by default and you turn it on once in Settings (Playback and then Remote Control). A command is a JSON object. If the app is not running it starts and runs the command and if it is running it gets the command as a relaunch and nothing restarts.
+You can install the app using one of the following methods:
 
-<details>
-<summary>Commands</summary>
-
-| Command | Parameters |
-| --- | --- |
-| `play` (or only `link`) | `link` must be a `media.ccc.de/v/...` link (with https://, http:// or without a scheme), nothing else is accepted (no other host, no bare slug or GUID). Optional: `start` (seconds), `aspect` (auto, zoom, stretch), `subtitle` (language code or none), `language` (audio language code) |
-| `pause`, `resume`, `toggle`, `stop` | none, `stop` closes the player |
-| `seek` | `to` (seconds) or `by` (seconds, negative goes back) |
-| `mute` | `value` true or false, without it the state toggles |
-| `aspect` | `value`: auto, zoom or stretch |
-| `subtitle` | `value`: language code or none |
-| `language` | `value`: audio language code |
-| `add` | `link`, `links` (list of links) or `items` (list of `{link, position}` or `{link, percent}`). Adds to the watchlist. With a `position` (seconds) or `percent` the talk is also put on the in progress list (Continue Watching) |
-| `remove` | `link` or `links`. Removes from the watchlist only, a talk that has progress stays on the in progress list |
-| `progress` | `link` with `position` (seconds) or `percent`, or `items` as above. The talk appears on the in progress list, the watchlist is not touched. Under 10 seconds clears the progress, the talk that is playing is moved with a seek |
-| `progress-set` | `items` replaces the whole in progress list |
-| `progress-clear` | `link` or `links`, removes the progress |
-
-Every link in every command and list is checked the same way and talks that fail the check are skipped. `progress-set` changes nothing if a single link in the list is not valid or cannot be loaded. A command takes up to 50 links and the in progress list never holds more than 20 talks (the most recent ones).
-
-Example, send a whole in progress list:
-
-```json
-{"cmd": "progress-set", "items": [
-  {"link": "https://media.ccc.de/v/24c3-2303-en-inside_the_macosx_kernel", "position": 1200},
-  {"link": "https://media.ccc.de/v/25c3-2874-en-the_ultimate_commodore_64_talk", "percent": 40}
-]}
-```
-
-</details>
-
-<details>
-<summary>Sending commands and reading the state</summary>
-
-From a shell on the TV:
-
-```sh
-luna-send -n 1 luna://com.webos.service.applicationmanager/launch \
-  '{"id":"org.webosbrew.cccbib","params":{"cmd":"play","link":"https://media.ccc.de/v/24c3-2303-en-inside_the_macosx_kernel","aspect":"zoom"}}'
-```
-
-From a computer with the webOS CLI: `ares-launch org.webosbrew.cccbib -p '{"cmd":"pause"}'`.
-
-From Home Assistant (LG webOS TV integration, not tested from Home Assistant yet):
-
-```yaml
-service: webostv.command
-data:
-  entity_id: media_player.lg_tv
-  command: system.launcher/launch
-  payload:
-    id: org.webosbrew.cccbib
-    params:
-      cmd: play
-      link: https://media.ccc.de/v/24c3-2303-en-inside_the_macosx_kernel
-```
-
-To read the state use the TV's web inspector (port 9998). `window.cccbib.report()` in the app page returns `state` (playing or paused or idle) and `now` (title and link and position) plus the `watchlist` and the in progress list with `link` and `position` for each. The page title also shows what is playing: `Playing: <talk title>` or `Paused: <talk title>` or `CCCBib` when no talk is open. With the inspector on `curl -s http://<tv-ip>:9998/json/list` lists it as `title`.
-
-</details>
-
-Zoom and Stretch call a TV service which webOS only allows for apps that were installed the normal way (`yarn deploy` or ares-install or the Homebrew Channel). Copying the files onto the TV by hand skips that registration.
-
-## Subtitles
-
-Old `.srt` (from 30c3) and new `.vtt` files both work. Languages that only exist as dead links or placeholder files are hidden and the subtitle button disappears when nothing usable is left. They load from the same CORS enabled hosts as the media.ccc.de website so no proxy is needed.
+- **[webOS Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel):** CCCBib is available in the official [webOS Brew repository](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/).
+- **[Device Manager](https://github.com/webosbrew/dev-manager-desktop):** Use the pre-built `.ipk` file from the [Releases](https://github.com/volkovmqx/cccbib/releases) page.
+- **Command Line (webOS CLI):** Build it and install it yourself, see the [contribution guide](CONTRIBUTING.md#package-and-deploy-to-a-tv).
 
 ## Browser support
 
@@ -105,14 +41,15 @@ The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or ol
 ## Roadmap
 
 - &#9744; Add Speaker page.
+- &#9744; Tag Filtering. 
 - ~~&#9744; Jeopardy Theme song when waiting for too long.~~
-- Playback speed is left out on purpose: webOS mutes the audio at any speed except 1x.
+- Playback speed on webOS goes through the TV's media service (`com.webos.media/setPlayRate`), because the web view mutes the sound at any other `playbackRate`.
 
 ## Contributing
 
 Contributions are welcome. You can report bugs, add translations, improve documentation, write tests, or submit code changes.
 
-The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the 95% coverage requirement, the coverage bot, and deployment.
+The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced Design (FSD). The [contribution guide](CONTRIBUTING.md) explains FSD, development setup, testing, the coverage requirements, the coverage bot, and deployment.
 
 ## Contributors
 
@@ -122,9 +59,15 @@ The application now uses strict TypeScript (`.ts` and `.tsx`) and Feature-Sliced
 
 The Logo ["Voctocat"](https://blinry.org/voctocat/) is kindly provided by [Blinry](https://github.com/blinry) under the CC BY-SA 4.0 License (as stated on the logo page). The animated loader (`src/shared/branding/voctocat.html`) is a modified version of it, where the raised arm is split off into its own shape so it can wave, and it is shared under the same license.
 
+The animation ["Fairy Dust"](https://media.metaebene.me/media/fairydust/index.html) is based on the Fairy Dust logo of the Chaos events, developed in 1999 by Tim Pritlove and Marten Suhr and released under the [CC BY 4.0 License](https://creativecommons.org/licenses/by/4.0/).
+
+The Pixelated icon variant uses icons from [pixelarticons](https://github.com/halfmage/pixelarticons) ([website](https://pixelarticons.com/)) by Gerrit Halfmann under the [MIT License](https://github.com/halfmage/pixelarticons/blob/v2.4.2/LICENSE) (a copy is in `src/shared/branding/pixelarticons-LICENSE.txt`). The skip, wifi off and heart off icons are drawn on the same grid from the shapes of its play, wifi and heart icons.
+
 The TV navigation follows [Norigin Media's guide](https://noriginmedia.com/2019/06/24/smart-tv-navigation-with-react/) and [Utkarsh Gupta's guide](https://medium.com/@utkarsh.gupta.316/spatial-navigation-in-react-js-for-smart-tv-3aa6977a94b1). The remote button mapping uses the LG input keymapping overview by [Simon34545](https://github.com/Simon34545).
 
 WebOS Project architecture from ["Informatic"](https://github.com/informatic/streamkatze)
+
+The themes and the look of the app are inspired by [Litefin](https://github.com/MoazSalem/litefin) by [MoazSalem](https://github.com/MoazSalem).
 
 
 

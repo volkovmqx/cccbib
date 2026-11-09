@@ -1,16 +1,15 @@
 import type { Talk } from '@/entities/talk';
 import type { PageProps } from '@/shared/ui';
-import React, { useState, useEffect, useRef } from 'react';
-import { useWindowEvent } from '@/shared/lib';
-import { formatSeconds } from '@/entities/talk';
-import { useScrollIntoView } from '@/shared/lib';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { isPointerDriven, pointerMoved, revealInList, useWindowEvent } from '@/shared/lib';
+import { formatSeconds, useFocusedTalk } from '@/entities/talk';
 import { searchLectures, getCachedSearch, normalizeQuery } from '../api/search';
 import { Spinner } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
 
 const SEARCH_DEBOUNCE_MS = 200;
 
-const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused }: PageProps & { onSelectEvent: (talk: Talk) => void }) {
+const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused, playerIsOpen = false }: PageProps & { onSelectEvent: (talk: Talk) => void; playerIsOpen?: boolean }) {
   const t = useTranslation();
   const [query, setQuery] = useState('');
   const [submitCount, setSubmitCount] = useState(0);
@@ -18,6 +17,7 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  useFocusedTalk(results[selectedIndex], !sidebarFocused && !playerIsOpen);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const resultsContainerRef = useRef<HTMLDivElement | null>(null);
   const selectedItemRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +78,13 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
     };
   }, [query, submitCount]);
 
-  useScrollIntoView(selectedItemRef, resultsContainerRef, selectedIndex);
+  // The list follows the selection at once, a smooth scroll lagged behind the keys and swept through all results when the selection wrapped around
+  useLayoutEffect(() => {
+    const container = resultsContainerRef.current;
+    if (isPointerDriven() || !container) return;
+    const tallest = Math.max(0, ...Array.from(container.querySelectorAll('.listItem'), (row) => row.getBoundingClientRect().height));
+    revealInList(selectedItemRef.current, container, tallest);
+  }, [selectedIndex, results]);
 
   useWindowEvent('keydown', (e) => {
     if (sidebarFocused) return;
@@ -134,7 +140,7 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
           />
         </div>
 
-        <div className="searchResults scrollable" ref={resultsContainerRef}>
+        <div className="searchResults scrollable" ref={resultsContainerRef} data-wheel="scroll" data-wheel-main>
           {loading && results.length === 0 && (
             <div className="center" style={{ height: 200 }}>
               <Spinner />
@@ -155,6 +161,7 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
                   ref={index === selectedIndex ? selectedItemRef : null}
                   className={`listItem ${index === selectedIndex ? 'listItem--selected' : ''}`}
                   onClick={() => onSelectEvent(event)}
+                  onMouseMove={(e) => { if (pointerMoved(e)) setSelectedIndex(index); }}
                 >
                   {event.images.thumbUrl && (
                     <img

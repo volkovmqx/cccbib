@@ -1,30 +1,35 @@
 import type { PlayerProps, PlayerButton, Selector } from '../model/types';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  IconWorld, IconBadgeCc, IconAspectRatio, IconRewindBackward10, IconRewindForward10,
-  IconPlayerPlayFilled, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled,
+  IconWorld, IconWorldFilled, IconBadgeCc, IconBadgeCcFilled, IconAspectRatio, IconAspectRatioFilled, IconPlayerTrackPrev, IconPlayerTrackPrevFilled, IconPlayerTrackNext, IconPlayerTrackNextFilled,
+  IconPlayerPlay, IconPlayerPlayFilled, IconPlayerPause, IconPlayerPauseFilled, IconVolume, IconVolumeOff, IconBookmark, IconBookmarkFilled, IconBug, IconBugFilled, IconGauge, IconGaugeFilled,
 } from '@tabler/icons-react';
 import { getVideo, releaseVideo } from '@/entities/talk';
 import { videoSources, rememberMirror } from '@/entities/talk';
 import { getSavedPlaybackPosition, removePlaybackHistoryItem } from '@/features/playback-history';
-import { LANGUAGE_NAMES, ASPECT_RATIOS } from '@/shared/config';
+import { LANGUAGE_NAMES, ASPECT_RATIOS, PLAYBACK_SPEEDS } from '@/shared/config';
 import { useSetting } from '@/shared/config';
 import { useWatchlist } from '@/features/watchlist';
 import { useTranslation } from '@/shared/i18n';
+import { isPhoneOrTablet, lockLandscape, useDelayedFlag, usePageTitle, useWindowEvent } from '@/shared/lib';
 import { usePlayerKeyboard } from '../model/usePlayerKeyboard';
 import { useControlsVisibility } from '../model/useControlsVisibility';
 import { Controls } from './Controls';
+import { StatsPanel } from './StatsPanel';
+import { usePlaybackStats } from '../model/usePlaybackStats';
 import { Spinner } from '@/shared/ui';
 import { usePlaybackPosition } from '../model/usePlaybackPosition';
 import { useSubtitleManagement } from '../model/useSubtitleManagement';
 import { useOutputWindow } from '../model/useOutputWindow';
+import { usePlaybackSpeed } from '../model/usePlaybackSpeed';
 import { useRemoteControl } from '../model/useRemoteControl';
-import { setNowPlayingReader } from '../model/nowPlaying';
+import { notifyNowPlaying, setNowPlayingReader } from '../model/nowPlaying';
 import { SelectorModal } from './SelectorModal';
+import { osdIcon } from './osdIcon';
 
-const IDLE_TITLE = document.title;
 const TOAST_MS = 3000;
 const SOURCE_DELAY_MS = 200;
+const BUFFERING_SPINNER_MS = 800;
 const STALL_CHECK_MS = 4000;
 const START_TIMEOUT_MS = 12000;
 const RESUME_SETTLE_MS = 150;
@@ -32,26 +37,72 @@ const NUDGE_DELAY_MS = 300;
 const NUDGE_SECONDS = 0.01;
 const RESUME_SEEK_TIMEOUT_MS = 8000;
 const PAUSING_SELECTORS = ['language', 'subtitle'];
+const VIDEO_STATE_EVENTS = ['play', 'pause', 'seeked'];
+// The TV needs a moment to free its video decoder, so the layer stays this long
+const CLOSE_HOLD_MS = 1000;
+const CLOSE_RELEASE_MS = 300;
 
+const windowRatio = () => (window.innerWidth && window.innerHeight ? window.innerWidth / window.innerHeight : 16 / 9);
 const aspectName = (code: string) => (ASPECT_RATIOS.find((aspect) => aspect.code === code) || {}).name || code;
+const speedName = (code: number | string) => (PLAYBACK_SPEEDS.find((speed) => speed.code === Number(code)) || {}).name || `${code}\u00d7`;
 
-export const Player = React.memo(function Player({ event, conferenceTitle, onClose, startAt }: PlayerProps) {
+export const Player = React.memo(function Player({ event, conferenceTitle, onClose, onClosing, startAt }: PlayerProps) {
   const t = useTranslation();
   const languageName = useCallback((code: string) => t(LANGUAGE_NAMES[code] || code), [t]);
   const selectorTitles = {
     language: t('Select Language'),
     subtitle: t('Select Subtitles'),
     aspect: t('Aspect Ratio'),
+    speed: t('Playback Speed'),
   };
   const selectorLabels: Partial<Record<Selector, (value: string) => string>> = {
     aspect: (value: string) => t(aspectName(value)),
+    speed: speedName,
   };
   const [preferredAudioLanguage] = useSetting('language');
   const [preferredSubtitleLanguage] = useSetting('subtitleLanguage');
   const [defaultAspect] = useSetting('aspectRatio');
+  const [defaultSpeed] = useSetting('playbackSpeed');
+  const [backSetting] = useSetting('osdBackButton');
+  const [iconVariant] = useSetting('iconVariant');
+  // A touch screen has no key to leave with, so it always gets the arrow
+  const [touch] = useState(isPhoneOrTablet);
+  const backButton = backSetting === 'on' || touch;
+  const [statsSetting] = useSetting('statsForNerds');
+  const statsEnabled = statsSetting === 'on';
+  const [statsOpen, setStatsOpen] = useState(false);
+
+  const [closing, setClosing] = useState(false);
+  const [released, setReleased] = useState(false);
+  const closeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const onClosingRef = useRef(onClosing);
+  onClosingRef.current = onClosing;
+  const hushRef = useRef<() => void>(() => {});
+  const closePlayer = useCallback(() => {
+    if (closeTimersRef.current.length) return;
+    hushRef.current();
+    if (onClosingRef.current) onClosingRef.current();
+    setClosing(true);
+    closeTimersRef.current = [
+      setTimeout(() => setReleased(true), CLOSE_RELEASE_MS),
+      setTimeout(() => onCloseRef.current(), CLOSE_HOLD_MS),
+    ];
+  }, []);
+  useEffect(() => () => closeTimersRef.current.forEach(clearTimeout), []);
+  const backAction = useMemo(() => (backButton ? { label: t('Back'), onPress: closePlayer } : undefined), [backButton, t, closePlayer]);
+  useEffect(() => {
+    if (!closing) return undefined;
+    document.documentElement.setAttribute('data-player-closing', '');
+    return () => document.documentElement.removeAttribute('data-player-closing');
+  }, [closing]);
+  const toggleStats = useCallback(() => setStatsOpen((open) => !open), []);
+  useEffect(() => lockLandscape(), []);
 
   const [languageChoice, setLanguageChoice] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState(defaultAspect);
+  const [speed, setSpeed] = useState(defaultSpeed);
   const [selector, setSelector] = useState<Selector | null>(null);
   const [selectorIndex, setSelectorIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -59,18 +110,29 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
   const [buffering, setBuffering] = useState(true);
   const [failed, setFailed] = useState(false);
+  const showSpinner = useDelayedFlag(buffering && !failed, BUFFERING_SPINNER_MS);
   const [videoRatio, setVideoRatio] = useState<number | null>(null);
+  const [viewRatio, setViewRatio] = useState(() => windowRatio());
+  useWindowEvent('resize', () => setViewRatio(windowRatio()));
   const [toast, setToast] = useState('');
   const [savedStart] = useState(() => (Number.isFinite(startAt) ? startAt! : getSavedPlaybackPosition(event.guid)));
 
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
+  hushRef.current = () => {
+    const element = videoElementRef.current;
+    if (!element) return;
+    element.muted = true;
+    element.pause();
+  };
   const startTimeRef = useRef(savedStart);
   const resumePendingRef = useRef(savedStart > 0);
   const playingRef = useRef(playing);
+  const speedRef = useRef(speed);
   const resumeAfterSelectorRef = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   playingRef.current = playing;
+  speedRef.current = speed;
 
   const {
     isInWatchlist,
@@ -103,6 +165,16 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   const controls = useControlsVisibility({ selectorOpen: Boolean(selector), playing });
+  // A tap on the picture of a hidden OSD brings the controls back, it does not pause as well
+  const revealOnlyRef = useRef(false);
+  const tapVideo = () => {
+    if (revealOnlyRef.current) {
+      revealOnlyRef.current = false;
+      controls.show();
+      return;
+    }
+    setPlaying((value) => !value);
+  };
 
   const { saveCurrentPosition } = usePlaybackPosition({
     event,
@@ -360,20 +432,45 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   useOutputWindow(videoElement, aspectRatio);
 
-  useEffect(() => {
-    document.title = `${playing ? 'Playing' : 'Paused'}: ${event.title}`;
-  }, [playing, event.title]);
-  useEffect(() => () => { document.title = IDLE_TITLE; }, []);
+  const speedUnsupported = useCallback(() => {
+    setSpeed(1);
+    showToast(t('Playback speed is not available on this device'));
+  }, [showToast, t]);
+  usePlaybackSpeed(videoElement, speed, speedUnsupported);
+
+  usePageTitle(event.title);
 
   useEffect(() => {
     setNowPlayingReader(() => {
       const element = videoElementRef.current;
-      return { event, playing: playingRef.current, position: element ? element.currentTime : 0, duration: (element && element.duration) || event.duration };
+      const position = resumePendingRef.current ? startTimeRef.current : element ? element.currentTime : 0;
+      return {
+        event,
+        playing: playingRef.current,
+        running: Boolean(element && !element.paused && !document.hidden),
+        position,
+        duration: (element && element.duration) || event.duration,
+        rate: Number(speedRef.current),
+      };
     });
     return () => setNowPlayingReader(null);
   }, [event]);
 
-  const showAspect = aspectRatio !== 'auto' || (videoRatio !== null && Math.abs(videoRatio - 16 / 9) > 0.08);
+  useEffect(() => {
+    notifyNowPlaying();
+  }, [playing, speed]);
+
+  useEffect(() => {
+    if (!videoElement) return undefined;
+    VIDEO_STATE_EVENTS.forEach((name) => videoElement.addEventListener(name, notifyNowPlaying));
+    document.addEventListener('visibilitychange', notifyNowPlaying);
+    return () => {
+      VIDEO_STATE_EVENTS.forEach((name) => videoElement.removeEventListener(name, notifyNowPlaying));
+      document.removeEventListener('visibilitychange', notifyNowPlaying);
+    };
+  }, [videoElement]);
+
+  const showAspect = aspectRatio !== 'auto' || (videoRatio !== null && Math.abs(videoRatio - viewRatio) > 0.08);
 
   useEffect(() => {
     if (subtitleStatus === 'error') showToast(t('Subtitles are not available for this talk'));
@@ -383,9 +480,10 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     language: availableLanguages,
     subtitle: subtitleOptions,
     aspect: ASPECT_RATIOS.map((aspect) => aspect.code),
+    speed: PLAYBACK_SPEEDS.map((option) => String(option.code)),
   }), [availableLanguages, subtitleOptions]);
 
-  const currentValues = { language, subtitle: subtitleLanguage, aspect: aspectRatio };
+  const currentValues = { language, subtitle: subtitleLanguage, aspect: aspectRatio, speed: String(speed) };
 
   const openSelector = useCallback((name: Selector) => {
     const options = selectorOptions[name];
@@ -396,7 +494,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     }
     setSelectorIndex(Math.max(0, options.indexOf(currentValues[name])));
     setSelector(name);
-  }, [selectorOptions, language, subtitleLanguage, aspectRatio]);
+  }, [selectorOptions, language, subtitleLanguage, aspectRatio, speed]);
 
   const closeSelector = useCallback(() => {
     setSelector(null);
@@ -421,6 +519,9 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     } else if (name === 'aspect') {
       setAspectRatio(value);
       showToast(t('Aspect ratio: {name}', { name: t(aspectName(value)) }));
+    } else if (name === 'speed') {
+      setSpeed(Number(value));
+      showToast(t('Speed: {speed}', { speed: speedName(value) }));
     }
     closeSelector();
   }, [language, event.videos, recording, setSubtitleLanguage, showToast, closeSelector, t]);
@@ -454,39 +555,50 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const buttons = useMemo(() => {
     const list: PlayerButton[] = [];
     if (hasMultipleLanguages) {
-      list.push({ id: 'language', align: 'left', label: languageButtonLabel, icon: <IconWorld />, onPress: () => openSelector('language') });
+      list.push({ id: 'language', align: 'left', label: languageButtonLabel, ...osdIcon(iconVariant, IconWorld, IconWorldFilled), onPress: () => openSelector('language') });
     }
     if (hasSubtitles) {
       list.push({
         id: 'subtitle', align: 'left',
         label: subtitleLanguage === 'none' ? t('Subtitles Off') : t('Subtitles ({language})', { language: languageName(subtitleLanguage) }),
-        icon: <IconBadgeCc />, onPress: () => openSelector('subtitle'),
+        ...osdIcon(iconVariant, IconBadgeCc, IconBadgeCcFilled), onPress: () => openSelector('subtitle'),
       });
     }
     if (showAspect) {
-      list.push({ id: 'aspect', align: 'left', label: t('Aspect: {name}', { name: t(aspectName(aspectRatio)) }), icon: <IconAspectRatio />, onPress: () => openSelector('aspect') });
+      list.push({ id: 'aspect', align: 'left', label: t('Aspect: {name}', { name: t(aspectName(aspectRatio)) }), ...osdIcon(iconVariant, IconAspectRatio, IconAspectRatioFilled), onPress: () => openSelector('aspect') });
     }
+    list.push({ id: 'speed', align: 'left', label: t('Speed: {speed}', { speed: speedName(speed) }), ...osdIcon(iconVariant, IconGauge, IconGaugeFilled), onPress: () => openSelector('speed') });
+    list.push({ id: 'skipback', align: 'center', label: t('Skip Back'), ...osdIcon(iconVariant, IconPlayerTrackPrev, IconPlayerTrackPrevFilled), onPress: () => seek(-10) });
+    list.push({
+      id: 'playpause', align: 'center', label: playing ? t('Pause') : t('Play'),
+      ...(playing ? osdIcon(iconVariant, IconPlayerPause, IconPlayerPauseFilled) : osdIcon(iconVariant, IconPlayerPlay, IconPlayerPlayFilled)), onPress: () => setPlaying((value) => !value),
+    });
+    list.push({ id: 'skipforward', align: 'center', label: t('Skip Forward'), ...osdIcon(iconVariant, IconPlayerTrackNext, IconPlayerTrackNextFilled), onPress: () => seek(10) });
     list.push(
-      { id: 'skipback', align: 'center', label: t('Skip Back'), icon: <IconRewindBackward10 />, onPress: () => seek(-10) },
-      {
-        id: 'playpause', align: 'center', label: playing ? t('Pause') : t('Play'),
-        icon: playing ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />, onPress: () => setPlaying((value) => !value),
-      },
-      { id: 'skipforward', align: 'center', label: t('Skip Forward'), icon: <IconRewindForward10 />, onPress: () => seek(10) },
-      { id: 'mute', align: 'right', label: isMuted ? t('Unmute') : t('Mute'), icon: isMuted ? <IconVolumeOff /> : <IconVolume />, onPress: toggleMute },
+      { id: 'mute', align: 'right', label: isMuted ? t('Unmute') : t('Mute'), ...osdIcon(iconVariant, isMuted ? IconVolumeOff : IconVolume), onPress: toggleMute },
       {
         id: 'watchlist', align: 'right', label: isInWatchlist ? t('In Watchlist') : t('Add to Watchlist'),
         icon: isInWatchlist ? <IconBookmarkFilled /> : <IconBookmark />, onPress: toggleWatchlist,
       },
     );
+    if (statsEnabled) list.push({ id: 'stats', align: 'right', label: t('Stats for Nerds'), ...osdIcon(iconVariant, IconBug, IconBugFilled), onPress: toggleStats });
     return list;
   }, [
     hasMultipleLanguages, hasSubtitles, languageButtonLabel, subtitleLanguage, aspectRatio,
-    playing, isMuted, isInWatchlist, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect,
+    playing, isMuted, isInWatchlist, speed, openSelector, seek, toggleMute, toggleWatchlist, t, languageName, showAspect, statsEnabled, toggleStats, iconVariant,
   ]);
 
+  const statsRows = usePlaybackStats({
+    video: videoElement,
+    active: statsEnabled && statsOpen,
+    context: {
+      guid: event.guid, recording, duration: event.duration, sourceUrl: videoUrl || '', sourceIndex, sourceCount: sources.length,
+      aspect: aspectRatio, speed, audioLanguage: recordingLanguage || language, subtitleLanguage, subtitleStatus, buffering, version: APP_VERSION,
+    },
+  });
+
   usePlayerKeyboard({
-    onClose,
+    onClose: closePlayer,
     controls,
     selector,
     selectorLength: selector ? selectorOptions[selector].length : 0,
@@ -496,6 +608,8 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     confirmSelector,
     closeSelector,
     buttons,
+    backButton,
+    hasControls: Boolean(recording),
     hasMultipleLanguages,
     hasSubtitles,
     setPlaying,
@@ -509,8 +623,9 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     else if (cmd === 'resume') setPlaying(true);
     else if (cmd === 'toggle') setPlaying((current) => !current);
     else if (cmd === 'mute') setIsMuted((current) => (typeof value === 'boolean' ? value : !current));
-    else if (cmd === 'stop') onClose();
+    else if (cmd === 'stop') closePlayer();
     else if (cmd === 'aspect' && typeof value === 'string' && ASPECT_RATIOS.some((aspect) => aspect.code === value)) applySelection('aspect', value);
+    else if (cmd === 'speed' && PLAYBACK_SPEEDS.some((option) => option.code === Number(value))) applySelection('speed', String(Number(value)));
     else if (cmd === 'subtitle' && typeof value === 'string') setSubtitleLanguage(value);
     else if (cmd === 'language' && typeof value === 'string' && availableLanguages.includes(value)) applySelection('language', value);
     else if (cmd === 'seek') {
@@ -546,8 +661,8 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const handleEnded = useCallback(() => {
     removePlaybackHistoryItem(event.guid);
     if (isInWatchlist) toggleWatchlist();
-    onClose();
-  }, [event.guid, isInWatchlist, toggleWatchlist, onClose]);
+    closePlayer();
+  }, [event.guid, isInWatchlist, toggleWatchlist, closePlayer]);
 
   if (!recording) {
     return <div className="player-message">{t('No recording available')}</div>;
@@ -557,17 +672,18 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
 
   return (
     <div
-      className={`player-wrapper ${controls.visible ? 'player-wrapper--controls-visible' : 'player-wrapper--controls-hidden'}`}
+      className={`player-wrapper ${controls.visible ? 'player-wrapper--controls-visible' : 'player-wrapper--controls-hidden'} ${closing ? 'player-wrapper--closing' : ''}`}
       onMouseMove={controls.show}
+      onPointerDown={(e) => { revealOnlyRef.current = e.pointerType === 'touch' && !controls.visible; }}
     >
-      <video
+      {!released && <video
         key={`${recording.url}#${sourceIndex}`}
         ref={handleVideoRef}
         className="player-video"
         src={videoUrl}
         playsInline
         style={{ objectFit: aspect.objectFit }}
-        onClick={() => setPlaying((value) => !value)}
+        onClick={tapVideo}
         onPlay={() => setPlaying(true)}
         onPause={handlePause}
         onEnded={handleEnded}
@@ -575,19 +691,22 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
         onPlaying={() => setBuffering(false)}
         onCanPlay={() => { if (!resumePendingRef.current) setBuffering(false); }}
         onError={() => advanceSource()}
-      />
+      />}
 
-      {buffering && !failed && <div className="player-buffering"><Spinner /></div>}
+      {showSpinner && <div className="player-buffering"><Spinner /></div>}
       {failed && <div className="player-message">{t('This video could not be played')}</div>}
 
       <Controls
         title={event.title}
-        subTitle={event.description}
         buttons={buttons}
+        back={backAction}
         focus={controls.focus}
         video={videoElement}
+        visible={controls.visible}
         onSeek={seekTo}
       />
+
+      {statsEnabled && statsOpen && <StatsPanel rows={statsRows} title={t('Stats for Nerds')} />}
 
       {toast && <div className="player-toast">{toast}</div>}
 
@@ -599,6 +718,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
           currentValue={currentValues[selector]}
           getLabel={selectorLabels[selector]}
           onSelect={(value) => applySelection(selector, value)}
+          onHover={setSelectorIndex}
           onClose={closeSelector}
         />
       )}
