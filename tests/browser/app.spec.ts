@@ -1291,61 +1291,50 @@ test('the settings tabs wrap around from the last tab to the first with the keys
   await expect(active).toContainText('Appearance');
 });
 
+// The compositor lists its layers when the domain is enabled and a layer that is not built by then only shows up after enabling it again
+async function compositorLayers(page: Page) {
+  const client = await page.context().newCDPSession(page);
+  const layered = new Set<number>();
+  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
+  await client.send('LayerTree.enable');
+  return (selector: string) => expect.poll(async () => {
+    const { root } = await client.send('DOM.getDocument');
+    const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+    const { node } = await client.send('DOM.describeNode', { nodeId });
+    if (layered.has(node.backendNodeId)) return true;
+    await client.send('LayerTree.disable');
+    await client.send('LayerTree.enable');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return layered.has(node.backendNodeId);
+  }, { message: selector }).toBe(true);
+}
+
 test('the search field and the results are compositor layers of their own, the TV shows stale frames on a page of one layer', async ({ page }) => {
   await start(page, {});
   await page.locator('.sidebarItem').filter({ hasText: 'Search' }).click();
   await page.getByRole('textbox').fill('fixture');
   await expect(page.locator('.searchResults .listItem')).toHaveCount(1);
-  const client = await page.context().newCDPSession(page);
-  const layered = new Set<number>();
-  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
-  await client.send('LayerTree.enable');
-  const { root } = await client.send('DOM.getDocument');
-  for (const selector of ['.searchInput', '.searchResults']) {
-    const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector });
-    const { node } = await client.send('DOM.describeNode', { nodeId });
-    await expect.poll(() => layered.has(node.backendNodeId), { message: selector }).toBe(true);
-  }
+  const isLayer = await compositorLayers(page);
+  for (const selector of ['.searchInput', '.searchResults']) await isLayer(selector);
 });
 
 test('the faded overlay over the Home preview is a compositor layer of its own, the TV keeps showing the row before otherwise', async ({ page }) => {
   await start(page, {});
   await expect(page.locator('.previewOverlay')).toBeAttached();
-  const client = await page.context().newCDPSession(page);
-  const layered = new Set<number>();
-  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
-  await client.send('LayerTree.enable');
-  const { root } = await client.send('DOM.getDocument');
-  const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.previewOverlay' });
-  const { node } = await client.send('DOM.describeNode', { nodeId });
-  await expect.poll(() => layered.has(node.backendNodeId)).toBe(true);
+  const isLayer = await compositorLayers(page);
+  await isLayer('.previewOverlay');
 });
 
 test('the menu is a compositor layer of its own, the TV keeps showing the page before the menu opened otherwise', async ({ page }) => {
   await start(page, {});
   await expect(page.locator('.sidebar')).toBeAttached();
-  const client = await page.context().newCDPSession(page);
-  const layered = new Set<number>();
-  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
-  await client.send('LayerTree.enable');
-  const { root } = await client.send('DOM.getDocument');
-  const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.sidebar' });
-  const { node } = await client.send('DOM.describeNode', { nodeId });
-  await expect.poll(() => layered.has(node.backendNodeId)).toBe(true);
+  const isLayer = await compositorLayers(page);
+  await isLayer('.sidebar');
 });
 
 test('the lists of Popular, Events and Watchlist and the conference grid are compositor layers of their own', async ({ page }) => {
   await start(page, { watchlist: [talk] });
-  const client = await page.context().newCDPSession(page);
-  const layered = new Set<number>();
-  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
-  await client.send('LayerTree.enable');
-  const isLayer = async (selector: string) => {
-    const { root } = await client.send('DOM.getDocument');
-    const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector });
-    const { node } = await client.send('DOM.describeNode', { nodeId });
-    await expect.poll(() => layered.has(node.backendNodeId), { message: selector }).toBe(true);
-  };
+  const isLayer = await compositorLayers(page);
   for (const [label, selector] of [['Popular', '.popularView__list'], ['Events', '.eventsListView__list'], ['Watchlist', '.watchlistView__list']]) {
     await page.locator('.sidebarItem').filter({ hasText: label }).click();
     await expect(page.locator(`${selector} .listItem`).first()).toBeVisible();
@@ -1361,16 +1350,8 @@ test('the tab list and the page of Settings are compositor layers of their own a
   await start(page, {});
   await page.locator('.sidebarItem').filter({ hasText: 'Settings' }).click();
   await expect(page.locator('.settingsView')).toBeVisible();
-  const client = await page.context().newCDPSession(page);
-  const layered = new Set<number>();
-  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
-  await client.send('LayerTree.enable');
-  const { root } = await client.send('DOM.getDocument');
-  for (const selector of ['.settingsView__tabs', '.settingsView__content']) {
-    const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector });
-    const { node } = await client.send('DOM.describeNode', { nodeId });
-    await expect.poll(() => layered.has(node.backendNodeId), { message: selector }).toBe(true);
-  }
+  const isLayer = await compositorLayers(page);
+  for (const selector of ['.settingsView__tabs', '.settingsView__content']) await isLayer(selector);
   const content = page.locator('.settingsView__content');
   await page.mouse.move(1000, 500);
   await page.mouse.wheel(0, 400);
