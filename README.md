@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/volkovmqx/cccbib)](LICENSE)
 [![LG Homebrew](https://img.shields.io/badge/LG%20Homebrew-install-ff69b4)](https://repo.webosbrew.org/apps/org.webosbrew.cccbib/)
 
-[media.ccc.de](https://media.ccc.de) media library application for webOS.
+[media.ccc.de](https://media.ccc.de) media library application for webOS. Some call it the Netflix for Hackers. Others call it even nicer things so you should try it out and watch some smart talks.
 
 ![Home screen](.github/screenshots/screenshot1.png)
 
