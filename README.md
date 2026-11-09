@@ -19,15 +19,12 @@ This app uses the official media.ccc.de GraphQL endpoint. It uses TypeScript, Re
 ## Features
 
 - Browse conferences with a preview of the selected talk (picture or short video) and search for talks.
-- Navigate with the TV remote. The Magic Remote pointer selects and its wheel scrolls lists.
 - Save talks to the Watchlist and resume the 20 most recent ones in Continue Watching.
 - Select audio languages and [subtitles](https://github.com/volkovmqx/cccbib/wiki/Subtitles) when a talk provides them. The app comes in 9 languages.
-- Choose from 18 themes, accent colors, 24 fonts, 27 loading animations, three icon styles and eight screen filters.
-- Change the video aspect ratio (Auto, Zoom or Stretch) and the playback speed from 0.5x to 2x.
-- Play videos from the CDN mirror that ranks best for your location.
-- Show technical details of the playback with Stats for Nerds.
+- A lot of customization! Themes yeah, Baby!
+- Show technical details. Stats for Nerds!
 - Control the app with webOS [launch commands](https://github.com/volkovmqx/cccbib/wiki/Remote-control) and publish what is playing to Home Assistant over [MQTT](https://github.com/volkovmqx/cccbib/wiki/Home-Assistant-over-MQTT).
-- Use it in a browser on a phone or tablet. The menu is a side menu on the TV and a bar on small screens, or a floating dock on any screen (Settings > Appearance > Side Menu).
+- Use it in a browser on a phone or tablet. 
 
 ## Installation
 
@@ -37,8 +34,6 @@ You can install the app using one of the following methods:
 - **[Device Manager](https://github.com/webosbrew/dev-manager-desktop):** Use the pre-built `.ipk` file from the [Releases](https://github.com/volkovmqx/cccbib/releases) page.
 - **Command Line (webOS CLI):** Build it and install it yourself, see the [contribution guide](CONTRIBUTING.md#package-and-deploy-to-a-tv).
 
-Zoom and Stretch only work when the app was installed one of these ways. Copying the files onto the TV by hand skips that.
-
 ## Browser support
 
 The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or older syntax. A startup error screen shows the error if the app fails to start. CI tests the production build in current Chromium, Chrome 68, and LG’s Simulator. See the [testing guide](CONTRIBUTING.md#tests-and-quality-checks).
@@ -46,6 +41,7 @@ The target is Chrome 68 (webOS 5). The production build uses ES2019 syntax or ol
 ## Roadmap
 
 - &#9744; Add Speaker page.
+- Tag Filtering? 
 - ~~&#9744; Jeopardy Theme song when waiting for too long.~~
 - Playback speed on webOS goes through the TV's media service (`com.webos.media/setPlayRate`), because the web view mutes the sound at any other `playbackRate`.
 
