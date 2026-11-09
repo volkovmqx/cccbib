@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import { SETTING_DEFAULTS, MENU_POSITIONS, THEME_MODES, ACCENT_COLORS, MENU_COLORS, NAV_INDICATORS, BUTTON_STYLES, BORDER_WIDTHS, CORNER_STYLES, UI_FONTS, SCANLINES, ICON_VARIANTS } from './constants';
+import { SETTING_DEFAULTS, MENU_LAYOUTS, MENU_POSITIONS, THEME_MODES, ACCENT_COLORS, MENU_COLORS, NAV_INDICATORS, BUTTON_STYLES, BORDER_WIDTHS, CORNER_STYLES, UI_FONTS, SCANLINES, ICON_VARIANTS } from './constants';
 import { buttonColors, computeAppearance, initAppearance, paletteFor } from './appearance';
 import { getSetting, setSetting, subscribeSettings, useSetting } from './settings';
 import type { Settings } from './settings';
@@ -62,6 +62,12 @@ const lightness = (hex: string) => {
 };
 const contrast = (a: string, b: string) => (Math.max(lightness(a), lightness(b)) + 0.05) / (Math.min(lightness(a), lightness(b)) + 0.05);
 
+test('appearance passes the menu layout to CSS and starts with the classic menu', () => {
+  expect(SETTING_DEFAULTS.menuLayout).toBe('classic');
+  expect(MENU_LAYOUTS.map(x => x.code)).toEqual(['classic', 'dock']);
+  for (const layout of MENU_LAYOUTS.map(x => x.code)) expect(computeAppearance({ ...SETTING_DEFAULTS, menuLayout: layout }).attrs['data-menu-layout']).toBe(layout);
+});
+
 test('appearance passes the menu position to CSS', () => {
   expect(SETTING_DEFAULTS.menuPosition).toBe('top');
   for (const position of MENU_POSITIONS.map(x => x.code)) expect(computeAppearance({ ...SETTING_DEFAULTS, menuPosition: position }).attrs['data-menu-position']).toBe(position);
@@ -96,7 +102,7 @@ test('every palette keeps its text readable on the background and the new themes
     expect(contrast(palette.text, palette.bg), theme).toBeGreaterThanOrEqual(7);
     expect(contrast(palette.muted, palette.bg), theme).toBeGreaterThanOrEqual(4.5);
   }
-  for (const theme of ['ember', 'sunset', 'frost', 'paper', 'nocturne', 'abyss', 'cyberpunk', 'terminal', 'chicago']) {
+  for (const theme of ['eris', 'paper', 'cyberpunk', 'terminal', 'kallisti', 'bbs', 'btx', 'chicago', 'luna', 'aero', 'aqua']) {
     const palette = paletteFor(theme, SETTING_DEFAULTS.accentColor);
     expect(contrast(palette.dim, palette.bg), theme).toBeGreaterThanOrEqual(3);
     for (const surface of [palette.surface, palette.surfaceAlt, palette.surfaceHover]) {
@@ -106,11 +112,25 @@ test('every palette keeps its text readable on the background and the new themes
   }
 });
 
+test('the Oldschool theme is bright grey and white, follows the corner style and is set in a serif font unless another font is chosen', () => {
+  const read = (settings: object) => computeAppearance({ ...SETTING_DEFAULTS, themeMode: 'oldschool', ...settings });
+  const plain = read({ cornerStyle: 'round' }).vars;
+  expect(plain['--bg']).toBe('#e4e4e4');
+  expect(plain['--surface']).toBe('#ffffff');
+  expect(plain['--text']).toBe('#000000');
+  expect(plain['--border-radius-lg']).toBe('22px');
+  expect(read({ cornerStyle: 'square' }).vars['--border-radius-lg']).toBe('0px');
+  expect(plain['--ui-font']).toContain('Times New Roman');
+  expect(plain['--ui-font']).toMatch(/serif$/);
+  expect(read({ uiFont: 'inter' }).vars['--ui-font']).toContain('Inter');
+  expect(computeAppearance({ ...SETTING_DEFAULTS, themeMode: 'black', cornerStyle: 'round' }).vars['--border-radius-lg']).toBe('22px');
+});
+
 test('the light themes get the light gloss and the glow themes get a canvas', () => {
   const read = (themeMode: string) => computeAppearance({ ...SETTING_DEFAULTS, themeMode });
-  for (const theme of ['light', 'lighttinted', 'frost', 'paper', 'chicago']) expect(read(theme).vars['--gloss'], theme).toBe('rgba(255, 255, 255, 0.6)');
-  for (const theme of ['black', 'dark', 'tinted', 'ambient', 'ember', 'sunset', 'nocturne', 'abyss', 'cyberpunk', 'terminal']) expect(read(theme).vars['--gloss'], theme).toBe('rgba(255, 255, 255, 0.14)');
-  for (const theme of ['ambient', 'ember', 'sunset', 'frost', 'paper', 'nocturne', 'abyss', 'cyberpunk', 'terminal', 'chicago']) expect(read(theme).attrs['data-canvas'], theme).toBe('glow');
+  for (const theme of ['light', 'lighttinted', 'paper', 'chicago', 'luna', 'aero', 'aqua', 'oldschool']) expect(read(theme).vars['--gloss'], theme).toBe('rgba(255, 255, 255, 0.6)');
+  for (const theme of ['black', 'dark', 'tinted', 'ambient', 'eris', 'cyberpunk', 'terminal', 'kallisti', 'bbs', 'btx']) expect(read(theme).vars['--gloss'], theme).toBe('rgba(255, 255, 255, 0.14)');
+  for (const theme of ['ambient', 'eris', 'paper', 'cyberpunk', 'terminal', 'kallisti', 'bbs', 'btx', 'chicago', 'luna', 'aero', 'aqua']) expect(read(theme).attrs['data-canvas'], theme).toBe('glow');
   for (const theme of ['black', 'dark', 'light', 'tinted', 'lighttinted', 'unknown']) expect(read(theme).attrs['data-canvas'], theme).toBe('none');
 });
 
@@ -193,7 +213,7 @@ test('the subtitle font App uses the font of the app with its size factor and fo
 
 test('the light themes are marked so the player keeps a dark scrim and white controls over the video', () => {
   const marked = THEME_MODES.map(x => x.code).filter(theme => computeAppearance({ ...SETTING_DEFAULTS, themeMode: theme }).attrs['data-light'] === 'true');
-  expect(marked).toEqual(['light', 'lighttinted', 'frost', 'paper', 'chicago']);
+  expect(marked).toEqual(['light', 'lighttinted', 'paper', 'chicago', 'luna', 'aero', 'aqua', 'oldschool']);
   expect(computeAppearance({ ...SETTING_DEFAULTS, themeMode: 'unknown' }).attrs['data-light']).toBe('false');
   expect(computeAppearance({ ...SETTING_DEFAULTS, osdOpacity: 1 }).vars['--osd-top']).toBe('0.7');
 });
@@ -258,6 +278,9 @@ test('the pixel fonts and the dyslexia font are evened out to the size of the ot
   expect(scales('vt323')).toEqual(['1.38', '1.15']);
   expect(scales('jersey10')).toEqual(['1.32', '1.1']);
   expect(scales('tiny5')).toEqual(['1.2', '1']);
+  expect(scales('inclusive-sans')).toEqual(['1.32', '1.1']);
+  expect(scales('literata')).toEqual(['1.32', '1.1']);
+  expect(scales('fira-sans')).toEqual(['1.26', '1.05']);
   expect(scales('opendyslexic')).toEqual(['1.02', '0.85']);
   expect(scales('silkscreen')).toEqual(['1.02', '0.85']);
 });

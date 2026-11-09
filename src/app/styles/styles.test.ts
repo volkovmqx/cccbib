@@ -4,6 +4,8 @@ import { expect, test } from 'vitest';
 import { SETTING_DEFAULTS } from '@/shared/config/constants';
 import { computeAppearance } from '@/shared/config/appearance';
 
+const raw = readFileSync(join(process.cwd(), 'src/app/styles/styles.css'), 'utf8');
+const section = (from: string, to: string) => raw.slice(raw.indexOf(`=== ${from} ===`), raw.indexOf(`=== ${to} ===`));
 const css = ['src/app/styles/styles.css', 'src/shared/branding/canvases.css', 'src/shared/branding/pixelIcons.css']
   .map((file) => readFileSync(join(process.cwd(), file), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
 const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
@@ -22,19 +24,26 @@ const property = (selector: string, name: string) => {
 };
 
 test('every theme with a canvas paints it behind the page and lists one fixed attachment per layer', () => {
-  const themes = ['ambient', 'ember', 'sunset', 'frost', 'paper', 'nocturne', 'abyss', 'cyberpunk', 'terminal', 'chicago'];
+  const themes = ['ambient', 'eris', 'paper', 'cyberpunk', 'terminal', 'kallisti', 'bbs', 'btx', 'chicago', 'luna', 'aero', 'aqua'];
   expect(property("html[data-canvas='glow']::before", 'background')).toBe('var(--canvas)');
   expect(property("html[data-canvas='glow']::before", 'position')).toBe('fixed');
   expect(property("html[data-canvas='glow']", '--page-bg')).toBe('transparent');
   for (const theme of themes) {
     const layers = property(`html[data-theme='${theme}']`, '--canvas').match(/(?:radial|linear)-gradient\(/g) || [];
-    if (!['ambient', 'frost', 'paper'].includes(theme)) expect(property(`html[data-theme='${theme}']`, '--canvas'), theme).toContain('var(--accent-rgb)');
+    if (!['ambient', 'paper'].includes(theme)) expect(property(`html[data-theme='${theme}']`, '--canvas'), theme).toContain('var(--accent-rgb)');
     const attachments = property(`html[data-theme='${theme}']`, '--canvas-fixed').split(',').map((value) => value.trim());
     expect(layers.length, theme).toBeGreaterThan(0);
     expect(attachments, theme).toEqual(Array(layers.length).fill('fixed'));
   }
   expect(property("html[data-canvas='glow'] .previewOverlay", 'background-attachment')).toBe('var(--canvas-fixed), scroll');
   expect(css).not.toMatch(/data-theme='ambient'\]\s+\./);
+});
+
+test('the tube filter keeps the page scrollbar inside the rounded picture, clear of the corners', () => {
+  expect(property("html[data-scanlines='tube'] #scanlines", 'border-radius')).toBe('3.4vw');
+  expect(property("html[data-scanlines='tube'] .pageScroll", 'top')).toBe('3.4vw');
+  expect(property("html[data-scanlines='tube'] .pageScroll", 'bottom')).toBe('3.4vw');
+  expect(property("html[data-scanlines='tube'] .pageScroll", 'right')).toBe('4px');
 });
 
 const FILTERS = ['lines', 'grille', 'trinitron', 'pixels', 'dots', 'tube', 'pulse'];
@@ -69,6 +78,7 @@ test('every still filter is one layer of gradients, so it costs the TV nothing, 
   expect(declarations(filter('dots'))).toContain('/ 6px 6px');
   expect(property(filter('tube'), 'border-radius')).toBe('3.4vw');
   expect(property(filter('tube'), 'box-shadow')).toContain('0 0 0 3.4vw #000');
+  expect(property(filter('tube'), 'box-shadow')).not.toContain('inset 0 0 0');
 });
 
 test('dark themes get a soft glow in the middle and a vignette, light themes only the vignette, because black cannot be darkened', () => {
@@ -94,7 +104,10 @@ test('the Pulse line stays away for people who asked for reduced motion', () => 
 });
 
 test('the Terminal theme adds a glow, a prompt before row titles and a slowly blinking block cursor behind the page titles', () => {
-  expect(property("html[data-theme='terminal'] body", 'text-shadow')).toContain('var(--accent-rgb)');
+  expect(property("html[data-theme='terminal'] body", 'text-shadow')).toBe('');
+  for (const title of ['.carouselTitle', '.active .embla__slide__title', '.settingsView__groupTitle', '.conferenceView__title', '.settingsView__tabsTitle']) {
+    expect(property(`html[data-theme='terminal'] ${title}`, 'text-shadow'), title).toContain('var(--accent-rgb)');
+  }
   expect(property("html[data-theme='terminal'] .carouselTitle::before", 'content')).toBe("'>\\00a0'");
   expect(property("html[data-theme='terminal'] .settingsView__groupTitle::before", 'content')).toBe("'# '");
   for (const title of ['.conferenceView__title', '.settingsView__tabsTitle']) {
@@ -123,6 +136,22 @@ test('every Tabler icon the app draws has a pixel art version for the Pixelated 
   for (const name of used) expect(declarations(`html[data-icons='pixelated'] .tabler-icon-${name}`), name).toContain('data:image/svg+xml');
 });
 
+test('a filled Tabler icon drawn directly, not through the OSD icon helper, has pixel art of its own', () => {
+  const direct = new Set<string>();
+  for (const file of sourceFiles('src')) {
+    for (const match of readFileSync(join(process.cwd(), file), 'utf8').matchAll(/<(Icon[A-Za-z0-9]+Filled)\b/g)) direct.add(`${kebab(match[1])}-filled`);
+  }
+  expect(direct.has('bookmark-filled')).toBe(true);
+  for (const name of direct) expect(declarations(`html[data-icons='pixelated'] .tabler-icon-${name}`), name).toContain('data:image/svg+xml');
+});
+
+test('the buffering spinner on the video keeps light text colours on the light themes, like the controls', () => {
+  expect(property("html[data-light='true'] .player-buffering", '--text')).toBe('#ffffff');
+  expect(property("html[data-light='true'] .player-buffering", '--text-rgb')).toBe('255, 255, 255');
+  expect(property("html[data-light='true'] .player-buffering", '--bg')).toBe('#000000');
+  expect(property("html[data-light='true'] .playerUI", '--text')).toBe('#ffffff');
+});
+
 test('a pixel icon is a mask of the pixel art in the colour of the text, drawn instead of the line icon, and nothing else is changed', () => {
   expect(property("html[data-icons='pixelated'] .tabler-icon", 'background-color')).toBe('currentColor');
   expect(property("html[data-icons='pixelated'] .tabler-icon", '-webkit-mask-image')).toBe('var(--pixel-icon)');
@@ -144,6 +173,74 @@ test('the Chicago theme draws Windows 95 style raised panels and buttons', () =>
   expect(property("html[data-theme='chicago']", '--bevel')).toContain('#ffffff');
   expect(property("html[data-theme='chicago'] .picker__panel", 'box-shadow')).toBe('var(--bevel)');
   expect(property("html[data-theme='chicago'] .settingsView__select", 'border-radius')).toBe('0');
+});
+
+test('the Chicago, Luna and Aero themes draw window title bars from the accent color', () => {
+  for (const theme of ['chicago', 'luna', 'aero']) {
+    expect(property(`html[data-theme='${theme}']`, '--titlebar'), theme).toContain('var(--accent');
+    expect(property(`html[data-theme='${theme}'] .settingsView__groupTitle`, 'background'), theme).toBe('var(--titlebar)');
+    expect(property(`html[data-theme='${theme}'] .picker__title`, 'color'), theme).toBe('var(--accent-contrast)');
+  }
+});
+
+test('the Oldschool theme keeps to flat boxes with rules that follow the border width and never change a border when it is focused', () => {
+  expect(property("html[data-theme='oldschool'][data-rail] .sidebar", 'box-shadow')).toBe('inset calc(var(--border-width) / -2) 0 var(--border-color), inset calc(var(--border-width) * -1) 0 #ffffff');
+  expect(property("html[data-theme='oldschool'] .picker__panel", 'box-shadow')).toBe('none');
+  expect(property("html[data-theme='oldschool'] .carouselTitle", 'text-decoration')).toBe('underline');
+  expect(property("html[data-theme='oldschool'] .searchInput input", 'box-shadow')).toContain('inset calc(var(--border-width) / 2) calc(var(--border-width) / 2) var(--border-color)');
+  const flat = section('THEME OLDSCHOOL', 'THEME BTX');
+  expect(flat.length).toBeGreaterThan(500);
+  expect(flat.match(/\bborder(?:-[a-z]+)?:\s*\d+px/g)).toBeNull();
+});
+
+test('the Oldschool theme draws raised buttons, a sunken current choice, etched rules and sunken tiles, and the Settings tabs get an etched edge', () => {
+  expect(property("html[data-theme='oldschool']", '--old-raised')).toBe('#ffffff var(--border-color) var(--border-color) #ffffff');
+  expect(property("html[data-theme='oldschool']", '--old-sunken')).toBe('var(--border-color) #ffffff #ffffff var(--border-color)');
+  expect(property("html[data-theme='oldschool'] .settingsView__select:not(.settingsView__control--focused)", 'border-color')).toBe('var(--old-raised)');
+  expect(property("html[data-theme='oldschool'] .settingsView__segment--current:not(.settingsView__control--focused)", 'border-color')).toBe('var(--old-sunken)');
+  expect(property("html[data-theme='oldschool'] .settingsView__groupTitle", 'box-shadow')).toBe('0 calc(var(--border-width) / 2) 0 #ffffff');
+  expect(property("html[data-theme='oldschool'] .embla__slide__img", 'border-color')).toBe('var(--old-sunken)');
+  expect(property("html[data-theme='oldschool'] .active .embla__slide__img", 'border-color')).toBe('var(--accent)');
+  expect(property("html[data-theme='oldschool'] .settingsView__tabs", 'border-right')).toBe('calc(var(--border-width) / 2) solid var(--border-color)');
+});
+
+test('the Oldschool theme has blocky scrollbars with a dithered track, raised square thumbs and arrow buttons, also for the page bar', () => {
+  const scroll = section('SCROLLBAR OLDSCHOOL', 'THEME OLDSCHOOL');
+  expect(scroll.length).toBeGreaterThan(500);
+  expect(property("html[data-theme='oldschool']", '--old-checker')).toContain('shape-rendering');
+  expect(property("html[data-theme='oldschool'] ::-webkit-scrollbar-track", 'background')).toBe('#ffffff var(--old-checker) 0 0 / 2px 2px');
+  expect(property("html[data-theme='oldschool'] ::-webkit-scrollbar-thumb", 'border-radius')).toBe('0');
+  expect(property("html[data-theme='oldschool'] ::-webkit-scrollbar-thumb", 'border-color')).toBe('#ffffff #404040 #404040 #ffffff');
+  expect(property("html[data-theme='oldschool'] .pageScroll .pageScroll__thumb", 'left')).toBe('0');
+  expect(property("html[data-theme='oldschool'] .picker__list::-webkit-scrollbar-thumb", 'border-radius')).toBe('0');
+  expect(property("html[data-theme='oldschool'] ::-webkit-scrollbar-button:single-button", 'width')).toBe('var(--scrollbar-hit)');
+  expect(property("html[data-theme='oldschool'] ::-webkit-scrollbar-button:vertical:start:decrement", 'background-image')).toBe('var(--old-arrow-up)');
+  expect(property("html[data-theme='oldschool'] ::-webkit-scrollbar-button:horizontal:end:increment", 'background-image')).toBe('var(--old-arrow-right)');
+  expect(property("html[data-theme='oldschool'] .pageScroll", 'margin')).toBe('var(--scrollbar-hit) 0');
+  expect(property("html[data-theme='oldschool'] .pageScroll::before", 'top')).toBe('calc(var(--scrollbar-hit) * -1)');
+  expect(property("html[data-theme='oldschool'] .pageScroll[data-scrollable]", 'opacity')).toBe('1');
+  expect(scroll).not.toContain(':hover');
+});
+
+test('the Aqua theme draws gel capsules, a pinstripe canvas and window title bars with traffic lights', () => {
+  expect(property("html[data-theme='aqua']", '--aqua-gel')).toContain('#dcdcdc 52%');
+  expect(property("html[data-theme='aqua']", '--aqua-candy')).toContain('var(--accent)');
+  expect(property("html[data-theme='aqua'] .settingsView__select", 'border-radius')).toBe('999px');
+  expect(property("html[data-theme='aqua'] .settingsView__select", 'border-width')).toBe('calc(var(--border-width) / 2)');
+  expect(property("html[data-theme='aqua'] .picker__title", 'background')).toBe('var(--aqua-bar)');
+  expect(property("html[data-theme='aqua'] .settingsView__groupTitle", 'background')).toBe('var(--aqua-bar)');
+  expect(property("html[data-theme='aqua'] .picker__title::before", 'height')).toBe('1.8rem');
+  expect(declarations("html[data-theme='aqua'] .picker__title::before")).toContain('#ec4137');
+  expect(declarations("html[data-theme='aqua'] .picker__title::before")).toContain('#3cbb3a');
+  expect(property("html[data-theme='aqua'] .settingsView__tab--active:not(.settingsView__tab--focused)", 'background')).toBe('var(--aqua-candy)');
+  expect(property("html[data-theme='aqua'] .searchInput input", 'border-radius')).toBe('999px');
+});
+
+test('the Aero theme draws glass window frames with a diagonal sheen and glossy split buttons', () => {
+  expect(property("html[data-theme='aero']", '--aero-sheen')).toContain('115deg');
+  expect(property("html[data-theme='aero']", '--aero-button')).toMatch(/#dbe3ee 50%/);
+  expect(property("html[data-theme='aero'] .picker__panel", 'border')).toBe('6px solid var(--aero-frame)');
+  expect(property("html[data-theme='aero'] .settingsView__group", 'border-radius')).toBe('8px');
 });
 
 test('screens up to 900px wide get a bottom tab bar, fluid text and a stacked Settings page', () => {
@@ -222,11 +319,32 @@ test('list rows and grid tiles only animate the properties their states change',
   expect(css).not.toMatch(/transition:\s*all\b/);
 });
 
-test('the TV switches off the fades of tiles and rows, other screens keep them', () => {
-  expect(property('html[data-webos] .embla__slide__img', 'transition')).toBe('none');
-  expect(property('html[data-webos] .listItem', 'transition')).toBe('none');
-  expect(property('html[data-webos] .conferenceView__gridItem', 'transition')).toBe('none');
+test('the TV switches off the fades of tiles, rows, the menu and the cover picture, other screens keep them', () => {
+  for (const selector of ['.embla__slide__img', '.listItem', '.conferenceView__gridItem', '.conferenceView__gridItem__img', '.sidebar', '.sidebarItem__label', '.sidebar__wordmark', '.previewBackdrop__img']) {
+    expect(property(`html[data-webos] ${selector}`, 'transition'), selector).toBe('none');
+    expect(property(selector, 'transition'), selector).not.toBe('');
+  }
   expect(property('.embla__slide__img', 'transition')).toContain('box-shadow');
+  expect(property('.sidebar', 'transition')).toContain('width');
+});
+
+test('the TV does not draw the spinner of the grid spacers, other screens keep it', () => {
+  expect(property('html[data-webos] .conferenceView__gridLoading', 'display')).toBe('none');
+  expect(property('.conferenceView__gridLoading', 'display')).toBe('flex');
+});
+
+test('a page behind the player comes back as soon as the player starts to close, not when it is gone', () => {
+  expect(property('.pageUnderPlayer', 'display')).toBe('none');
+  expect(property('html[data-player-closing] .pageUnderPlayer', 'display')).toBe('block');
+  expect(property('html[data-player-closing] .player-fullscreen-container', 'pointer-events')).toBe('none');
+});
+
+test('every keyframes name in the loaders is defined once, a second definition silently replaces the first', () => {
+  const loaders = readFileSync(join(process.cwd(), 'src/shared/branding/loaders.css'), 'utf8');
+  const names = [...loaders.matchAll(/@keyframes\s+([\w-]+)/g)].map((match) => match[1]);
+  expect(names.length).toBeGreaterThan(10);
+  expect(names.filter((name, index) => names.indexOf(name) !== index)).toEqual([]);
+  for (const [, used] of loaders.matchAll(/animation:\s*((?:voctocat|loader|spinner|rocket)[\w-]*)/g)) expect(names, used).toContain(used);
 });
 
 test('a conference name that opens its page gets a pointer and an arrow in the accent colour, without an underline', () => {
@@ -499,7 +617,7 @@ test('the side menu indicator draws a line, a frame, or a contrast fill, and nev
   }
   expect(property('.sidebarItem__icon', 'margin-left')).toBe('');
   const marks = rules.filter((rule) => /sidebarItem--selected/.test(rule.selectors.join()) && /(::before|box-shadow|background-color)/.test(rule.body) && !/display\s*:\s*none/.test(rule.body));
-  for (const rule of marks) for (const selector of rule.selectors) expect(selector, selector).toContain(':not(.sidebarItem--brand)');
+  for (const rule of marks) for (const selector of rule.selectors.filter((item) => !item.includes("data-menu-layout='dock'"))) expect(selector, selector).toContain(':not(.sidebarItem--brand)');
 });
 
 test('the contrast indicator keeps its label free of the glass shadow and hover is left to the pointer selection', () => {
@@ -568,3 +686,58 @@ test('the tab list and the page of Settings are separate layers, one shared laye
   for (const selector of ['.popularView__list', '.eventsListView__list', '.watchlistView__list', '.conferenceView__container']) expect(property(selector, 'will-change'), selector).toBe('transform');
 });
 
+test('the faded overlay over the preview picture is a layer of its own, the TV keeps showing the row before on Home otherwise', () => {
+  expect(property('.previewOverlay', 'will-change')).toBe('transform');
+});
+
+test('the menu is a layer of its own, the TV keeps showing the page before the menu opened otherwise', () => {
+  expect(property('.sidebar', 'will-change')).toBe('transform');
+});
+
+
+test('the dock takes its material from the menu style, floats clear of the screen edge and only looks round with rounded corners', () => {
+  expect(property("html[data-menu-layout='dock']", '--dock-bg')).toBe('var(--bg)');
+  expect(property("html[data-menu-layout='dock'][data-rail='panel']", '--dock-bg')).toBe('var(--surface)');
+  expect(property("html[data-menu-layout='dock'][data-rail='glass']", '--dock-bg')).toBe('var(--glass-rail-bg)');
+  expect(property("html[data-menu-layout='dock']", '--dock-radius')).toBe('calc(var(--border-radius-lg) * 2)');
+  expect(property("html[data-menu-layout='dock'] .appShell__nav", 'pointer-events')).toBe('none');
+  expect(property("html[data-menu-layout='dock'] .sidebar.sidebar", 'pointer-events')).toBe('auto');
+  expect(property("html[data-menu-layout='dock'] .sidebar.sidebar", 'left')).toBe('var(--dock-gap)');
+  expect(property("html[data-menu-layout='dock'] .sidebar.sidebar", 'padding')).toBe('calc(8px + var(--dock-radius) * 0.35) 0');
+  expect(property("html[data-menu-layout='dock'] .sidebarItem--selected:not(.sidebarItem--brand):not(.sidebarItem--highlighted)::before", 'left')).toBe('4px');
+  expect(property("html[data-menu-layout='dock']", '--nav-inset-left')).toBe('0px');
+  expect(property("html[data-menu-layout='dock']", '--nav-inset-right')).toBe('0px');
+  expect(property("html[data-menu-layout='dock'] .sidebarItem__icon", 'border-radius')).toBe('var(--border-radius-md)');
+  expect(property("html[data-menu-layout='dock'] .sidebarItem", 'border-radius')).toBe('var(--border-radius-md)');
+  expect(property("html[data-menu-layout='dock'] .settingsView__tab--active::before", 'left')).toBe('calc(50% - var(--dock-mark) / 2)');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='border'] .sidebarItem--selected:not(.sidebarItem--highlighted) .sidebarItem__icon", 'box-shadow')).toBe('inset 0 0 0 var(--border-width) var(--accent-stroke)');
+  expect(css.split("html[data-menu-layout='dock'][data-nav-indicator='line']").length - 1).toBe(1);
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='border'] .sidebarItem--selected:not(.sidebarItem--highlighted)::after", 'box-shadow')).toBe('inset 0 0 0 var(--border-width) var(--accent-stroke)');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='contrast'] .sidebarItem--selected:not(.sidebarItem--highlighted)::after", 'background-color')).toBe('var(--nav-fill)');
+  expect(property("html[data-menu-layout='dock'] .sidebarItem--selected:not(.sidebarItem--highlighted)", 'isolation')).toBe('isolate');
+  expect(property("html[data-menu-layout='dock'] .sidebar.sidebar:not(.sidebar--focused) .sidebarItem--selected.sidebarItem--brand::before", 'display')).toBe('none');
+  expect(property("html[data-menu-layout='dock'] .sidebar.sidebar:not(.sidebar--focused) .sidebarItem--selected.sidebarItem--brand::after", 'display')).toBe('none');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='contrast'] .sidebar.sidebar:not(.sidebar--focused) .sidebarItem--selected.sidebarItem--brand .catIcon__disc", 'fill')).toBe('var(--text)');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='line'] .sidebarItem--selected.sidebarItem--brand:not(.sidebarItem--highlighted)::before", 'background')).toBe('var(--accent-stroke)');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='border'] .sidebarItem--selected.sidebarItem--highlighted .sidebarItem__icon", 'box-shadow')).toBe('inset 0 0 0 var(--border-width) var(--accent-stroke)');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='contrast'] .sidebarItem--selected.sidebarItem--highlighted .sidebarItem__icon", 'background-color')).toBe('var(--nav-fill)');
+  expect(property("html[data-menu-layout='dock'][data-nav-indicator='contrast'] .sidebarItem--selected.sidebarItem--brand:not(.sidebarItem--highlighted) .catIcon__disc", 'fill')).toBe('var(--nav-fill-fg)');
+});
+
+test('the preview of the home screen shrinks with the window and keeps its shape, so it never reaches into the menu column', () => {
+  const block = css.slice(css.indexOf('@media (max-width: 1900px)'));
+  expect(block).toMatch(/--preview-width:\s*calc\(100vw - var\(--sidebar-width\)\)/);
+  expect(block).toMatch(/--preview-height:\s*calc\(var\(--preview-width\) \* 0\.5626\)/);
+  expect(block).toMatch(/\.preview\s*\{[^}]*max-width:\s*1742px/);
+});
+
+test('the text of the settings is sized from one factor that lifts it to the size of the Home text, half of it goes to the tabs and their column, and the phone layout sets it back to one', () => {
+  expect(property('.settingsView', '--settings-text')).toBe('1.26');
+  for (const selector of ['.settingsView__groupTitle', '.settingsView__rowName', '.settingsView__rowDescription', '.settingsView__select', '.settingsView__segment', '.settingsView__about']) {
+    expect(property(selector, 'font-size'), selector).toContain('var(--settings-text)');
+  }
+  for (const theme of ['chicago', 'luna', 'aero', 'aqua']) expect(property(`html[data-theme='${theme}'] .settingsView__groupTitle`, 'font-size'), theme).toContain('var(--settings-text)');
+  expect(property('.settingsView__tab', 'font-size')).toContain('(var(--settings-text) + 1) / 2');
+  expect(property('.settingsView__tabs', 'flex')).toContain('(var(--settings-text) + 1) / 2');
+  expect(css.slice(css.indexOf('@media (max-width: 900px)'))).toMatch(/\.settingsView \{\s*--settings-text: 1;/);
+});

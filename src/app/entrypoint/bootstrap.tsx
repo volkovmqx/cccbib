@@ -12,7 +12,7 @@ import { initRemote } from '@/features/remote-control';
 import { refreshMirrors } from '@/entities/talk';
 import { initScrollbars, isWebOS } from '@/shared/lib';
 import { buildReport } from '@/app/model';
-import { backfillTalkDetails } from '@/app/model';
+import { backfillTalkDetails, startMqtt } from '@/app/model';
 
 window.addEventListener('error', (e) => {
   if (e.message === 'ResizeObserver loop completed with undelivered notifications.') {
@@ -27,6 +27,7 @@ if (isWebOS()) document.documentElement.setAttribute('data-webos', '');
 initAppearance();
 initLanguage();
 initRemote();
+startMqtt();
 refreshMirrors();
 initScrollbars();
 window.cccbib = { report: buildReport };

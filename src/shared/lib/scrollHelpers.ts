@@ -2,10 +2,7 @@ import { isPointerDriven } from './pointer';
 
 export function scrollIntoView(selectedItemRef: React.RefObject<HTMLElement | null>, _containerRef: React.RefObject<HTMLElement | null> | null, block: ScrollLogicalPosition = 'nearest') {
   if (selectedItemRef.current && !isPointerDriven()) {
-    selectedItemRef.current.scrollIntoView({
-      behavior: 'smooth',
-      block: block
-    });
+    selectedItemRef.current.scrollIntoView({ block });
   }
 }
 

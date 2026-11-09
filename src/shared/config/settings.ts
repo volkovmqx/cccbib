@@ -13,7 +13,7 @@ const LEGACY: Partial<Record<SettingKey, { key: string; map: Record<string, stri
   logoButton: { key: 'settingsEntry', map: { icon: 'off', logo: 'settings' } },
 };
 
-const VALUE_ALIASES: Partial<Record<SettingKey, Record<string, string>>> = { previewVideo: { off: 'still' }, scanlines: { crt: 'grille' } };
+const VALUE_ALIASES: Partial<Record<SettingKey, Record<string, string>>> = { previewVideo: { off: 'still' }, scanlines: { crt: 'grille' }, uiFont: { 'geist-pixel': 'pixelify' }, subtitleFont: { 'geist-pixel': 'pixelify' }, themeMode: { ember: 'eris', sunset: 'cyberpunk', copper: 'cyberpunk', frost: 'kallisti', nocturne: 'btx', abyss: 'bbs' } };
 
 function parseStored(raw: string): unknown {
   try { return JSON.parse(raw); } catch { return raw; }

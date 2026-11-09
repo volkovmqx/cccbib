@@ -1,7 +1,20 @@
 import { expect, test, vi } from 'vitest';
 import { conference, talk } from '../../../../tests/fixtures';
 import { loadHomeCache, saveHomeCache, clearHomeCache } from './homeCache';
-import { mergeRecent } from '../api/queries';
+import { mergeLectures, mergeRecent } from '../api/queries';
+
+test('the talks of a conference add up page by page without a talk twice, and the last page ends the paging', () => {
+  const page = (guids: string[], hasNextPage: boolean, endCursor: string | null) => ({ conference: conference({ lectures: { nodes: guids.map((guid) => talk({ guid })), pageInfo: { hasNextPage, endCursor } } }) });
+  const first = page(['a', 'b'], true, 'c1');
+  expect(mergeLectures(undefined, first)).toBe(first);
+  const second = mergeLectures(first, page(['b', 'c'], true, 'c2'));
+  expect(second.conference.lectures.nodes.map((item) => item.guid)).toEqual(['a', 'b', 'c']);
+  expect(second.conference.lectures.pageInfo).toEqual({ hasNextPage: true, endCursor: 'c2' });
+  const last = mergeLectures(second, page(['d'], false, null));
+  expect(last.conference.lectures.nodes.map((item) => item.guid)).toEqual(['a', 'b', 'c', 'd']);
+  expect(last.conference.lectures.pageInfo).toEqual({ hasNextPage: false, endCursor: null });
+  expect(last.conference.title).toBe('Test conference');
+});
 
 test('conference pages merge without duplicate IDs and preserve the fetched offset', () => {
   const first = conference({ id: '1' });

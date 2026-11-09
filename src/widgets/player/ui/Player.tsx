@@ -11,7 +11,7 @@ import { LANGUAGE_NAMES, ASPECT_RATIOS, PLAYBACK_SPEEDS } from '@/shared/config'
 import { useSetting } from '@/shared/config';
 import { useWatchlist } from '@/features/watchlist';
 import { useTranslation } from '@/shared/i18n';
-import { lockLandscape, useDelayedFlag, usePageTitle, useWindowEvent } from '@/shared/lib';
+import { isPhoneOrTablet, lockLandscape, useDelayedFlag, usePageTitle, useWindowEvent } from '@/shared/lib';
 import { usePlayerKeyboard } from '../model/usePlayerKeyboard';
 import { useControlsVisibility } from '../model/useControlsVisibility';
 import { Controls } from './Controls';
@@ -23,7 +23,7 @@ import { useSubtitleManagement } from '../model/useSubtitleManagement';
 import { useOutputWindow } from '../model/useOutputWindow';
 import { usePlaybackSpeed } from '../model/usePlaybackSpeed';
 import { useRemoteControl } from '../model/useRemoteControl';
-import { setNowPlayingReader } from '../model/nowPlaying';
+import { notifyNowPlaying, setNowPlayingReader } from '../model/nowPlaying';
 import { SelectorModal } from './SelectorModal';
 import { osdIcon } from './osdIcon';
 
@@ -37,6 +37,7 @@ const NUDGE_DELAY_MS = 300;
 const NUDGE_SECONDS = 0.01;
 const RESUME_SEEK_TIMEOUT_MS = 8000;
 const PAUSING_SELECTORS = ['language', 'subtitle'];
+const VIDEO_STATE_EVENTS = ['play', 'pause', 'seeked'];
 // The TV needs a moment to free its video decoder, so the layer stays this long
 const CLOSE_HOLD_MS = 1000;
 const CLOSE_RELEASE_MS = 300;
@@ -45,7 +46,7 @@ const windowRatio = () => (window.innerWidth && window.innerHeight ? window.inne
 const aspectName = (code: string) => (ASPECT_RATIOS.find((aspect) => aspect.code === code) || {}).name || code;
 const speedName = (code: number | string) => (PLAYBACK_SPEEDS.find((speed) => speed.code === Number(code)) || {}).name || `${code}\u00d7`;
 
-export const Player = React.memo(function Player({ event, conferenceTitle, onClose, startAt }: PlayerProps) {
+export const Player = React.memo(function Player({ event, conferenceTitle, onClose, onClosing, startAt }: PlayerProps) {
   const t = useTranslation();
   const languageName = useCallback((code: string) => t(LANGUAGE_NAMES[code] || code), [t]);
   const selectorTitles = {
@@ -64,7 +65,9 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const [defaultSpeed] = useSetting('playbackSpeed');
   const [backSetting] = useSetting('osdBackButton');
   const [iconVariant] = useSetting('iconVariant');
-  const backButton = backSetting === 'on';
+  // A touch screen has no key to leave with, so it always gets the arrow
+  const [touch] = useState(isPhoneOrTablet);
+  const backButton = backSetting === 'on' || touch;
   const [statsSetting] = useSetting('statsForNerds');
   const statsEnabled = statsSetting === 'on';
   const [statsOpen, setStatsOpen] = useState(false);
@@ -74,10 +77,13 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const closeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const onClosingRef = useRef(onClosing);
+  onClosingRef.current = onClosing;
   const hushRef = useRef<() => void>(() => {});
   const closePlayer = useCallback(() => {
     if (closeTimersRef.current.length) return;
     hushRef.current();
+    if (onClosingRef.current) onClosingRef.current();
     setClosing(true);
     closeTimersRef.current = [
       setTimeout(() => setReleased(true), CLOSE_RELEASE_MS),
@@ -121,10 +127,12 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   const startTimeRef = useRef(savedStart);
   const resumePendingRef = useRef(savedStart > 0);
   const playingRef = useRef(playing);
+  const speedRef = useRef(speed);
   const resumeAfterSelectorRef = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   playingRef.current = playing;
+  speedRef.current = speed;
 
   const {
     isInWatchlist,
@@ -157,6 +165,16 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   const controls = useControlsVisibility({ selectorOpen: Boolean(selector), playing });
+  // A tap on the picture of a hidden OSD brings the controls back, it does not pause as well
+  const revealOnlyRef = useRef(false);
+  const tapVideo = () => {
+    if (revealOnlyRef.current) {
+      revealOnlyRef.current = false;
+      controls.show();
+      return;
+    }
+    setPlaying((value) => !value);
+  };
 
   const { saveCurrentPosition } = usePlaybackPosition({
     event,
@@ -425,10 +443,32 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
   useEffect(() => {
     setNowPlayingReader(() => {
       const element = videoElementRef.current;
-      return { event, playing: playingRef.current, position: element ? element.currentTime : 0, duration: (element && element.duration) || event.duration };
+      const position = resumePendingRef.current ? startTimeRef.current : element ? element.currentTime : 0;
+      return {
+        event,
+        playing: playingRef.current,
+        running: Boolean(element && !element.paused && !document.hidden),
+        position,
+        duration: (element && element.duration) || event.duration,
+        rate: Number(speedRef.current),
+      };
     });
     return () => setNowPlayingReader(null);
   }, [event]);
+
+  useEffect(() => {
+    notifyNowPlaying();
+  }, [playing, speed]);
+
+  useEffect(() => {
+    if (!videoElement) return undefined;
+    VIDEO_STATE_EVENTS.forEach((name) => videoElement.addEventListener(name, notifyNowPlaying));
+    document.addEventListener('visibilitychange', notifyNowPlaying);
+    return () => {
+      VIDEO_STATE_EVENTS.forEach((name) => videoElement.removeEventListener(name, notifyNowPlaying));
+      document.removeEventListener('visibilitychange', notifyNowPlaying);
+    };
+  }, [videoElement]);
 
   const showAspect = aspectRatio !== 'auto' || (videoRatio !== null && Math.abs(videoRatio - viewRatio) > 0.08);
 
@@ -569,6 +609,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     closeSelector,
     buttons,
     backButton,
+    hasControls: Boolean(recording),
     hasMultipleLanguages,
     hasSubtitles,
     setPlaying,
@@ -633,6 +674,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
     <div
       className={`player-wrapper ${controls.visible ? 'player-wrapper--controls-visible' : 'player-wrapper--controls-hidden'} ${closing ? 'player-wrapper--closing' : ''}`}
       onMouseMove={controls.show}
+      onPointerDown={(e) => { revealOnlyRef.current = e.pointerType === 'touch' && !controls.visible; }}
     >
       {!released && <video
         key={`${recording.url}#${sourceIndex}`}
@@ -641,7 +683,7 @@ export const Player = React.memo(function Player({ event, conferenceTitle, onClo
         src={videoUrl}
         playsInline
         style={{ objectFit: aspect.objectFit }}
-        onClick={() => setPlaying((value) => !value)}
+        onClick={tapVideo}
         onPlay={() => setPlaying(true)}
         onPause={handlePause}
         onEnded={handleEnded}

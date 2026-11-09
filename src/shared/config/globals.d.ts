@@ -5,8 +5,8 @@ declare module '*.css';
 
 interface Window {
   __cccbibReady?: () => void;
-  webOSSystem?: { launchParams?: string };
-  PalmSystem?: { launchParams?: string };
+  webOSSystem?: { launchParams?: string; activate?: () => void };
+  PalmSystem?: { launchParams?: string; activate?: () => void };
   PalmServiceBridge?: new () => {
     onservicecallback: (message: string) => void;
     call: (uri: string, params: string) => void;

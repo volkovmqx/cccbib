@@ -3,14 +3,14 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { Home } from './Home';
 import { EventCarousel } from './EventCarousel';
 import { conference, json, talk } from '../../../../tests/fixtures';
-import { formatDuration, type Talk } from '@/entities/talk';
+import { formatDuration, readFocusedTalk, type Talk } from '@/entities/talk';
 import { seedQuery, updateQuery } from '@/shared/api';
 import { setSetting } from '@/shared/config';
 import { replacePlaybackHistory, removePlaybackHistoryItem } from '@/features/playback-history';
 import type { RecentData } from '@/entities/conference';
 import type { CarouselApi } from '../model/types';
 
-const carousel = vi.hoisted(() => ({ options: {} as { startIndex?: number }, starts: [] as (number | undefined)[], canScrollPrev: vi.fn(() => false), canScrollNext: vi.fn(() => true), selectedScrollSnap: vi.fn(() => 0), slideNodes: vi.fn(() => [1, 2, 3]), scrollNext: vi.fn(), scrollPrev: vi.fn(), scrollTo: vi.fn(), reInit: vi.fn() }));
+const carousel = vi.hoisted(() => ({ options: {} as { startIndex?: number }, starts: [] as (number | undefined)[], canScrollPrev: vi.fn(() => false), canScrollNext: vi.fn(() => true), selectedScrollSnap: vi.fn(() => 0), slideNodes: vi.fn(() => [1, 2, 3]), scrollNext: vi.fn(), scrollPrev: vi.fn(), scrollTo: vi.fn(), reInit: vi.fn(), on: vi.fn(), off: vi.fn() }));
 vi.mock('embla-carousel-react', () => ({ default: (options: { startIndex?: number }) => { carousel.options = options; carousel.starts.push(options.startIndex); return [() => {}, carousel]; } }));
 vi.mock('@/widgets/player', () => ({ Player: ({ event, onClose }: { event: Talk; onClose: () => void }) => <button onClick={onClose}>Close {event.title}</button> }));
 vi.mock('@/entities/talk', async (importOriginal) => { const original = await importOriginal<typeof import('@/entities/talk')>(); return { ...original, formatDuration: vi.fn(original.formatDuration) }; });
@@ -59,7 +59,20 @@ test('home keeps selection while inactive and while the player opens', async () 
 
 const tiles = (container: HTMLElement) => [...container.querySelectorAll('.embla .embla__slide')];
 let cursor = 0;
-const move = (element: Element) => fireEvent.mouseMove(element, { clientX: (cursor += 1), clientY: 10 });
+const move = (element: Element) => fireEvent.mouseMove(element, { clientX: (cursor += 50), clientY: 10 });
+
+test('home tells which tile the remote is on, and nothing while the menu has the focus, the player is open or another screen shows', async () => {
+  const callbacks = props(); const view = render(<Home {...callbacks} />);
+  await tick();
+  expect(readFocusedTalk()?.title).toBe('A0');
+  key('ArrowRight'); expect(readFocusedTalk()?.title).toBe('B0');
+  view.rerender(<Home {...callbacks} sidebarFocused />); expect(readFocusedTalk()).toBeNull();
+  view.rerender(<Home {...callbacks} />); expect(readFocusedTalk()?.title).toBe('B0');
+  view.rerender(<Home {...callbacks} active={false} />); expect(readFocusedTalk()).toBeNull();
+  view.rerender(<Home {...callbacks} />);
+  key('Enter'); expect(readFocusedTalk()).toBeNull();
+  view.unmount(); expect(readFocusedTalk()).toBeNull();
+});
 
 test('home follows the pointer in the first row without scrolling it and opens a tile on click', async () => {
   const callbacks = props(); const view = render(<Home {...callbacks} />); await tick();
@@ -139,6 +152,54 @@ test('home rows scroll natively and the remote moves the selected row to the top
   expect(rowsView.scrollTop).toBe(400);
 });
 
+test('the up and down keys belong to the page, so the browser does not scroll the rows a second time', async () => {
+  const view = render(<Home {...props()} />); await tick();
+  expect(key('ArrowUp')).toBe(false);
+  for (let index = 0; index < 8; index += 1) { expect(key('ArrowDown')).toBe(false); await tick(); }
+  expect(key('ArrowUp')).toBe(false);
+  view.rerender(<Home {...props()} active={false} />);
+  expect(key('ArrowDown')).toBe(true);
+  expect(key('ArrowUp')).toBe(true);
+  view.rerender(<Home {...props()} sidebarFocused />);
+  expect(key('ArrowDown')).toBe(true);
+});
+
+test('home puts the selected row back in view when the page comes back, its scroller starts at the top again', async () => {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const list = this.parentElement;
+    const isRow = Boolean(list && list.classList.contains('embla__container_vertical'));
+    const rowsView = this.closest('.homeRows') as HTMLElement | null;
+    const top = isRow ? Array.prototype.indexOf.call(list!.children, this) * 400 - (rowsView ? rowsView.scrollTop : 0) : 0;
+    return { top, bottom: top, left: 0, right: 0, width: 0, height: 400, x: 0, y: top, toJSON: () => ({}) } as DOMRect;
+  });
+  const callbacks = props(); const view = render(<Home {...callbacks} />); await tick();
+  for (let i = 0; i < 3; i += 1) { key('ArrowDown'); await tick(); }
+  expect(scroller(view.container).scrollTop).toBe(1200);
+  view.rerender(<Home {...callbacks} active={false} />);
+  expect(view.container).toBeEmptyDOMElement();
+  view.rerender(<Home {...callbacks} />);
+  expect(scroller(view.container).scrollTop).toBe(1200);
+  expect(screen.getByTestId('preview')).toHaveTextContent('A3');
+});
+
+test('a swipe that moves a row without a key or a hover builds the slides where it stops', () => {
+  const refs = { current: [] as CarouselApi[] };
+  const value = conference({ lectures: { nodes: Array.from({ length: 30 }, (_, index) => talk({ guid: `s${index}`, title: `S${index}` })) } });
+  render(<EventCarousel eventApis={refs} events={value} activeEvent={0} rowIndex={0} conferenceTitle="Conference" />);
+  const titles = () => [...document.querySelectorAll('.embla__slide__title')].map((title) => title.textContent);
+  expect(titles()).toContain('S5');
+  expect(titles()).not.toContain('S6');
+  const follow = carousel.on.mock.calls.find(([name]) => name === 'select')![1] as () => void;
+  carousel.selectedScrollSnap.mockReturnValue(12);
+  act(() => follow());
+  expect(titles()).toEqual(expect.arrayContaining(['S0', 'S5', 'S7', 'S12', 'S17']));
+  expect(titles()).not.toContain('S6');
+  expect(titles()).not.toContain('S18');
+  carousel.selectedScrollSnap.mockReturnValue(0);
+  act(() => follow());
+  expect(titles()).not.toContain('S12');
+});
+
 test('the home bar can be grabbed, pressing and dragging its thumb scrolls the rows', async () => {
   const view = render(<Home {...props()} />); await tick();
   const rowsView = scroller(view.container);
@@ -163,6 +224,27 @@ test('the home bar can be grabbed, pressing and dragging its thumb scrolls the r
   fireEvent.mouseDown(bar, { clientY: 10 });
   view.unmount();
   fireEvent.mouseMove(window, { clientY: 600 });
+});
+
+test('the home bar is marked scrollable only while the rows have something to scroll and its end arrows scroll a step', async () => {
+  const view = render(<Home {...props()} />); await tick();
+  const rowsView = scroller(view.container);
+  const bar = view.container.querySelector('.pageScroll') as HTMLElement;
+  expect(bar).not.toHaveAttribute('data-scrollable');
+  layout(rowsView);
+  Object.defineProperty(rowsView, 'clientHeight', { configurable: true, value: 700 });
+  Object.defineProperty(rowsView, 'scrollHeight', { configurable: true, value: 2800 });
+  fireEvent.scroll(rowsView);
+  expect(bar).toHaveAttribute('data-scrollable');
+  const rect = { top: 20, bottom: 980, left: 0, right: 10, width: 10, height: 960, x: 0, y: 20, toJSON: () => ({}) };
+  bar.getBoundingClientRect = () => rect;
+  fireEvent.mouseDown(bar, { clientY: 990 });
+  expect(rowsView.scrollTop).toBe(84);
+  fireEvent.mouseDown(bar, { clientY: 5 });
+  expect(rowsView.scrollTop).toBe(0);
+  Object.defineProperty(rowsView, 'scrollHeight', { configurable: true, value: 700 });
+  fireEvent.scroll(rowsView);
+  expect(bar).not.toHaveAttribute('data-scrollable');
 });
 
 test('the home bar thumb follows the scrolled rows along the whole screen height', async () => {
@@ -266,6 +348,18 @@ test('continue watching preserves the selected talk when history changes', async
   expect(screen.getByTestId('preview')).toHaveTextContent('saved-a');
   act(() => { replacePlaybackHistory([]); });
   expect(screen.queryByText('Continue Watching')).not.toBeInTheDocument();
+});
+
+test('home can be browsed from the saved history while the network is down', async () => {
+  seedQuery('recent', undefined);
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Error('offline')));
+  replacePlaybackHistory(['saved-a', 'saved-b'].map(guid => ({ event: talk({ guid, title: guid }), conferenceTitle: 'Saved conference', positionSeconds: 100, durationSeconds: 600 })));
+  const callbacks = props(); render(<Home {...callbacks} />);
+  await tick();
+  expect(screen.getByTestId('preview')).toHaveTextContent('saved-a');
+  key('ArrowRight'); expect(screen.getByTestId('preview')).toHaveTextContent('saved-b');
+  key('ArrowLeft'); key('ArrowLeft');
+  expect(callbacks.onFocusSidebar).toHaveBeenCalled();
 });
 
 test('home handles initial failures, missing talks, and an absent startup callback', async () => {

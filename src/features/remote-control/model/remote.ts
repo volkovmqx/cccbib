@@ -5,7 +5,7 @@ type Handler = (command: RemoteCommand) => void;
 type Entry = { command: RemoteCommand; at: number };
 
 
-const APP_COMMANDS = ['play', 'add', 'remove', 'progress', 'progress-set', 'progress-clear'];
+const APP_COMMANDS = ['play', 'add', 'remove', 'progress', 'progress-set', 'progress-clear', 'mqtt'];
 const PLAYER_COMMANDS = ['pause', 'resume', 'toggle', 'seek', 'mute', 'aspect', 'speed', 'subtitle', 'language', 'stop'];
 const BACKLOG_MS = 20000;
 const STARTUP_DUPLICATE_MS = 3000;
@@ -70,7 +70,7 @@ function receive(raw: unknown, atStartup = false) {
   if (getSetting('remoteControl') === 'off') return;
   const command = parseCommand(raw);
   if (!command) return;
-  const key = JSON.stringify(command);
+  const key = JSON.stringify({ ...command, password: command.password && '*' });
   if (!atStartup && key === startupKey && Date.now() < startupUntil) return;
   if (atStartup) {
     startupKey = key;

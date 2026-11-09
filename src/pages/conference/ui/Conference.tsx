@@ -1,10 +1,12 @@
 import type { Conference } from '@/entities/conference';
+import type { Talk } from '@/entities/talk';
 import type { PlaybackPageProps } from '@/shared/ui';
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { isPointerDriven, pointerMoved, useMediaQuery, usePageTitle, useWindowEvent } from '@/shared/lib';
-import { useQuery } from '@/shared/api';
+import { graphqlRequest, updateQuery, useQuery } from '@/shared/api';
 import { useSetting } from '@/shared/config';
-import { GET_CONFERENCE } from '@/entities/conference';
+import { GET_CONFERENCE, mergeLectures } from '@/entities/conference';
+import { useFocusedTalk } from '@/entities/talk';
 import { Preview } from '@/widgets/talk-preview';
 import { Player } from '@/widgets/player';
 import { LoadingScreen, PageScrollbar, Spinner } from '@/shared/ui';
@@ -12,6 +14,37 @@ import { useTranslation } from '@/shared/i18n';
 
 const GRID_TILE_WIDTH = 400;
 const GRID_GAP = 16;
+const PAGE_RETRIES = 3;
+const PAGE_RETRY_MS = 3000;
+
+interface GridTileProps {
+  event: Talk; index: number; active: boolean; touch: boolean; compact: boolean;
+  selectedRef: React.RefObject<HTMLDivElement | null> | null;
+  onOpen: (index: number) => void; onHover: (index: number) => void;
+}
+
+// A key press changes two tiles, so the others keep their markup
+const GridTile = React.memo(function GridTile({ event, index, active, touch, compact, selectedRef, onOpen, onHover }: GridTileProps) {
+  return (
+    <div
+      ref={selectedRef}
+      className={`conferenceView__gridItem ${active ? 'conferenceView__gridItem--active' : ''}`}
+      onClick={touch ? undefined : () => onOpen(index)}
+      onMouseMove={(e) => { if (pointerMoved(e)) onHover(index); }}
+    >
+      <div className="conferenceView__gridItem__media" onClick={touch ? () => onOpen(index) : undefined}>
+        <img
+          src={event.images.thumbUrl}
+          alt={event.title}
+          className="conferenceView__gridItem__img"
+          loading="lazy"
+        />
+      </div>
+      <div className="conferenceView__gridItem__title">{event.title}</div>
+      {compact && event.description && <div className="conferenceView__gridItem__description">{event.description}</div>}
+    </div>
+  );
+});
 
 const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen, onClose }: PlaybackPageProps & { conferenceId: string }) {
   const t = useTranslation();
@@ -23,9 +56,33 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
   const selectedItemRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const { error, data } = useQuery<{ conference: Conference }>(`conference:${conferenceId}`, GET_CONFERENCE, { id: conferenceId }, { revalidate: false });
+  const queryKey = `conference:${conferenceId}`;
+  const { error, data } = useQuery<{ conference: Conference }>(queryKey, GET_CONFERENCE, { id: conferenceId }, { revalidate: false });
   const loading = !data && !error;
+  const pageInfo = data?.conference?.lectures?.pageInfo;
+  const nextPage = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
+  const [pageFailures, setPageFailures] = useState(0);
+  useEffect(() => {
+    if (!nextPage) return undefined;
+    let active = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    graphqlRequest<{ conference: Conference }>(GET_CONFERENCE, { id: conferenceId, after: nextPage })
+      .then((page) => {
+        if (!active) return;
+        setPageFailures(0);
+        updateQuery<{ conference: Conference }>(queryKey, (existing) => mergeLectures(existing, page));
+      })
+      .catch((err) => {
+        console.error('Failed to fetch more talks:', err);
+        if (active && pageFailures < PAGE_RETRIES) retry = setTimeout(() => setPageFailures(pageFailures + 1), PAGE_RETRY_MS);
+      });
+    return () => {
+      active = false;
+      clearTimeout(retry);
+    };
+  }, [nextPage, conferenceId, queryKey, pageFailures]);
   usePageTitle(data?.conference?.title);
+  useFocusedTalk(data?.conference?.lectures?.nodes?.[activeEvent], !sidebarFocused && !playerIsOpen);
 
   const [tileScale] = useSetting('tileScale');
   const [textScale] = useSetting('textScale');
@@ -58,9 +115,9 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
   }, [data, eventsPerRow, textScale, gridWidth]);
 
   // The window of rendered rows follows what is scrolled into view, so wheel and touch scrolling load rows too
-  const { visibleEvents, topSpacerHeight, bottomSpacerHeight, startRow, endRow } = useMemo(() => {
+  const { visibleEvents, startIndex, topSpacerHeight, bottomSpacerHeight, startRow, endRow } = useMemo(() => {
     if (!data?.conference?.lectures?.nodes) {
-      return { visibleEvents: [], topSpacerHeight: 0, bottomSpacerHeight: 0, startRow: 0, endRow: -1 };
+      return { visibleEvents: [], startIndex: 0, topSpacerHeight: 0, bottomSpacerHeight: 0, startRow: 0, endRow: -1 };
     }
 
     const events = data.conference.lectures.nodes;
@@ -75,10 +132,8 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
     const endIndex = Math.min(totalEvents, (endRow + 1) * eventsPerRow);
 
     return {
-      visibleEvents: events.slice(startIndex, endIndex).map((event, i) => ({
-        ...event,
-        originalIndex: startIndex + i
-      })),
+      visibleEvents: events.slice(startIndex, endIndex),
+      startIndex,
       topSpacerHeight: startRow * itemHeight,
       bottomSpacerHeight: Math.max(0, (totalRows - endRow - 1) * itemHeight),
       startRow,
@@ -161,7 +216,7 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
   // Keyboard navigation
   useWindowEvent('keydown', (e) => {
     if (!data || !data.conference || !data.conference.lectures) return;
-    const totalEvents = data.conference.lectures.nodes.length;
+    const totalEvents = data.conference.lectures.nodes?.length ?? 0;
 
     // Don't handle keyboard events when player is open (Player handles its own back/escape)
     if (playerIsOpen) return;
@@ -209,11 +264,11 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
     }
   });
 
-  const openTalk = (index: number) => {
+  const openTalk = useCallback((index: number) => {
     setActiveEvent(index);
     setPlayerIsOpen(true);
     setIsPlayerFullscreen(true);
-  };
+  }, [setIsPlayerFullscreen]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -223,7 +278,7 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
     return <p>{t('Error: {message}', { message: error.message })}</p>;
   }
 
-  if (!data || !data.conference || !data.conference.lectures || !data.conference.lectures.nodes.length) {
+  if (!data || !data.conference || !data.conference.lectures || !data.conference.lectures.nodes?.length) {
     return (
       <div className="center" style={{ height: '100vh' }}>
         <p>{t('No videos found for this conference.')}</p>
@@ -248,7 +303,7 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
           />
         </div>
       )}
-      <div className="fluidContainer" style={{ display: playerIsOpen ? 'none' : 'block' }}>
+      <div className={playerIsOpen ? 'fluidContainer pageUnderPlayer' : 'fluidContainer'}>
         {!compact && <Preview event={events[activeEvent]} disableVideo={playerIsOpen} />}
         <div className="conferenceView__container scrollable" ref={containerRef} onScroll={handleScroll} data-wheel="scroll" data-wheel-main>
           <div className="conferenceView__header">
@@ -267,25 +322,18 @@ const ConferenceView = React.memo(function ConferenceView({ conferenceId, onFocu
                 <div className="conferenceView__gridLoading"><Spinner /></div>
               </div>
             )}
-            {visibleEvents.map((event) => (
-              <div
+            {visibleEvents.map((event, i) => (
+              <GridTile
                 key={event.guid}
-                ref={event.originalIndex === activeEvent ? selectedItemRef : null}
-                className={`conferenceView__gridItem ${event.originalIndex === activeEvent ? 'conferenceView__gridItem--active' : ''}`}
-                onClick={touch ? undefined : () => openTalk(event.originalIndex)}
-                onMouseMove={(e) => { if (pointerMoved(e)) setActiveEvent(event.originalIndex); }}
-              >
-                <div className="conferenceView__gridItem__media" onClick={touch ? () => openTalk(event.originalIndex) : undefined}>
-                  <img
-                    src={event.images.thumbUrl}
-                    alt={event.title}
-                    className="conferenceView__gridItem__img"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="conferenceView__gridItem__title">{event.title}</div>
-                {compact && event.description && <div className="conferenceView__gridItem__description">{event.description}</div>}
-              </div>
+                event={event}
+                index={startIndex + i}
+                active={startIndex + i === activeEvent}
+                touch={touch}
+                compact={compact}
+                selectedRef={startIndex + i === activeEvent ? selectedItemRef : null}
+                onOpen={openTalk}
+                onHover={setActiveEvent}
+              />
             ))}
             {bottomSpacerHeight > 0 && (
               <div

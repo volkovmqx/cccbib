@@ -5,7 +5,7 @@ export interface Conference {
   updatedAt?: string;
   eventLastReleasedAt?: string;
   title: string;
-  lectures: { nodes: Talk[] };
+  lectures: { nodes: Talk[]; pageInfo?: { hasNextPage: boolean; endCursor: string | null } };
 }
 
 export interface RecentData {

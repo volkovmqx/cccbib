@@ -14,9 +14,10 @@
 @font-face { font-family: 'Jersey 10'; src: url('../../shared/branding/fonts/Jersey10.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
 @font-face { font-family: 'Silkscreen'; src: url('../../shared/branding/fonts/Silkscreen.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'VT323'; src: url('../../shared/branding/fonts/VT323.woff2') format('woff2'); font-display: swap; }
-@font-face { font-family: 'Geist Pixel'; src: url('../../shared/branding/fonts/GeistPixel.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Tiny5'; src: url('../../shared/branding/fonts/Tiny5-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Tiny5'; src: url('../../shared/branding/fonts/Tiny5-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Pixelify Sans'; src: url('../../shared/branding/fonts/PixelifySans-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Pixelify Sans'; src: url('../../shared/branding/fonts/PixelifySans-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 @font-face { font-family: 'Andika'; src: url('../../shared/branding/fonts/Andika-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Andika'; src: url('../../shared/branding/fonts/Andika-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 @font-face { font-family: 'Comic Neue'; src: url('../../shared/branding/fonts/ComicNeue-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
@@ -27,3 +28,9 @@
 @font-face { font-family: 'Atkinson Hyperlegible Next'; src: url('../../shared/branding/fonts/AtkinsonHyperlegibleNext-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 @font-face { font-family: 'Open Sans'; src: url('../../shared/branding/fonts/OpenSans-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Open Sans'; src: url('../../shared/branding/fonts/OpenSans-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Inclusive Sans'; src: url('../../shared/branding/fonts/InclusiveSans-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Inclusive Sans'; src: url('../../shared/branding/fonts/InclusiveSans-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Fira Sans'; src: url('../../shared/branding/fonts/FiraSans-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Fira Sans'; src: url('../../shared/branding/fonts/FiraSans-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Literata'; src: url('../../shared/branding/fonts/Literata-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Literata'; src: url('../../shared/branding/fonts/Literata-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }

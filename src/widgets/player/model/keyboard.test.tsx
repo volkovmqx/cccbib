@@ -49,6 +49,14 @@ test('player keys control playback, seeking, mute, selectors, and exit', () => {
   expect(ctx.openSelector).not.toHaveBeenCalled();
 });
 
+test('on the screen without controls the first Back leaves at once', () => {
+  const ctx = { ...context(), hasControls: false };
+  renderHook(() => usePlayerKeyboard(ctx));
+  key('Escape');
+  expect(ctx.onClose).toHaveBeenCalledTimes(1);
+  expect(ctx.controls.hide).not.toHaveBeenCalled();
+});
+
 test('player button focus wraps and disabled buttons do not execute', () => {
   const ctx = context(); ctx.controls.focus = { area: 'buttons', id: 'playpause' };
   const { rerender } = renderHook(({ value }) => usePlayerKeyboard(value), { initialProps: { value: ctx } });

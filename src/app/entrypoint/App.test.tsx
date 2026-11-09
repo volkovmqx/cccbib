@@ -7,14 +7,21 @@ import type { Talk } from '@/entities/talk';
 import type { RemoteCommand } from '@/features/remote-control';
 import { talk } from '../../../tests/fixtures';
 
-const commands = vi.hoisted(() => ({ list: vi.fn() }));
-vi.mock('@/app/model', () => ({ LIST_COMMANDS: ['add', 'remove', 'progress', 'progress-set', 'progress-clear'], applyListCommand: commands.list }));
+const commands = vi.hoisted(() => ({ list: vi.fn(), setMqtt: vi.fn(), clearMqtt: vi.fn() }));
+vi.mock('@/app/model', () => ({ LIST_COMMANDS: ['add', 'remove', 'progress', 'progress-set', 'progress-clear'], applyListCommand: commands.list, setMqtt: commands.setMqtt, clearMqtt: commands.clearMqtt }));
 vi.mock('@/entities/talk', async importOriginal => ({ ...await importOriginal<typeof import('@/entities/talk')>(), fetchTalk: vi.fn() }));
 vi.mock('../routing/Screens', () => ({ Screens: (props: { selectedItem: string; onFocusSidebar: () => void; onSelectItem: (item: string) => void; setIsPlayerFullscreen: (value: boolean) => void }) => <div>
   <span>Screen {props.selectedItem}</span><button onClick={props.onFocusSidebar}>Focus sidebar</button><button onClick={() => props.onSelectItem('search')}>Open search</button>
   <button onClick={() => props.setIsPlayerFullscreen(true)}>Play on screen</button><button onClick={() => props.setIsPlayerFullscreen(false)}>Stop on screen</button>
 </div> }));
-vi.mock('@/widgets/player', () => ({ Player: ({ event, onClose }: { event: Talk; onClose: () => void }) => <button onClick={onClose}>Close {event.title}</button> }));
+const mounted = vi.hoisted(() => ({ count: 0 }));
+vi.mock('@/widgets/player', async () => {
+  const { useState } = await import('react');
+  return { Player: ({ event, onClose, onClosing, startAt }: { event: Talk; onClose: () => void; onClosing?: () => void; startAt?: number }) => {
+    const [number] = useState(() => { mounted.count += 1; return mounted.count; });
+    return <><button onClick={onClose}>Close {event.title}</button><button onClick={onClosing}>Closing {event.title}</button><span>Player {number} start {String(startAt)}</span></>;
+  } };
+});
 const send = async (command: RemoteCommand) => act(async () => { dispatchCommand(command); });
 beforeEach(() => { vi.useFakeTimers(); vi.mocked(fetchTalk).mockResolvedValue(talk()); commands.list.mockReset(); });
 
@@ -90,13 +97,33 @@ test('app opens remote talks, queues extras, updates the same talk, and restores
   await send({ cmd: 'play', link: 'media.ccc.de/v/talk', start: 40, aspect: 'stretch' });
   expect(player).toHaveBeenCalledWith({ cmd: 'seek', to: 40 });
   expect(player).toHaveBeenCalledWith({ cmd: 'aspect', value: 'stretch' });
+  player.mockClear();
   await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(player.mock.calls.map(call => call[0].cmd)).toEqual(['resume']);
   vi.mocked(fetchTalk).mockResolvedValue(talk({ guid: 'other', title: 'Other' }));
   await send({ cmd: 'play', link: 'media.ccc.de/v/other' });
   expect(screen.getByText('Close Other')).toBeVisible();
   fireEvent.click(screen.getByText('Close Other'));
   expect(screen.getByText('Screen recent')).toBeVisible();
   stop();
+});
+
+test('a talk sent again while the same talk is closing starts a new player instead of resuming the closing one', async () => {
+  mounted.count = 0;
+  render(<App />);
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(screen.getByText('Player 1 start undefined')).toBeVisible();
+  fireEvent.click(screen.getByText('Closing Test talk'));
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk', start: 30 });
+  expect(screen.getByText('Player 2 start 30')).toBeVisible();
+  expect(screen.queryByText('Player 1 start undefined')).not.toBeInTheDocument();
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(screen.getByText('Player 2 start 30')).toBeVisible();
+  fireEvent.click(screen.getByText('Closing Test talk'));
+  fireEvent.click(screen.getByText('Close Test talk'));
+  expect(screen.getByText('Screen recent')).toBeVisible();
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(screen.getByText('Player 3 start undefined')).toBeVisible();
 });
 
 test('app displays remote failures and each list result and clears notices', async () => {
@@ -111,4 +138,35 @@ test('app displays remote failures and each list result and clears notices', asy
   }
   await act(async () => { await vi.advanceTimersByTimeAsync(3500); });
   expect(document.querySelector('.remote-notice')).not.toBeInTheDocument();
+});
+
+test('the mqtt command saves a valid broker with its login, clears it without an address and reports an invalid one', async () => {
+  render(<App />);
+  commands.setMqtt.mockReturnValueOnce(true).mockReturnValueOnce(false);
+  await send({ cmd: 'mqtt', url: 'ws://broker:9001', username: 'user', password: 'secret' });
+  expect(commands.setMqtt).toHaveBeenCalledWith('ws://broker:9001', 'user', 'secret');
+  expect(screen.getByText('MQTT broker saved')).toBeVisible();
+  await send({ cmd: 'mqtt', url: 'nonsense' });
+  expect(screen.getByText('Invalid MQTT broker address')).toBeVisible();
+  await send({ cmd: 'mqtt' });
+  expect(commands.clearMqtt).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('MQTT broker cleared')).toBeVisible();
+});
+
+test('only a talk to play brings the app to the front when it was running behind another app', async () => {
+  const activate = vi.fn();
+  vi.stubGlobal('webOSSystem', { activate });
+  render(<App />);
+  commands.list.mockResolvedValue({ kind: 'added', title: 'Result' });
+  await send({ cmd: 'add', link: 'media.ccc.de/v/talk' });
+  await send({ cmd: 'mqtt' });
+  expect(activate).not.toHaveBeenCalled();
+  vi.mocked(fetchTalk).mockRejectedValueOnce(Error('404'));
+  await send({ cmd: 'play', link: 'missing' });
+  expect(activate).not.toHaveBeenCalled();
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(activate).toHaveBeenCalledTimes(1);
+  await send({ cmd: 'play', link: 'media.ccc.de/v/talk' });
+  expect(activate).toHaveBeenCalledTimes(2);
+  vi.unstubAllGlobals();
 });

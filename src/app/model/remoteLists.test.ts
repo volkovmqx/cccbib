@@ -56,7 +56,7 @@ test('progress converts percentages and clears positions below ten seconds', asy
 });
 
 test('progress seeks a talk opened by any player', async () => {
-  setNowPlayingReader(() => ({ event: talk, playing: true, position: 0, duration: 600 }));
+  setNowPlayingReader(() => ({ event: talk, playing: true, running: true, position: 0, duration: 600, rate: 1 }));
   let position;
   await applyListCommand({ cmd: 'progress', link, position: 400 }, (seconds) => { position = seconds; });
   assert.equal(position, 400);
@@ -64,7 +64,7 @@ test('progress seeks a talk opened by any player', async () => {
 });
 
 test('progress saves another talk without seeking the current player', async () => {
-  setNowPlayingReader(() => ({ event: { ...talk, guid: 'other' }, playing: true, position: 0, duration: 600 }));
+  setNowPlayingReader(() => ({ event: { ...talk, guid: 'other' }, playing: true, running: true, position: 0, duration: 600, rate: 1 }));
   await applyListCommand({ cmd: 'progress', link, position: 100 }, () => assert.fail('Unexpected seek'));
   assert.equal(readPlaybackHistory()[0].positionSeconds, 100);
 });

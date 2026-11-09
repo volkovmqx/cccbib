@@ -1,7 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
-const { injectBoot } = require('./tools/index-html');
+const { injectBoot, BOOT_FILES } = require('./tools/index-html');
 const appInfo = require('./assets/appinfo.json');
 
 module.exports = {
@@ -67,6 +67,11 @@ module.exports = {
     },
   },
   plugins: [
+    {
+      apply: (compiler) => compiler.hooks.thisCompilation.tap('BootFiles', (compilation) => {
+        BOOT_FILES.forEach((file) => compilation.fileDependencies.add(file));
+      }),
+    },
     new webpack.DefinePlugin({
       APP_VERSION: JSON.stringify(appInfo.version),
       APP_ID: JSON.stringify(appInfo.id),
@@ -75,6 +80,7 @@ module.exports = {
       patterns: [
         { context: 'assets', from: '**/*' },
         { context: 'src/shared/branding/fonts', from: '*.{txt,md}', to: 'fonts' },
+        { context: 'src/shared/branding', from: 'pixelarticons-LICENSE.txt' },
         {
           context: 'src',
           from: 'index.html',

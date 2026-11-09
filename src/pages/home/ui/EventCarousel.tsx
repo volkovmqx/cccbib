@@ -1,6 +1,6 @@
 import type { Conference } from '@/entities/conference';
 import type { CarouselApi } from '../model/types';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { IconWorld, IconBadgeCc, IconAspectRatio } from '@tabler/icons-react';
 import { pointerMoved, useImagePreload } from '@/shared/lib';
@@ -149,6 +149,17 @@ export const EventCarousel = React.memo(function EventCarousel({
 
     const latest = useRef({ active, activeEvent: activeEvent || 0, rowIndex, onHover, onOpen });
     latest.current = { active, activeEvent: activeEvent || 0, rowIndex, onHover, onOpen };
+    // A swipe moves the row without a key or a hover, so the slides where it stops are built as well. With keys and hover the row stops at the selection and nothing changes here
+    const [swipedTo, setSwipedTo] = useState<number | null>(null);
+    useEffect(() => {
+      if (!emblaApi) return undefined;
+      const follow = () => {
+        const snap = emblaApi.selectedScrollSnap();
+        setSwipedTo(snap === latest.current.activeEvent ? null : snap);
+      };
+      emblaApi.on('select', follow);
+      return () => { emblaApi.off('select', follow); };
+    }, [emblaApi]);
     const pointSlide = useCallback((event: React.MouseEvent, ei: number) => {
       const { active: rowActive, activeEvent: current, rowIndex: row, onHover: hover } = latest.current;
       if (!hover || !pointerMoved(event) || (rowActive && ei === current)) return;
@@ -170,7 +181,7 @@ export const EventCarousel = React.memo(function EventCarousel({
         <div className="embla">
           <div className="embla__viewport" ref={emblaRef}>
             <div className="embla__container">
-              {events.lectures.nodes.map((e, ei) => (Math.abs(ei - center) > SLIDE_REACH ? <div key={ei} className="embla__slide" /> : (
+              {events.lectures.nodes.map((e, ei) => (Math.abs(ei - center) > SLIDE_REACH && (swipedTo === null || Math.abs(ei - swipedTo) > SLIDE_REACH) ? <div key={ei} className="embla__slide" /> : (
                 <Slide
                   key={ei}
                   lecture={e}

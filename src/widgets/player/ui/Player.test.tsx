@@ -8,7 +8,7 @@ import { dispatchCommand, queuePlayerCommand } from '@/features/remote-control';
 import type { RemoteCommand } from '@/features/remote-control';
 import { readPlaybackHistory } from '@/features/playback-history';
 import { readWatchlist } from '@/features/watchlist';
-import { readNowPlaying } from '../model/nowPlaying';
+import { readNowPlaying, subscribeNowPlaying } from '../model/nowPlaying';
 
 const subtitle = vi.hoisted(() => ({ status: 'idle', options: ['none', 'eng'], available: true }));
 vi.mock('../model/useOutputWindow', () => ({ useOutputWindow: vi.fn() }));
@@ -52,6 +52,53 @@ test('on a phone or tablet the player turns the screen to landscape and gives it
   expect(orientation.unlock).toHaveBeenCalledTimes(1);
   vi.unstubAllGlobals();
   Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true });
+});
+
+function asTouchDevice() {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(hover: none) and (pointer: coarse)', media: query, addListener() {}, removeListener() {} }));
+  Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true });
+}
+const touchTap = (element: Element) => {
+  const down = new Event('pointerdown', { bubbles: true });
+  Object.defineProperty(down, 'pointerType', { value: 'touch' });
+  act(() => { element.dispatchEvent(down); });
+  fireEvent.mouseMove(element.closest('.player-wrapper')!);
+  fireEvent.click(element);
+};
+
+test('a phone or tablet always gets the back arrow, whatever the setting says, because it has no key to leave with', async () => {
+  asTouchDevice();
+  setSetting('osdBackButton', 'off');
+  const view = setup();
+  await tick(200);
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  await tick(1000);
+  expect(view.onClose).toHaveBeenCalledTimes(1);
+  Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true });
+});
+
+test('on a touch screen the first tap on the picture of a hidden OSD shows the controls and the next one pauses', async () => {
+  asTouchDevice();
+  const view = setup();
+  await tick(200);
+  const wrapper = view.container.querySelector('.player-wrapper')!;
+  await tick(4500);
+  expect(wrapper).toHaveClass('player-wrapper--controls-hidden');
+  touchTap(view.video());
+  expect(wrapper).toHaveClass('player-wrapper--controls-visible');
+  expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+  touchTap(view.video());
+  expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+  Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true });
+});
+
+test('a click with a mouse or the Magic Remote on a hidden OSD still pauses at once', async () => {
+  const view = setup();
+  await tick(200);
+  await tick(4500);
+  expect(view.container.querySelector('.player-wrapper')).toHaveClass('player-wrapper--controls-hidden');
+  fireEvent.click(view.video());
+  expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
 });
 
 test('the player buttons follow the icon style, and the bookmark stays an outline until the talk is in the watchlist', () => {
@@ -434,4 +481,60 @@ test('a TV that refuses the speed goes back to normal speed with a notice', asyn
   expect(screen.getByText('Playback speed is not available on this device')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Speed: 1\u00d7' })).toBeInTheDocument();
   vi.unstubAllGlobals();
+});
+
+test('listeners hear when a talk starts, pauses, plays on and ends', async () => {
+  const heard = vi.fn();
+  const stop = subscribeNowPlaying(heard);
+  const view = setup(); const video = view.video();
+  expect(heard).toHaveBeenCalled();
+  await tick(200);
+  fireEvent.loadedMetadata(video); fireEvent.canPlay(video); fireEvent.playing(video);
+  heard.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+  expect(readNowPlaying()?.playing).toBe(false); expect(heard).toHaveBeenCalledTimes(1);
+  heard.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+  expect(readNowPlaying()?.playing).toBe(true); expect(heard).toHaveBeenCalledTimes(1);
+  heard.mockClear();
+  view.unmount();
+  expect(heard).toHaveBeenCalledTimes(1); expect(readNowPlaying()).toBeNull();
+  stop();
+});
+
+test('a resuming talk reports its saved position and is not running until the video plays from there', async () => {
+  const paused = vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(true);
+  const view = setup({ startAt: 120 }); const video = view.video();
+  expect(readNowPlaying()).toMatchObject({ playing: true, running: false, position: 120 });
+  fireEvent.loadedMetadata(video); fireEvent.loadedData(video);
+  fireEvent.seeked(video); fireEvent.seeked(video); await tick(150);
+  paused.mockReturnValue(false);
+  expect(readNowPlaying()).toMatchObject({ running: true });
+  expect(readNowPlaying()!.position).toBeCloseTo(120.01);
+  view.unmount();
+});
+
+test('listeners hear the video play, pause and seek, the page hide and a speed change, and the reader tells the speed and whether the video runs', async () => {
+  const paused = vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(false);
+  const hidden = vi.spyOn(document, 'hidden', 'get');
+  const heard = vi.fn();
+  const stop = subscribeNowPlaying(heard);
+  const view = setup(); const video = view.video();
+  await tick(200);
+  expect(readNowPlaying()).toMatchObject({ running: true, rate: 1 });
+  for (const fire of [fireEvent.play, fireEvent.pause, fireEvent.seeked]) {
+    heard.mockClear(); fire(video); expect(heard).toHaveBeenCalled();
+  }
+  paused.mockReturnValue(true);
+  expect(readNowPlaying()).toMatchObject({ running: false });
+  paused.mockReturnValue(false); hidden.mockReturnValue(true);
+  heard.mockClear(); act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(heard).toHaveBeenCalled(); expect(readNowPlaying()).toMatchObject({ running: false });
+  hidden.mockRestore();
+  heard.mockClear(); command({ cmd: 'speed', value: 1.5 });
+  expect(heard).toHaveBeenCalled(); expect(readNowPlaying()).toMatchObject({ rate: 1.5 });
+  view.unmount();
+  heard.mockClear(); act(() => { document.dispatchEvent(new Event('visibilitychange')); fireEvent.play(video); });
+  expect(heard).not.toHaveBeenCalled();
+  stop();
 });

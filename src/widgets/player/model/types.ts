@@ -13,8 +13,8 @@ export interface PlayerButton {
   onPress: () => void;
   disabled?: boolean;
 }
-export interface PlayerProps { event: Talk; conferenceTitle?: string; onClose: () => void; startAt?: number }
-export interface NowPlaying { event: Talk; playing: boolean; position: number; duration: number }
+export interface PlayerProps { event: Talk; conferenceTitle?: string; onClose: () => void; onClosing?: () => void; startAt?: number }
+export interface NowPlaying { event: Talk; playing: boolean; running: boolean; position: number; duration: number; rate: number }
 export interface KeyboardContext {
   onClose: () => void;
   controls: ReturnType<typeof useControlsVisibility>;
@@ -27,6 +27,7 @@ export interface KeyboardContext {
   closeSelector: () => void;
   buttons: PlayerButton[];
   backButton: boolean;
+  hasControls?: boolean;
   hasMultipleLanguages: boolean;
   hasSubtitles: boolean;
   setPlaying: Dispatch<SetStateAction<boolean>>;

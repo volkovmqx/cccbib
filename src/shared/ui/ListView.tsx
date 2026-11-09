@@ -1,36 +1,43 @@
-import React, { useRef, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { LoadingScreen } from './Spinner';
 import { isPointerDriven, pointerMoved, useListNavigation } from '@/shared/lib';
 import { useTranslation } from '@/shared/i18n';
+
+// near turns true once the row is within reach of the list's view, Chrome 68 loads every loading="lazy" image at once
+type RenderItem<T> = (item: T, index: number, near: boolean) => React.ReactNode;
+type Watch = (row: Element, onNear: () => void) => (() => void) | undefined;
 
 interface ListViewProps<T> {
  title: string; items: T[]; loading?: boolean; error?: string | null; emptyIcon?: React.ReactNode;
  emptyMessage?: string; selectedIndex: number; setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
  onClose: () => void; onSelect: (item: T, index: number) => void; onFocusSidebar: () => void;
- sidebarFocused: boolean; disabled?: boolean; renderItem: (item: T, index: number) => React.ReactNode;
+ sidebarFocused: boolean; disabled?: boolean; renderItem: RenderItem<T>;
  className?: string; itemClassName?: string; selectedItemClassName?: string; countLabel?: string | null;
 }
 
-
-
-
-
 interface ListRowProps<T> {
   item: T; index: number; selected: boolean; className?: string; selectedClassName?: string;
-  selectedRef: React.RefObject<HTMLDivElement | null> | null; renderItem: (item: T, index: number) => React.ReactNode;
+  selectedRef: React.RefObject<HTMLDivElement | null> | null; renderItem: RenderItem<T>; watch?: Watch;
   onSelect: (item: T, index: number) => void; onHover: (index: number) => void;
 }
 
 // A key press changes the selection of two rows, so the others keep their markup
-const ListRow = React.memo(function ListRow<T>({ item, index, selected, className = '', selectedClassName = '', selectedRef, renderItem, onSelect, onHover }: ListRowProps<T>) {
+const ListRow = React.memo(function ListRow<T>({ item, index, selected, className = '', selectedClassName = '', selectedRef, renderItem, watch, onSelect, onHover }: ListRowProps<T>) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [near, setNear] = useState(!watch);
+  useEffect(() => (near || !watch || !rowRef.current ? undefined : watch(rowRef.current, () => setNear(true))), [near, watch]);
+  const setRef = useCallback((node: HTMLDivElement | null) => {
+    rowRef.current = node;
+    if (selectedRef) selectedRef.current = node;
+  }, [selectedRef]);
   return (
     <div
-      ref={selectedRef}
+      ref={setRef}
       className={`listItem ${className} ${selected ? `listItem--selected ${selectedClassName}` : ''}`}
       onClick={() => onSelect(item, index)}
       onMouseMove={(e) => { if (pointerMoved(e)) onHover(index); }}
     >
-      {renderItem(item, index)}
+      {renderItem(item, index, near)}
     </div>
   );
 }) as <T>(props: ListRowProps<T>) => React.ReactElement;
@@ -40,7 +47,9 @@ const VIRTUALIZATION_THRESHOLD = 150;
 const WINDOW_SIZE = 150;
 const SHIFT_THRESHOLD = 30;
 const ESTIMATED_ITEM_HEIGHT = 120;
+const MIN_ITEM_HEIGHT = 20;
 const SCROLL_PADDING = 15;
+const LOOKAHEAD_PX = 800;
 
 // Custom scroll function that adds padding to avoid border clipping
 const scrollItemIntoView = (itemRef: React.RefObject<HTMLElement | null>, containerRef: React.RefObject<HTMLElement | null>) => {
@@ -86,32 +95,70 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isInitialMount = useRef(true);
 
+  const nearRows = useRef(new Map<Element, () => void>());
+  const observer = useRef<{ root: Element; io: IntersectionObserver } | null>(null);
+  const watch = useMemo<Watch | undefined>(() => (typeof IntersectionObserver === 'undefined' ? undefined : (row, onNear) => {
+    const root = containerRef.current;
+    if (!root) return undefined;
+    if (!observer.current || observer.current.root !== root) {
+      if (observer.current) observer.current.io.disconnect();
+      const io = new IntersectionObserver((entries) => entries.forEach((entry) => {
+        const reached = entry.isIntersecting ? nearRows.current.get(entry.target) : undefined;
+        if (!reached) return;
+        nearRows.current.delete(entry.target);
+        io.unobserve(entry.target);
+        reached();
+      }), { root, rootMargin: `${LOOKAHEAD_PX}px 0px` });
+      observer.current = { root, io };
+    }
+    const { io } = observer.current;
+    nearRows.current.set(row, onNear);
+    io.observe(row);
+    return () => { nearRows.current.delete(row); io.unobserve(row); };
+  }), []);
+  useEffect(() => () => { if (observer.current) observer.current.io.disconnect(); }, []);
+
   const shouldVirtualize = items.length > VIRTUALIZATION_THRESHOLD;
+
+  // The spacers stand for the rows that are not built, they use the height the rows really have so that moving the window does not move the list
+  const [rowHeight, setRowHeight] = useState(ESTIMATED_ITEM_HEIGHT);
+  const rowHeightRef = useRef(rowHeight);
+  rowHeightRef.current = rowHeight;
 
   // Window state for virtualization
   const [windowStart, setWindowStart] = useState(() =>
     Math.max(0, selectedIndex - Math.floor(WINDOW_SIZE / 2))
   );
+  const windowStartRef = useRef(windowStart);
+  windowStartRef.current = windowStart;
+  const alignSelection = useRef(false);
+
+  // Where the window goes for an index, null while the index is well inside it
+  const windowAround = (index: number) => {
+    const start = windowStartRef.current;
+    const end = Math.min(start + WINDOW_SIZE - 1, items.length - 1);
+    if (index - start < SHIFT_THRESHOLD && start > 0) return Math.max(0, index - Math.floor(WINDOW_SIZE / 2));
+    if (end - index < SHIFT_THRESHOLD && end < items.length - 1) return Math.max(0, Math.min(index - Math.floor(WINDOW_SIZE / 2), items.length - WINDOW_SIZE));
+    return null;
+  };
 
   // Shift window when selection approaches edges (only if virtualizing)
   useEffect(() => {
     if (!shouldVirtualize || items.length === 0) return;
+    const next = windowAround(selectedIndex);
+    if (next === null) return;
+    alignSelection.current = true;
+    setWindowStart(next);
+  }, [selectedIndex, items.length, shouldVirtualize]);
 
-    const windowEnd = Math.min(windowStart + WINDOW_SIZE - 1, items.length - 1);
-    const distanceFromStart = selectedIndex - windowStart;
-    const distanceFromEnd = windowEnd - selectedIndex;
-
-    if (distanceFromStart < SHIFT_THRESHOLD && windowStart > 0) {
-      const newStart = Math.max(0, selectedIndex - Math.floor(WINDOW_SIZE / 2));
-      setWindowStart(newStart);
-    } else if (distanceFromEnd < SHIFT_THRESHOLD && windowEnd < items.length - 1) {
-      const newStart = Math.max(0, Math.min(
-        selectedIndex - Math.floor(WINDOW_SIZE / 2),
-        items.length - WINDOW_SIZE
-      ));
-      setWindowStart(newStart);
-    }
-  }, [selectedIndex, windowStart, items.length, shouldVirtualize]);
+  // Touch, the scrollbar and the wheel move the list without the selection, the window follows what is on screen
+  const followScroll = () => {
+    const container = containerRef.current;
+    if (!shouldVirtualize || !container) return;
+    const middle = Math.floor((container.scrollTop + container.clientHeight / 2) / rowHeightRef.current);
+    const next = windowAround(Math.min(items.length - 1, Math.max(0, middle)));
+    if (next !== null) setWindowStart(next);
+  };
 
   // Reset window when items change
   useEffect(() => {
@@ -144,6 +191,23 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
     }
   }, [selectedIndex]);
 
+  // A jump across the list (up on the first row, down on the last) moves the window after the key press, the selected row only exists from that render on
+  useLayoutEffect(() => {
+    if (!alignSelection.current) return;
+    alignSelection.current = false;
+    if (!isPointerDriven()) scrollItemIntoView(selectedItemRef, containerRef);
+  }, [windowStart, rowHeight]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!shouldVirtualize || !container) return;
+    const rows = container.querySelectorAll<HTMLElement>('.listItem');
+    const pitch = (rows[rows.length - 1].offsetTop - rows[0].offsetTop) / (rows.length - 1);
+    if (!(pitch >= MIN_ITEM_HEIGHT) || Math.abs(pitch - rowHeightRef.current) <= 1) return;
+    alignSelection.current = true;
+    setRowHeight(pitch);
+  }, [windowStart, items.length, shouldVirtualize]);
+
   // Calculate visible items
   const windowEnd = shouldVirtualize
     ? Math.min(windowStart + WINDOW_SIZE - 1, items.length - 1)
@@ -152,9 +216,9 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
   const visibleItems = shouldVirtualize
     ? items.slice(windowStart, windowEnd + 1)
     : items;
-  const topSpacerHeight = shouldVirtualize ? windowStart * ESTIMATED_ITEM_HEIGHT : 0;
+  const topSpacerHeight = shouldVirtualize ? windowStart * rowHeight : 0;
   const bottomSpacerHeight = shouldVirtualize
-    ? Math.max(0, (items.length - 1 - windowEnd)) * ESTIMATED_ITEM_HEIGHT
+    ? Math.max(0, (items.length - 1 - windowEnd)) * rowHeight
     : 0;
 
   const handleSelect = useCallback((index: number) => {
@@ -209,7 +273,7 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
           <p className={`${className}__count`}>{countLabel}</p>
         )}
       </div>
-      <div className={`${className}__list scrollable`} ref={containerRef} data-wheel="scroll" data-wheel-main>
+      <div className={`${className}__list scrollable`} ref={containerRef} onScroll={followScroll} data-wheel="scroll" data-wheel-main>
         {topSpacerHeight > 0 && (
           <div style={{ height: topSpacerHeight }} aria-hidden="true" />
         )}
@@ -225,6 +289,7 @@ function ListViewComponent<T extends { guid?: string; slug?: string; acronym?: s
               selectedClassName={selectedItemClassName}
               selectedRef={actualIndex === selectedIndex ? selectedItemRef : null}
               renderItem={renderItem}
+              watch={watch}
               onSelect={selectItem}
               onHover={setSelectedIndex}
             />

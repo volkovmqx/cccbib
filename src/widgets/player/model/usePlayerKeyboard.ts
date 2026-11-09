@@ -56,7 +56,7 @@ function handleKey(e: KeyboardEvent, ref: React.RefObject<KeyboardContext>) {
 
   if (isBack(e)) {
     consume();
-    if (controls.visible || controls.focus.area !== 'none') controls.hide();
+    if (ctx.hasControls !== false && (controls.visible || controls.focus.area !== 'none')) controls.hide();
     else ctx.onClose();
     return;
   }

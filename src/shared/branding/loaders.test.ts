@@ -88,7 +88,7 @@ test('the boot screen gets the voctocat, the loading animation styles and their 
   expect(html).toContain('<!--CANVAS_CSS-->');
   const built = injectBoot(html);
   expect(built).not.toMatch(/<!--(?:VOCTOCAT|LOADER_CSS|LOADER_MARKUP|CANVAS_CSS)-->/);
-  for (const theme of ['ambient', 'ember', 'sunset', 'frost', 'paper', 'nocturne', 'abyss', 'cyberpunk', 'terminal', 'chicago']) expect(built, theme).toContain(`html[data-theme='${theme}']`);
+  for (const theme of ['ambient', 'eris', 'paper', 'cyberpunk', 'terminal', 'kallisti', 'bbs', 'btx', 'chicago', 'luna', 'aero', 'aqua']) expect(built, theme).toContain(`html[data-theme='${theme}']`);
   expect(built).toContain("html[data-canvas='glow'] #boot { background: var(--canvas), var(--bg); }");
   for (const { code } of LOADER_STYLES) expect(built, String(code)).toContain(`.loader-${code}`);
   const script = /var markup = (\{.*\});/.exec(built);
@@ -112,6 +112,18 @@ test('the rocket of the CCC logo flies diagonally, its flame swells in bursts an
   expect(keyframesOf('rocket-puff')).toContain('opacity');
   const delays = [...css.matchAll(/\.loader-rocket \.puff\.([abc]) \{[^}]*animation-delay: (-?[\d.]+)s/g)].map(match => Number(match[2]));
   expect(delays).toEqual([-0.8, -0.4]);
-  expect(SPINNER_STYLES.map(style => style.code).slice(0, 3)).toEqual(['orbit', 'rocket', 'glider']);
+  expect(SPINNER_STYLES.map(style => style.code).slice(0, 4)).toEqual(['kallisti', 'orbit', 'rocket', 'glider']);
 });
 
+
+test('the golden apple is drawn in the text colour with an accent leaf and rocks, and the Sacred Chao keeps its two symbols upright', () => {
+  expect(css).toMatch(/\.loader-kallisti i\s*\{[^}]*mask:\s*url\(/);
+  expect(css).toMatch(/\.loader-kallisti i\s*\{[^}]*background:\s*var\(--text\)/);
+  expect(css).toMatch(/\.loader-kallisti i \+ i\s*\{[^}]*background:\s*var\(--accent\)/);
+  expect(entries.kallisti.match(/<i><\/i>/g)).toHaveLength(2);
+  expect(css).toMatch(/\.loader-kallisti i\s*\{[^}]*animation:\s*loader-wobble/);
+  expect(keyframesOf('loader-wobble')).toContain('rotate(');
+  expect(entries.chao.match(/class="turn"/g)).toHaveLength(2);
+  expect(css).toMatch(/\.loader-chao \.spin\s*\{\s*animation:\s*spinner-rotate 14s linear infinite;/);
+  expect(css).toMatch(/\.loader-chao \.turn\s*\{\s*animation:\s*spinner-rotate 14s linear infinite reverse;/);
+});

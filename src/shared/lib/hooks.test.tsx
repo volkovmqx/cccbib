@@ -100,9 +100,9 @@ test('online status and scroll helpers follow browser state', () => {
   const item = document.createElement('div');
   scrollIntoView({ current: null }, null);
   scrollIntoView({ current: item }, null);
-  expect(item.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+  expect(item.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
   scrollIntoView({ current: item }, null, 'center');
-  expect(item.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+  expect(item.scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
 });
 
 

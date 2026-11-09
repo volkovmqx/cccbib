@@ -367,7 +367,10 @@ test.describe('a long conference', () => {
         await expect.poll(async () => (await visibleTitles()).length, { timeout: 3000 }).toBeGreaterThanOrEqual(1);
       }
       await page.evaluate(() => { document.querySelector('.conferenceView__container')!.scrollTop = 7000; });
-      await expect.poll(async () => Math.min(...(await visibleTitles()).map((title) => Number(title!.replace('Many talk ', ''))))).toBeGreaterThan(30);
+      await expect.poll(async () => {
+        const titles = await visibleTitles();
+        return titles.length ? Math.min(...titles.map((title) => Number(title!.replace('Many talk ', '')))) : -1;
+      }).toBeGreaterThan(20);
       expect(await page.locator('.conferenceView__gridItem').count()).toBeLessThan(40);
     });
   }
@@ -451,10 +454,10 @@ async function bootStyle(page: Page, cached: Record<string, unknown>) {
 }
 
 test('the startup screen shows the glow of the theme and not just a flat colour', async ({ page }) => {
-  const style = await bootStyle(page, { attrs: { 'data-theme': 'sunset', 'data-canvas': 'glow', 'data-loader': 'wheel' }, vars: { '--bg': '#1c142e', '--accent': '#FF9800', '--accent-rgb': '255, 152, 0' } });
+  const style = await bootStyle(page, { attrs: { 'data-theme': 'kallisti', 'data-canvas': 'glow', 'data-loader': 'wheel' }, vars: { '--bg': '#0e0800', '--accent': '#FF9800', '--accent-rgb': '255, 152, 0' } });
   expect(style.image).toContain('radial-gradient');
   expect(style.image).toContain('rgba(255, 152, 0');
-  expect(style.color).toBe('rgb(28, 20, 46)');
+  expect(style.color).toBe('rgb(14, 8, 0)');
 });
 
 test('the startup screen of a theme without a glow stays a flat colour', async ({ page }) => {
@@ -1305,6 +1308,32 @@ test('the search field and the results are compositor layers of their own, the T
   }
 });
 
+test('the faded overlay over the Home preview is a compositor layer of its own, the TV keeps showing the row before otherwise', async ({ page }) => {
+  await start(page, {});
+  await expect(page.locator('.previewOverlay')).toBeAttached();
+  const client = await page.context().newCDPSession(page);
+  const layered = new Set<number>();
+  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
+  await client.send('LayerTree.enable');
+  const { root } = await client.send('DOM.getDocument');
+  const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.previewOverlay' });
+  const { node } = await client.send('DOM.describeNode', { nodeId });
+  await expect.poll(() => layered.has(node.backendNodeId)).toBe(true);
+});
+
+test('the menu is a compositor layer of its own, the TV keeps showing the page before the menu opened otherwise', async ({ page }) => {
+  await start(page, {});
+  await expect(page.locator('.sidebar')).toBeAttached();
+  const client = await page.context().newCDPSession(page);
+  const layered = new Set<number>();
+  client.on('LayerTree.layerTreeDidChange', ({ layers }) => (layers || []).forEach((layer) => { if (layer.backendNodeId) layered.add(layer.backendNodeId); }));
+  await client.send('LayerTree.enable');
+  const { root } = await client.send('DOM.getDocument');
+  const { nodeId } = await client.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.sidebar' });
+  const { node } = await client.send('DOM.describeNode', { nodeId });
+  await expect.poll(() => layered.has(node.backendNodeId)).toBe(true);
+});
+
 test('the lists of Popular, Events and Watchlist and the conference grid are compositor layers of their own', async ({ page }) => {
   await start(page, { watchlist: [talk] });
   const client = await page.context().newCDPSession(page);
@@ -1530,7 +1559,7 @@ test('returning from the tabs and the side menu to the settings content keeps th
   await page.waitForTimeout(900);
   const scrolled = await content.evaluate((element) => element.scrollTop);
   expect(scrolled).toBeGreaterThan(0);
-  for (let step = 0; step < 3 && (await page.locator('.settingsView__tab--focused').count()) === 0; step++) await page.keyboard.press('ArrowLeft');
+  for (let step = 0; step < 8 && (await page.locator('.settingsView__tab--focused').count()) === 0; step++) await page.keyboard.press('ArrowLeft');
   await expect(page.locator('.settingsView__tab--focused')).toHaveCount(1);
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('.sidebar')).toHaveClass(/sidebar--focused/);

@@ -16,9 +16,17 @@ test.each([
   ['scanlines', 'scanlines', '"crt"', 'grille'],
   ['scanlines', 'scanlines', '"tube"', 'tube'],
   ['themeMode', 'themeMode', 'dark', 'dark'],
+  ['themeMode', 'themeMode', '"ember"', 'eris'],
+  ['themeMode', 'themeMode', '"sunset"', 'cyberpunk'],
+  ['themeMode', 'themeMode', '"copper"', 'cyberpunk'],
+  ['themeMode', 'themeMode', '"frost"', 'kallisti'],
+  ['themeMode', 'themeMode', '"nocturne"', 'btx'],
+  ['themeMode', 'themeMode', '"abyss"', 'bbs'],
   ['textScale', 'textScale', '1.5', 1.2],
   ['textScale', 'textScale', '"bad"', 1],
   ['uiFont', 'uiFont', '{}', 'default'],
+  ['uiFont', 'uiFont', '"geist-pixel"', 'pixelify'],
+  ['subtitleFont', 'subtitleFont', '"geist-pixel"', 'pixelify'],
 ] as const)('settings migrate and validate %s from %s', async (key, storedKey, raw, expected) => {
   vi.resetModules();
   localStorage.setItem(storedKey, raw);

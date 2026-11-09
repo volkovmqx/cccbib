@@ -70,15 +70,18 @@ export const THEME_MODES = [
   { code: 'tinted', name: 'Tinted' },
   { code: 'ambient', name: 'Ambient Glow' },
   { code: 'lighttinted', name: 'Light Tinted' },
-  { code: 'ember', name: 'Ember' },
-  { code: 'sunset', name: 'Sunset' },
-  { code: 'frost', name: 'Frost' },
+  { code: 'eris', name: 'Eris' },
   { code: 'paper', name: 'Paper' },
-  { code: 'nocturne', name: 'Nocturne' },
-  { code: 'abyss', name: 'Abyss' },
   { code: 'cyberpunk', name: 'Cyberpunk' },
   { code: 'terminal', name: 'Terminal' },
+  { code: 'kallisti', name: 'Kallisti' },
+  { code: 'bbs', name: 'BBS' },
+  { code: 'btx', name: 'Btx' },
   { code: 'chicago', name: 'Chicago' },
+  { code: 'luna', name: 'Luna' },
+  { code: 'aero', name: 'Aero' },
+  { code: 'aqua', name: 'Aqua' },
+  { code: 'oldschool', name: 'Oldschool' },
 ];
 
 export const ACCENT_COLORS = [
@@ -108,6 +111,7 @@ export const ACCENT_COLORS = [
 ];
 
 export const SPINNER_STYLES = [
+  { code: 'kallisti', name: 'Golden Apple' },
   { code: 'orbit', name: 'Twin Dots' },
   { code: 'rocket', name: 'Fairy Dust' },
   { code: 'glider', name: 'Glider' },
@@ -132,6 +136,8 @@ export const SPINNER_STYLES = [
   { code: 'chase', name: 'Chasing Dots' },
   { code: 'gears', name: 'Gears' },
   { code: 'hourglass', name: 'Hourglass' },
+  { code: 'chao', name: 'Sacred Chao' },
+  { code: 'eye', name: 'All-Seeing Eye' },
 ];
 
 export const LOADER_STYLES = [
@@ -216,6 +222,11 @@ export const ICON_VARIANTS = [
   { code: 'outlined', name: 'Outlined' },
   { code: 'filled', name: 'Filled' },
   { code: 'pixelated', name: 'Pixelated' },
+];
+
+export const MENU_LAYOUTS = [
+  { code: 'classic', name: 'Classic' },
+  { code: 'dock', name: 'Dock' },
 ];
 
 export const MENU_POSITIONS = [
@@ -321,17 +332,20 @@ export const UI_FONTS = [
   { code: 'vt323', name: 'VT323', family: 'VT323', scale: 1.15 },
   { code: 'jersey10', name: 'Jersey 10', family: 'Jersey 10', scale: 1.1 },
   { code: 'tiny5', name: 'Tiny5', family: 'Tiny5' },
-  { code: 'geist-pixel', name: 'Geist Pixel', family: 'Geist Pixel' },
+  { code: 'pixelify', name: 'Pixelify Sans', family: 'Pixelify Sans' },
   { code: 'inter', name: 'Inter', family: 'Inter' },
   { code: 'poppins', name: 'Poppins', family: 'Poppins' },
   { code: 'open-sans', name: 'Open Sans', family: 'Open Sans' },
+  { code: 'fira-sans', name: 'Fira Sans', family: 'Fira Sans', scale: 1.05 },
   { code: 'space-grotesk', name: 'Space Grotesk', family: 'Space Grotesk' },
   { code: 'lexend', name: 'Lexend', family: 'Lexend' },
   { code: 'atkinson', name: 'Atkinson Hyperlegible Next', family: 'Atkinson Hyperlegible Next', scale: 1.1 },
+  { code: 'inclusive-sans', name: 'Inclusive Sans', family: 'Inclusive Sans', scale: 1.1 },
   { code: 'andika', name: 'Andika', family: 'Andika' },
   { code: 'comic-neue', name: 'Comic Neue', family: 'Comic Neue', scale: 1.1 },
   { code: 'opendyslexic', name: 'OpenDyslexic', family: 'OpenDyslexic', scale: 0.85 },
   { code: 'print', name: 'Merriweather', family: 'Merriweather' },
+  { code: 'literata', name: 'Literata', family: 'Literata', scale: 1.1 },
   { code: 'typewriter', name: 'Courier Prime', family: 'Courier Prime' },
 ];
 
@@ -355,12 +369,16 @@ export const SETTING_DEFAULTS = {
   subtitleBackground: 'auto',
   previewVideo: 'still',
   remoteControl: 'off',
+  mqttUrl: '',
+  mqttUser: '',
+  mqttPassword: '',
   themeMode: 'black',
   accentColor: '#AAF40D',
   uiFont: 'default',
   loaderStyle: 'voctocat',
   railStyle: 'transparent',
   logoButton: 'off',
+  menuLayout: 'classic',
   menuPosition: 'top',
   iconVariant: 'outlined',
   glassSheen: 'gloss',

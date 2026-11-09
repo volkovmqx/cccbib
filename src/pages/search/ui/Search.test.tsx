@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
+import { readFocusedTalk } from '@/entities/talk';
 import { talk } from '../../../../tests/fixtures';
 import Search from './Search';
 import { searchLectures, getCachedSearch } from '../api/search';
@@ -156,3 +157,18 @@ test('with rows of different heights a key never moves the highlighted row again
   expect(moved.every((delta) => delta <= 0)).toBe(true);
 });
 
+
+test('a result is only the focused talk while the search is in front', async () => {
+  const props = callbacks();
+  vi.mocked(searchLectures).mockResolvedValue([talk()]);
+  const view = render(<Search {...props} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  expect(readFocusedTalk()?.title).toBe('Test talk');
+  view.rerender(<Search {...props} playerIsOpen />);
+  expect(readFocusedTalk()).toBeNull();
+  view.rerender(<Search {...props} />);
+  expect(readFocusedTalk()?.title).toBe('Test talk');
+  view.rerender(<Search {...props} sidebarFocused />);
+  expect(readFocusedTalk()).toBeNull();
+});

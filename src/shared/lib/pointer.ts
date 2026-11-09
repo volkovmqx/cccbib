@@ -4,8 +4,14 @@ const WHEEL_STEP_MS = 120;
 const RESCAN_MS = 100;
 const RESCAN_END_MS = 220;
 const LINE_PX = 40;
+const JITTER_PX = 10;
+const KEY_QUIET_MS = 400;
+const KEY_QUIET_PX = 40;
 let lastX = -1;
 let lastY = -1;
+let anchorX = -1;
+let anchorY = -1;
+let lastKeyAt = -Infinity;
 let lastEvent: Event | null = null;
 let lastMoved = false;
 let rescanEvent: Event | null = null;
@@ -16,19 +22,29 @@ function markPointerDriven() {
   pointerDriven = true;
   if (keyResetAttached) return;
   keyResetAttached = true;
-  window.addEventListener('keydown', () => { pointerDriven = false; }, true);
+  window.addEventListener('keydown', () => {
+    pointerDriven = false;
+    anchorX = lastX;
+    anchorY = lastY;
+    lastKeyAt = Date.now();
+  }, true);
 }
 
 export const isPointerDriven = () => pointerDriven;
 
-// Chrome repeats mousemove when content scrolls under a resting cursor
+// Chrome repeats mousemove when content scrolls under a resting cursor, and a hand holding the remote shakes the cursor a few pixels, most of all while it presses a key
 export function pointerMoved(event: { nativeEvent: Event; clientX: number; clientY: number }) {
   if (event.nativeEvent === lastEvent) return lastMoved;
   lastEvent = event.nativeEvent;
-  lastMoved = event.nativeEvent === rescanEvent || event.clientX !== lastX || event.clientY !== lastY;
+  const limit = Date.now() - lastKeyAt < KEY_QUIET_MS ? KEY_QUIET_PX : JITTER_PX;
+  lastMoved = event.nativeEvent === rescanEvent || anchorX < 0 || Math.hypot(event.clientX - anchorX, event.clientY - anchorY) >= limit;
   lastX = event.clientX;
   lastY = event.clientY;
-  if (lastMoved) markPointerDriven();
+  if (lastMoved) {
+    anchorX = lastX;
+    anchorY = lastY;
+    markPointerDriven();
+  }
   return lastMoved;
 }
 

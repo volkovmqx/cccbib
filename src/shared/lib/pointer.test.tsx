@@ -4,13 +4,33 @@ import { isPointerDriven, pointerMoved, useWheelNavigation } from './pointer';
 
 const at = (clientX: number, clientY: number) => ({ nativeEvent: new Event('mousemove'), clientX, clientY });
 
-test('a pointer move is recognised once per event and repeats at the same position are ignored', () => {
+test('a pointer move is recognised once per event, repeats at the same position and a shaking hand are ignored', () => {
   expect(pointerMoved(at(5, 5))).toBe(true);
   expect(pointerMoved(at(5, 5))).toBe(false);
-  const moved = at(9, 5);
+  expect(pointerMoved(at(9, 8))).toBe(false);
+  const moved = at(20, 5);
   expect(pointerMoved(moved)).toBe(true);
   expect(pointerMoved(moved)).toBe(true);
-  expect(pointerMoved(at(9, 6))).toBe(true);
+  expect(pointerMoved(at(21, 6))).toBe(false);
+  expect(pointerMoved(at(21, 40))).toBe(true);
+});
+
+test('a hand that shakes the cursor while it presses a key does not take the selection back from the key, a real move does', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(50000);
+  const { unmount } = renderHook(() => useWheelNavigation());
+  expect(pointerMoved(at(1000, 500))).toBe(true);
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+  expect(pointerMoved(at(1003, 502))).toBe(false);
+  expect(pointerMoved(at(1020, 500))).toBe(false);
+  expect(isPointerDriven()).toBe(false);
+  expect(pointerMoved(at(1045, 500))).toBe(true);
+  expect(isPointerDriven()).toBe(true);
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+  vi.advanceTimersByTime(450);
+  expect(pointerMoved(at(1049, 503))).toBe(false);
+  expect(pointerMoved(at(1060, 500))).toBe(true);
+  unmount();
 });
 
 test('the wheel steps through the focused list like the up and down keys, one step at a time, but not over the player', () => {
@@ -205,7 +225,7 @@ test('a selection that follows the pointer is flagged until the next key press',
   expect(isPointerDriven()).toBe(false);
   pointerMoved(at(700, 700));
   expect(isPointerDriven()).toBe(false);
-  pointerMoved(at(701, 700));
+  pointerMoved(at(760, 700));
   expect(isPointerDriven()).toBe(true);
   unmount();
 });

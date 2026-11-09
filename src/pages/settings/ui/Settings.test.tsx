@@ -99,7 +99,7 @@ test('going back to the content from the tabs or the side menu returns to the ro
   key('ArrowRight');
   expect(rows[2]).toHaveClass('settingsView__row--focused');
   expect(scroll).toHaveBeenCalledTimes(1);
-  expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+  expect(scroll).toHaveBeenCalledWith({ block: 'nearest' });
   key('ArrowLeft'); key('Enter');
   expect(rows[2]).toHaveClass('settingsView__row--focused');
   fireEvent.click(view.container.querySelectorAll('.settingsView__tab')[1]);
@@ -172,12 +172,26 @@ test('a row focused by the pointer is not scrolled to the centre but one focused
   fireEvent.mouseMove(rows[3], { clientX: 202, clientY: 302 });
   fireEvent.keyDown(window, { key: 'ArrowDown' });
   expect(rows[4]).toHaveClass('settingsView__row--focused');
-  expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+  expect(scroll).toHaveBeenCalledWith({ block: 'center' });
+});
+
+test('a pointer over an option chooses it and still reaches the page, so the side menu lets go', () => {
+  const page = vi.fn();
+  const view = render(<div onMouseMove={page}><Settings {...callbacks()} /></div>);
+  const indicator = screen.getByText('Indicator').closest('.settingsView__row')!;
+  const border = [...indicator.querySelectorAll('.settingsView__segment')].find(option => option.textContent === 'Border')!;
+  fireEvent.mouseMove(border, { clientX: 301, clientY: 5 });
+  expect(border).toHaveClass('settingsView__control--focused');
+  expect(page).toHaveBeenCalledTimes(1);
+  fireEvent.mouseMove(indicator.querySelector('.settingsView__rowLabel')!, { clientX: 400, clientY: 5 });
+  expect(indicator.querySelector('.settingsView__control--focused')).toHaveTextContent('Line');
+  expect(page).toHaveBeenCalledTimes(2);
+  view.unmount();
 });
 
 test('settings follow a moving pointer over tabs, rows, options, and the picker', () => {
   const view = render(<Settings {...callbacks()} />);
-  const move = (element: Element, x: number) => fireEvent.mouseMove(element, { clientX: x, clientY: 5 });
+  const move = (element: Element, x: number) => fireEvent.mouseMove(element, { clientX: x * 50, clientY: 5 });
   const tabs = [...view.container.querySelectorAll('.settingsView__tab')];
   move(tabs[1], 101);
   expect(tabs[1]).toHaveClass('settingsView__tab--active');
@@ -363,6 +377,36 @@ test.each([[false, 0], [true, 1]])('the menu position row only shows on a small 
     fireEvent.click(within(row as HTMLElement).getByText('Bottom'));
     expect(getSetting('menuPosition')).toBe('bottom');
   }
+  vi.unstubAllGlobals();
+});
+
+test('a row that goes away under the focus when the screen gets wider does not break the keys', () => {
+  const screenSize = { small: true };
+  const listeners: (() => void)[] = [];
+  vi.stubGlobal('matchMedia', () => ({ get matches() { return screenSize.small; }, addListener: (listener: () => void) => { listeners.push(listener); }, removeListener: vi.fn() }));
+  const view = render(<Settings {...callbacks()} />);
+  const names = () => [...view.container.querySelectorAll('.settingsView__rowName')].map((name) => name.textContent);
+  const allRows = [...view.container.querySelectorAll('.settingsView__row')];
+  expect(names()).toContain('Menu Position');
+  const lastRow = allRows[allRows.length - 1];
+  fireEvent.mouseMove(lastRow, { clientX: 301, clientY: 5 });
+  expect(lastRow).toHaveClass('settingsView__row--focused');
+  screenSize.small = false;
+  act(() => listeners.forEach((listener) => listener()));
+  expect(names()).not.toContain('Menu Position');
+  fireEvent.keyDown(window, { key: 'ArrowRight' });
+  fireEvent.keyDown(window, { key: 'Enter' });
+  expect(view.container.querySelector('.settingsView__row--focused')).toBeInTheDocument();
+  vi.unstubAllGlobals();
+});
+
+test.each([false, true])('the menu layout row shows on every screen size and switches the menu to a dock: %s', (small) => {
+  vi.stubGlobal('matchMedia', () => ({ matches: small, addListener: vi.fn(), removeListener: vi.fn() }));
+  const view = render(<Settings {...callbacks()} />);
+  const row = [...view.container.querySelectorAll('.settingsView__row')].find((item) => item.textContent?.startsWith('Menu Layout'))!;
+  expect(getSetting('menuLayout')).toBe('classic');
+  fireEvent.click(within(row as HTMLElement).getByText('Dock'));
+  expect(getSetting('menuLayout')).toBe('dock');
   vi.unstubAllGlobals();
 });
 

@@ -3,7 +3,7 @@ import { isWebOS } from './platform';
 type LockableOrientation = ScreenOrientation & { lock?: (type: string) => Promise<void> };
 
 // Input decides, not the width: a narrow desktop window and the TV do not count
-const isPhoneOrTablet = () => !isWebOS()
+export const isPhoneOrTablet = () => !isWebOS()
   && typeof window.matchMedia === 'function' && window.matchMedia('(hover: none) and (pointer: coarse)').matches
   && navigator.maxTouchPoints > 0;
 

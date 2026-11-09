@@ -5,19 +5,19 @@ import { IconHeartOff } from '@tabler/icons-react';
 import { Player } from '@/widgets/player';
 import { ListView } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
+import { useFocusedTalk } from '@/entities/talk';
 import { readWatchlist } from '@/features/watchlist';
 
 const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }: PlaybackPageProps) {
   const t = useTranslation();
-  const [watchlist, setWatchlist] = useState<Talk[]>([]);
+  const [watchlist, setWatchlist] = useState<Talk[]>(readWatchlist);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<Talk | null>(null);
   const playerIsOpen = selectedEvent !== null;
+  useFocusedTalk(watchlist[selectedIndex], !sidebarFocused && !playerIsOpen);
 
   useEffect(() => {
     const loadWatchlist = () => setWatchlist(readWatchlist());
-
-    loadWatchlist();
 
     window.addEventListener('storage', loadWatchlist);
     window.addEventListener('watchlistUpdate', loadWatchlist);
@@ -33,14 +33,13 @@ const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSideba
     setIsPlayerFullscreen(true);
   }, [setIsPlayerFullscreen]);
 
-  const renderItem = useCallback((event: Talk) => (
+  const renderItem = useCallback((event: Talk, _index: number, near: boolean) => (
     <>
       {event.images?.thumbUrl && (
         <img
-          src={event.images.thumbUrl}
-          alt={event.title}
+          src={near ? event.images.thumbUrl : undefined}
+          alt={near ? event.title : ''}
           className="watchlistView__thumbnail"
-          loading="lazy"
         />
       )}
       <div className="watchlistView__info">
@@ -66,7 +65,7 @@ const WatchlistView = React.memo(function WatchlistView({ onClose, onFocusSideba
           />
         </div>
       )}
-      <div style={{ display: playerIsOpen ? 'none' : 'block' }}>
+      <div className={playerIsOpen ? 'pageUnderPlayer' : undefined}>
         <ListView
           title={t('Watchlist')}
           items={watchlist}

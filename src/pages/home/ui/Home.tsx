@@ -3,6 +3,7 @@ import type { PlaybackPageProps } from '@/shared/ui';
 import type { CarouselApi, HomeRow, TalkSelection } from '../model/types';
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback, useDeferredValue } from 'react';
 import { GET_RECENT_CONFERENCES, RECENT_KEY, mergeRecent } from '@/entities/conference';
+import { useFocusedTalk } from '@/entities/talk';
 import { isWebOS, useMediaQuery, useWindowEvent } from '@/shared/lib';
 import { useQuery, graphqlRequest, updateQuery } from '@/shared/api';
 import { Preview } from '@/widgets/talk-preview';
@@ -105,6 +106,7 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
     const index = activeEvents[row.key] || 0;
     return { event: row.events.lectures.nodes[index] || null, conferenceTitle: row.conferenceTitleAt(index) };
   }, [rows, activeRow, activeEvents]);
+  useFocusedTalk(activeBrowseSelection.event, active && !sidebarFocused && !playerIsOpen);
 
   useEffect(() => {
     const previousHistory = previousPlaybackHistoryRef.current;
@@ -130,13 +132,20 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
     lastViewChangeRef.current = Date.now();
   }, [active]);
 
-  useLayoutEffect(() => {
-    if (!keyboardRowRef.current) return;
-    keyboardRowRef.current = false;
+  const alignActiveRow = () => {
     const scroller = scrollerRef.current;
     const row = scroller && scroller.firstElementChild && scroller.firstElementChild.children[activeRow];
     if (scroller && row) scroller.scrollTop = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+  };
+  useLayoutEffect(() => {
+    if (!keyboardRowRef.current) return;
+    keyboardRowRef.current = false;
+    alignActiveRow();
   }, [activeKey]);
+  // The page is not drawn while another one is open, so its scroller starts at the top again when it comes back
+  useLayoutEffect(() => {
+    if (active) alignActiveRow();
+  }, [active]);
 
   // Every row in the page costs the TV time on each key press, so only the rows around the screen are built and the others are a title
   // A row is built when it comes within reach, kept a little longer so going back does not build it again, and dropped beyond that
@@ -207,7 +216,7 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
   };
 
   useWindowEvent('keydown', (e) => {
-    if (!active || !data) return
+    if (!active || rows.length === 0) return
     if (sidebarFocused) return
     if (playerIsOpen) return
     const row = rows[activeRow];
@@ -240,8 +249,10 @@ export const Home = React.memo(function Home({ active, onReady, onFocusSidebar, 
         handleArrowLeft(api, activeEvents, row.key, setActiveEvents);
       }
     } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
       moveRow(1);
     } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
       moveRow(-1);
     }
   })

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const read = (file) => fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+const BOOT_FILES = ['voctocat.html', 'loaders.css', 'canvases.css', 'loaders.json'].map((name) => path.resolve(__dirname, '../src/shared/branding', name));
 
 function injectBoot(html) {
   const voctocat = read('src/shared/branding/voctocat.html').trim();
@@ -15,4 +16,4 @@ function injectBoot(html) {
     .replace('<!--LOADER_MARKUP-->', () => markup);
 }
 
-module.exports = { injectBoot };
+module.exports = { injectBoot, BOOT_FILES };

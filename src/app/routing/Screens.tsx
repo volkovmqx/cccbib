@@ -86,7 +86,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
             />
           </div>
         )}
-        <div style={{ display: selectedSearchEvent ? 'none' : 'block' }}>
+        <div className={selectedSearchEvent ? 'pageUnderPlayer' : undefined}>
           <LazyView>
             <Search
               onClose={() => {
@@ -97,6 +97,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
               onSelectEvent={setSelectedSearchEvent}
               onFocusSidebar={onFocusSidebar}
               sidebarFocused={sidebarFocused}
+              playerIsOpen={Boolean(selectedSearchEvent)}
             />
           </LazyView>
         </div>

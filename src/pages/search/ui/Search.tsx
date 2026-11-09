@@ -2,14 +2,14 @@ import type { Talk } from '@/entities/talk';
 import type { PageProps } from '@/shared/ui';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { isPointerDriven, pointerMoved, revealInList, useWindowEvent } from '@/shared/lib';
-import { formatSeconds } from '@/entities/talk';
+import { formatSeconds, useFocusedTalk } from '@/entities/talk';
 import { searchLectures, getCachedSearch, normalizeQuery } from '../api/search';
 import { Spinner } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
 
 const SEARCH_DEBOUNCE_MS = 200;
 
-const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused }: PageProps & { onSelectEvent: (talk: Talk) => void }) {
+const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused, playerIsOpen = false }: PageProps & { onSelectEvent: (talk: Talk) => void; playerIsOpen?: boolean }) {
   const t = useTranslation();
   const [query, setQuery] = useState('');
   const [submitCount, setSubmitCount] = useState(0);
@@ -17,6 +17,7 @@ const Search = React.memo(function Search({ onClose, onSelectEvent, onFocusSideb
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  useFocusedTalk(results[selectedIndex], !sidebarFocused && !playerIsOpen);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const resultsContainerRef = useRef<HTMLDivElement | null>(null);
   const selectedItemRef = useRef<HTMLDivElement | null>(null);

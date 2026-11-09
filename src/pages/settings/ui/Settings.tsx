@@ -3,10 +3,10 @@ import type { Settings as SettingsValues, SettingKey } from '@/shared/config';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { pointerMoved, useWindowEvent } from '@/shared/lib';
 import { IconCheck, IconChevronDown } from '@tabler/icons-react';
-import { NavIcon, isFilled } from '@/shared/ui';
+import { AppleGlyph, NavIcon, isFilled } from '@/shared/ui';
 import {
   LANGUAGES, UI_LANGUAGES, SUBTITLE_LANGUAGES, SUBTITLE_SIZES, SUBTITLE_COLORS, SUBTITLE_BACKGROUNDS, PREVIEW_VIDEO_OPTIONS, REMOTE_CONTROL_OPTIONS,
-  THEME_MODES, ACCENT_COLORS, UI_FONTS, SUBTITLE_FONTS, LOADER_STYLES, SPINNER_STYLES, RAIL_STYLES, GLASS_SHEEN, GLASS_TRANSPARENCY, MENU_COLORS, NAV_INDICATORS, ICON_VARIANTS, LOGO_BUTTONS, MENU_POSITIONS, BUTTON_STYLES, CORNER_STYLES, BORDER_WIDTHS, SCROLLBAR_SIZES, SCANLINES, SCALE_OPTIONS, TEXT_SCALE_OPTIONS, OSD_SCALE_OPTIONS, OSD_OPACITY_OPTIONS, OSD_MENU_OPACITY_OPTIONS, OSD_HANDLES, OSD_BAR_COLORS, OSD_TIME_MODES, OSD_BUTTON_SHAPES, OSD_IDLE_BUTTONS, OSD_BACK_BUTTONS, STATS_OPTIONS, ASPECT_RATIOS, PLAYBACK_SPEEDS,
+  THEME_MODES, ACCENT_COLORS, UI_FONTS, SUBTITLE_FONTS, LOADER_STYLES, SPINNER_STYLES, RAIL_STYLES, GLASS_SHEEN, GLASS_TRANSPARENCY, MENU_COLORS, NAV_INDICATORS, ICON_VARIANTS, MENU_LAYOUTS, LOGO_BUTTONS, MENU_POSITIONS, BUTTON_STYLES, CORNER_STYLES, BORDER_WIDTHS, SCROLLBAR_SIZES, SCANLINES, SCALE_OPTIONS, TEXT_SCALE_OPTIONS, OSD_SCALE_OPTIONS, OSD_OPACITY_OPTIONS, OSD_MENU_OPACITY_OPTIONS, OSD_HANDLES, OSD_BAR_COLORS, OSD_TIME_MODES, OSD_BUTTON_SHAPES, OSD_IDLE_BUTTONS, OSD_BACK_BUTTONS, STATS_OPTIONS, ASPECT_RATIOS, PLAYBACK_SPEEDS,
 } from '@/shared/config';
 import { revealInList, scrollIntoView, useMediaQuery } from '@/shared/lib';
 import { PLAYBACK_HISTORY_KEY } from '@/features/playback-history';
@@ -60,6 +60,7 @@ const TABS: Tab[] = [
         title: 'Side Menu',
         rows: [
           { key: 'railStyle', title: 'Style', description: 'Plain blends into the page (pure black in the Black theme), Panel gives the menu its own background and Glass is translucent. Glass shows one more option below.', options: RAIL_STYLES },
+          { key: 'menuLayout', title: 'Menu Layout', description: 'Classic is the side menu on the TV and a bar on phones and tablets. Dock is a rounded pill that floats on the left of the TV and at the top or bottom of a phone or tablet. It takes the look of Style above.', options: MENU_LAYOUTS },
           { key: 'glassSheen', title: 'Menu Shine', description: 'Shiny adds a soft glow behind the logo of the open menu and a light reflection on the Glass style. Flat keeps the menu plain.', options: GLASS_SHEEN },
           { key: 'glassTransparency', title: 'Glass Transparency', description: 'How much of the page shows through the open glass menu. On this TV the text behind it is not blurred, so Low stays the easiest to read.', options: GLASS_TRANSPARENCY, showWhen: { railStyle: 'glass' } },
           { key: 'menuPosition', title: 'Menu Position', description: 'Where the menu sits on phones and tablets. Bottom is easier to reach with a thumb and moves the Settings tabs to the bottom as well.', options: MENU_POSITIONS, compactOnly: true },
@@ -252,6 +253,8 @@ const SettingRow = React.memo(function SettingRow({ row, focused, optionIndex, r
   const [current] = useSetting(row.action ? 'uiLanguage' : row.key);
   const control = controlOf(row);
   const currentOption = row.options && row.options.find((option) => option.code === current);
+  // The move over an option is handled there, the row must not take it over, and it still goes on to the page so that the side menu lets go
+  const optionMove = useRef<Event | null>(null);
 
   let controls;
   if (control === 'select') {
@@ -277,7 +280,7 @@ const SettingRow = React.memo(function SettingRow({ row, focused, optionIndex, r
         key={String(option.code)}
         className={`settingsView__segment ${option.code === current ? 'settingsView__segment--current' : ''} ${focused && index === optionIndex ? 'settingsView__control--focused' : ''}`}
         onClick={() => onPick(row, index)}
-        onMouseMove={(e) => { if (pointerMoved(e)) { onHover(row, index); e.stopPropagation(); } }}
+        onMouseMove={(e) => { if (pointerMoved(e)) { optionMove.current = e.nativeEvent; onHover(row, index); } }}
       >
         <OptionContent row={row} option={option} />
       </div>
@@ -288,7 +291,7 @@ const SettingRow = React.memo(function SettingRow({ row, focused, optionIndex, r
     <div
       ref={focused ? rowRef : null}
       className={`settingsView__row ${focused ? 'settingsView__row--focused' : ''}`}
-      onMouseMove={(e) => { if (pointerMoved(e)) onHover(row, -1); }}
+      onMouseMove={(e) => { if (pointerMoved(e) && optionMove.current !== e.nativeEvent) onHover(row, -1); }}
     >
       <div className="settingsView__rowLabel">
         <span className="settingsView__rowName">{t(row.title)}</span>
@@ -534,6 +537,11 @@ const Settings = React.memo(function Settings({ onClose, onFocusSidebar, sidebar
     }
 
     const row = rows[rowIndex];
+    if (!row) {
+      e.preventDefault();
+      focusRow(Math.max(0, rows.length - 1));
+      return;
+    }
     const control = controlOf(row);
     const choices = control === 'inline';
     const count = row.options ? row.options.length : 1;
@@ -602,7 +610,7 @@ const Settings = React.memo(function Settings({ onClose, onFocusSidebar, sidebar
         {tab.about && (
           <div className="settingsView__group">
             <h3 className="settingsView__groupTitle">{t('About')}</h3>
-            <p className="settingsView__about">{t('CCCBib made with ♥.')} {APP_ID} {APP_VERSION}.<br />{t('Powered by media.ccc.de. Sponsor and help if you can!')}<br />Ewige Blumenkraft! ✿</p>
+            <p className="settingsView__about">{t('CCCBib made with ♥.')} {APP_ID} {APP_VERSION}.<br />{t('Powered by media.ccc.de. Sponsor and help if you can!')}<br />Ewige Blumenkraft! <AppleGlyph pixelated={iconVariant === 'pixelated'} /></p>
           </div>
         )}
       </div>

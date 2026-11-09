@@ -5,7 +5,7 @@ import { seedQuery } from '@/shared/api';
 import { loadHomeCache } from '@/entities/conference';
 import { refreshMirrors } from '@/entities/talk';
 import { initScrollbars, isWebOS } from '@/shared/lib';
-import { backfillTalkDetails, buildReport } from '@/app/model';
+import { backfillTalkDetails, buildReport, startMqtt } from '@/app/model';
 
 vi.mock('react-dom/client', () => ({ createRoot: vi.fn(() => ({ render: vi.fn() })) }));
 vi.mock('./App', () => ({ default: () => <div>App</div> }));
@@ -17,7 +17,7 @@ vi.mock('@/entities/talk', () => ({ refreshMirrors: vi.fn() }));
 vi.mock('@/shared/lib', () => ({ initScrollbars: vi.fn(), isWebOS: vi.fn(() => false) }));
 vi.mock('@/shared/api', () => ({ seedQuery: vi.fn() }));
 vi.mock('@/entities/conference', () => ({ RECENT_KEY: 'recent', loadHomeCache: vi.fn() }));
-vi.mock('@/app/model', () => ({ backfillTalkDetails: vi.fn(), buildReport: vi.fn() }));
+vi.mock('@/app/model', () => ({ backfillTalkDetails: vi.fn(), buildReport: vi.fn(), startMqtt: vi.fn() }));
 beforeEach(() => { vi.resetModules(); vi.clearAllMocks(); vi.useFakeTimers(); document.body.innerHTML = '<div id="app"></div>'; });
 
 test.each([false, true])('startup mounts React and seeds cached conferences when present: %s', async cached => {
@@ -31,6 +31,7 @@ test.each([false, true])('startup mounts React and seeds cached conferences when
   expect(createRoot).toHaveBeenCalledWith(document.getElementById('app'));
   expect(window.cccbib.report).toBe(buildReport);
   expect(refreshMirrors).toHaveBeenCalledTimes(1);
+  expect(startMqtt).toHaveBeenCalledTimes(1);
   expect(initScrollbars).toHaveBeenCalledTimes(1);
   if (cached) expect(seedQuery).toHaveBeenCalledWith('recent', { conferencesRecent: [] });
   else expect(seedQuery).not.toHaveBeenCalled();
