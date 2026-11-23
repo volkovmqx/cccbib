@@ -168,6 +168,7 @@ test('conference list loads a logo once its row is within reach of the list and 
   ] })));
   const view = render(<Conferences {...props()} onSelectEvent={vi.fn()} selectedIndex={0} setSelectedIndex={vi.fn()} />);
   await screen.findByText('First');
+  await waitFor(() => expect(observers).toHaveLength(1));
   const logos = () => [...view.container.querySelectorAll('.eventsListView__logo')].map((logo) => [logo.tagName, logo.getAttribute('src'), logo.getAttribute('alt')]);
   const reach = (row: number) => act(() => observers[0].callback([{ target: view.container.querySelectorAll('.listItem')[row], isIntersecting: true }] as unknown as IntersectionObserverEntry[], {} as IntersectionObserver));
   expect(probes).toHaveLength(0);
