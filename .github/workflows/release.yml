@@ -53,7 +53,7 @@ jobs:
         with:
           name: Release ${{ github.ref_name }}
           draft: false
-          prerelease: true
+          prerelease: false
           files: |
             ${{github.workspace}}/${{env.RELEASE_FILENAME_IPK}}
             ${{github.workspace}}/org.webosbrew.cccbib.manifest.json
