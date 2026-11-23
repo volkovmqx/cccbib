@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest';
-import { getVideo, getPreviewVideo, isOddAspect, releaseVideo, formatDuration, formatSeconds } from './media';
+import { getVideo, getPreviewVideo, isOddAspect, previewFit, releaseVideo, formatDuration, formatSeconds } from './media';
 import { talk } from '../../../../tests/fixtures';
 
 const recording = talk().videos[0];
@@ -28,13 +28,30 @@ test('video selection resolves ties and handles missing recordings', () => {
   expect(getVideo([{ ...recording, language: '' }], 'deu')[0]).toBeTruthy();
 });
 
-test('previews use the smallest matching recording and aspect checks require dimensions', () => {
+test('video selection and aspect checks tolerate recordings without widths and missing lists', () => {
+  const noWidth = { ...recording, width: undefined };
+  expect(getVideo([noWidth, { ...noWidth, language: 'eng' }], 'auto')[0]).toBe(noWidth);
+  expect(isOddAspect(undefined as never)).toBe(false);
+});
+
+test('previews use the smallest matching recording', () => {
   const small = { ...recording, width: 320 };
   expect(getPreviewVideo([recording, small], 'deu')).toBe(small);
   expect(getPreviewVideo([small, recording], 'deu')).toBe(small);
   expect(getPreviewVideo([], 'deu')).toBeNull();
   const noWidth = { ...recording, width: undefined };
   expect(getPreviewVideo([noWidth], 'deu')).toBe(noWidth);
+});
+
+test('the preview video box takes the shape of the video inside the widescreen preview', () => {
+  expect(previewFit(16 / 9)).toEqual({ width: '100%', height: '100%' });
+  expect(previewFit(4 / 3)).toEqual({ width: '75%', height: '100%' });
+  expect(previewFit(2)).toEqual({ width: '100%', height: '88.89%' });
+  expect(previewFit(1.25)).toEqual({ width: '70.31%', height: '100%' });
+  for (const ratio of [0, -1, NaN, Infinity]) expect(previewFit(ratio)).toEqual({ width: '100%', height: '100%' });
+});
+
+test('aspect checks require dimensions', () => {
   expect(isOddAspect([recording], 'deu')).toBe(true);
   expect(isOddAspect([{ ...recording, width: 1920, height: 1080 }], 'deu')).toBe(false);
   for (const sources of [[], [{ ...recording, width: 0 }], [{ ...recording, height: 0 }]]) expect(isOddAspect(sources)).toBe(false);

@@ -1,26 +1,55 @@
-import { useCallback } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { getSetting, subscribeSettings, useSetting } from '@/shared/config';
-import de from './locales/de';
-import fr from './locales/fr';
-import es from './locales/es';
-import it from './locales/it';
-import nl from './locales/nl';
-import pt from './locales/pt';
-import pl from './locales/pl';
-import cs from './locales/cs';
 
-const CATALOGS: Record<string, Record<string, string>> = { en: {}, de, fr, es, it, nl, pt, pl, cs };
+type Catalog = Record<string, string>;
+
+// English is the text in the code, every other language is loaded when it is used
+const LOADERS: Record<string, () => Promise<{ default: Catalog }>> = {
+  de: () => import('./locales/de'),
+  fr: () => import('./locales/fr'),
+  es: () => import('./locales/es'),
+  it: () => import('./locales/it'),
+  nl: () => import('./locales/nl'),
+  pt: () => import('./locales/pt'),
+  pl: () => import('./locales/pl'),
+  cs: () => import('./locales/cs'),
+};
+const SUPPORTED = ['en', ...Object.keys(LOADERS)];
+const CATALOGS: Record<string, Catalog> = { en: {} };
+const pending = new Map<string, Promise<void>>();
+const listeners = new Set<() => void>();
+
+export function loadLanguage(code: string): Promise<void> {
+  if (CATALOGS[code] || !LOADERS[code]) return Promise.resolve();
+  let request = pending.get(code);
+  if (!request) {
+    request = LOADERS[code]().then((module) => {
+      CATALOGS[code] = module.default;
+      listeners.forEach((notify) => notify());
+    }).catch(() => undefined).then(() => { pending.delete(code); });
+    pending.set(code, request);
+  }
+  return request;
+}
+
+const subscribeCatalogs = (notify: () => void) => {
+  listeners.add(notify);
+  return () => { listeners.delete(notify); };
+};
+const loadedCount = () => Object.keys(CATALOGS).length;
 
 export function detectLanguage() {
   const preferred = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
   for (let i = 0; i < preferred.length; i++) {
     const code = String(preferred[i] || '').toLowerCase().split('-')[0];
-    if (CATALOGS[code]) return code;
+    if (SUPPORTED.includes(code)) return code;
   }
   return 'en';
 }
 
-export const resolveLanguage = (setting: string) => (CATALOGS[setting] ? setting : detectLanguage());
+export const resolveLanguage = (setting: string) => (SUPPORTED.includes(setting) ? setting : detectLanguage());
+
+export const loadActiveLanguage = () => loadLanguage(resolveLanguage(getSetting('uiLanguage')));
 
 export function translate(language: string, text: string, params?: Record<string, unknown>): string {
   const catalog = CATALOGS[language];
@@ -38,13 +67,22 @@ export function useLanguage() {
 
 export function useTranslation() {
   const language = useLanguage();
-  return useCallback((text: string, params?: Record<string, unknown>) => translate(language, text, params), [language]);
+  const loaded = useSyncExternalStore(subscribeCatalogs, loadedCount);
+  return useCallback((text: string, params?: Record<string, unknown>) => translate(language, text, params), [language, loaded]);
 }
 
-export const formatNumber = (language: string, value: number) => value.toLocaleString(language);
+const numberFormats = new Map<string, Intl.NumberFormat>();
+export const formatNumber = (language: string, value: number) => {
+  let format = numberFormats.get(language);
+  if (!format) numberFormats.set(language, format = new Intl.NumberFormat(language));
+  return format.format(value);
+};
 
 export function initLanguage() {
-  const apply = () => { document.documentElement.lang = resolveLanguage(getSetting('uiLanguage')); };
+  const apply = () => {
+    document.documentElement.lang = resolveLanguage(getSetting('uiLanguage'));
+    loadActiveLanguage();
+  };
   apply();
   return subscribeSettings((key) => {
     if (key === 'uiLanguage') apply();

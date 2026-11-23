@@ -37,10 +37,13 @@ jobs:
   build:
     needs: quality
     runs-on: ubuntu-latest
+    # latest can point at an unfinished Node alpha, so that leg only reports and never fails the run
+    continue-on-error: ${{ matrix.node-version == 'latest' }}
 
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [24.x, latest]
+        node-version: [24.x, 26.x, latest]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:

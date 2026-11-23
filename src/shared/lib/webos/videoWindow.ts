@@ -1,5 +1,6 @@
+import { callLuna } from './luna';
+
 const SET_WINDOW = 'luna://com.webos.service.videooutput/display/setDisplayWindow';
-const LUNA_TIMEOUT_MS = 5000;
 const NOT_REGISTERED = 53;
 const FIRST_CHROME_WITH_OBJECT_FIT = 79;
 
@@ -7,28 +8,6 @@ const FIRST_CHROME_WITH_OBJECT_FIT = 79;
 export function usesOutputWindow() {
   const match = /Chrome\/(\d+)/.exec(navigator.userAgent);
   return typeof window.PalmServiceBridge !== 'undefined' && match !== null && Number(match[1]) < FIRST_CHROME_WITH_OBJECT_FIT;
-}
-
-function callLuna(uri: string, params: unknown): Promise<{ returnValue: boolean; errorCode?: number }> {
-  return new Promise((resolve) => {
-    let bridge: InstanceType<NonNullable<Window['PalmServiceBridge']>> | null = null;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const done = (reply: { returnValue: boolean; errorCode?: number }) => {
-      clearTimeout(timer);
-      try { if (bridge) bridge.cancel(); } catch (error) { }
-      resolve(reply);
-    };
-    try {
-      bridge = new window.PalmServiceBridge!();
-      bridge.onservicecallback = (message) => {
-        try { done(JSON.parse(message)); } catch (error) { done({ returnValue: false }); }
-      };
-      timer = setTimeout(() => done({ returnValue: false }), LUNA_TIMEOUT_MS);
-      bridge.call(uri, JSON.stringify(params));
-    } catch (error) {
-      done({ returnValue: false });
-    }
-  });
 }
 
 export function computeOutputWindow(mode: string, vw: number, vh: number, sw: number, sh: number) {

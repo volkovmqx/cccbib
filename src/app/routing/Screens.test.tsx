@@ -6,7 +6,7 @@ import { talk } from '../../../tests/fixtures';
 import type { Talk } from '@/entities/talk';
 import type { PageProps } from '@/shared/ui';
 
-vi.mock('@/pages/home', () => ({ Home: ({ active, onReady }: { active: boolean; onReady: () => void }) => <div>{active && <button onClick={onReady}>Preload screens</button>}</div> }));
+vi.mock('@/pages/home', () => ({ Home: ({ active, onReady, onOpenConference }: { active: boolean; onReady: () => void; onOpenConference?: (id: string) => void }) => <div>{active && <button onClick={onReady}>Preload screens</button>}{active && <button onClick={() => onOpenConference?.('home-conf')}>Open conference from home</button>}</div> }));
 vi.mock('@/pages/search', () => ({ default: ({ onClose, onSelectEvent }: PageProps & { onSelectEvent: (talk: Talk) => void }) => <div><button onClick={onClose}>Close search</button><button onClick={() => onSelectEvent(talk())}>Select talk</button></div> }));
 vi.mock('@/pages/conferences', () => ({ default: ({ onClose, onSelectEvent, selectedIndex, setSelectedIndex }: PageProps & { onSelectEvent: (id: string) => void; selectedIndex: number; setSelectedIndex: React.Dispatch<React.SetStateAction<number>> }) => <div>
   <button onClick={onClose}>Close events</button><button onClick={() => onSelectEvent('conf-id')}>Select conference</button><button onClick={() => setSelectedIndex(index => index + 1)}>Index {selectedIndex}</button>
@@ -68,4 +68,19 @@ test('screen preloading and all other screen close actions retain the app naviga
   expect(screen.getByText('Preload screens')).toBeInTheDocument();
   fireEvent.click(screen.getByText('Go empty'));
   expect(screen.getByRole('status')).toBeInTheDocument();
+});
+
+test('a conference opened from the home page returns to the home page, also after one was opened from the events', async () => {
+  render(<Harness initial="events" fullscreen={vi.fn()} />);
+  await settle();
+  fireEvent.click(screen.getByText('Select conference')); await settle();
+  expect(screen.getByText('Close conference conf-id')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Close conference conf-id'));
+  expect(screen.getByText('Close events')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Go recent'));
+  fireEvent.click(screen.getByText('Open conference from home')); await settle();
+  expect(screen.getByText('Close conference home-conf')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Close conference home-conf'));
+  expect(screen.getByText('Preload screens')).toBeInTheDocument();
+  expect(screen.queryByText('Close events')).not.toBeInTheDocument();
 });

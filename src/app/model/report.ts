@@ -1,4 +1,5 @@
 import type { Talk } from '@/entities/talk';
+import { readFocusedTalk } from '@/entities/talk';
 import { readWatchlist } from '@/features/watchlist';
 import { readPlaybackHistory } from '@/features/playback-history';
 import { readNowPlaying } from '@/widgets/player';
@@ -9,6 +10,8 @@ export function buildReport() {
   const history = readPlaybackHistory();
   const positions = new Map(history.map((item) => [item.event.guid, item.positionSeconds]));
   const now = readNowPlaying();
+  const focused = readFocusedTalk();
+  const focusedLink = talkLink(focused);
   return {
     v: 1,
     at: new Date().toISOString(),
@@ -19,6 +22,7 @@ export function buildReport() {
       position: Math.round(now.position || 0),
       duration: Math.round(now.duration || 0),
     } : null,
+    focused: focused && focusedLink ? { title: focused.title, link: focusedLink } : null,
     watchlist: readWatchlist().map((item) => ({
       title: item.title,
       link: talkLink(item),

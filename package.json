@@ -1,6 +1,6 @@
 {
   "name": "org.webosbrew.cccbib",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "media.ccc.de library application (EXPERIMENTAL)",
   "scripts": {
     "start": "webpack serve --config ./webpack.config.js --mode development",

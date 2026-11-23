@@ -11,6 +11,13 @@ test('saved talks accept complete records and missing optional metadata', () => 
     subtitles: [{ url: 'subtitles', mimeType: 'text/vtt', language: 'eng' }] }))).toBe(true);
 });
 
+test('recordings may list a file size in megabytes, also as null from GraphQL, but not as text', () => {
+  const video = talk().videos[0];
+  for (const size of [undefined, null, 37]) expect(isTalk(talk({ videos: [{ ...video, size }] }))).toBe(true);
+  expect(isTalk({ ...talk(), videos: [{ ...video, size: '37' }] })).toBe(false);
+  expect(isTalk({ ...talk(), videos: [{ ...video, size: Infinity }] })).toBe(false);
+});
+
 test.each([
   null, [], 'talk', {},
   ...[null, 1, ''].map(guid => ({ ...talk(), guid })),

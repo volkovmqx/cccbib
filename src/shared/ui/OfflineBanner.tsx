@@ -11,7 +11,7 @@ export const OfflineBanner = React.memo(function OfflineBanner() {
 
   return (
     <div className="offline-banner">
-      <IconWifiOff size={20} stroke={2} />
+      <IconWifiOff size={24} stroke={2} />
       <span>{t('No internet connection')}</span>
     </div>
   );

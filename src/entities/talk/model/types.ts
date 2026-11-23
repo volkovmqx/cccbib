@@ -4,6 +4,7 @@ export interface Recording {
   language: string;
   width?: number;
   height?: number;
+  size?: number | null;
 }
 
 export interface SubtitleSource {
@@ -33,6 +34,7 @@ export interface RestRecording {
   language?: string;
   width?: number;
   height?: number;
+  size?: number;
 }
 
 export interface RestTalk {

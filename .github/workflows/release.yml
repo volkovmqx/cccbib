@@ -29,7 +29,20 @@ jobs:
 
       - run: yarn install --frozen-lockfile
       - run: yarn run build
+
+      # On some Node versions (the one in .nvmrc too) ares-package writes every file date as 1970 and webOS refuses to install such an ipk
+      - name: Use Node.js 20 for packaging
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - run: yarn run package
+      - name: Check that the ipk keeps real file dates
+        run: |
+          if ar p org.webosbrew.cccbib_*_all.ipk data.tar.gz | tar tvz | grep -q ' 1970-01-01 '; then
+            echo 'The ipk has files dated 1970 and webOS refuses to install it'
+            exit 1
+          fi
       - run: echo RELEASE_FILENAME_IPK=`ls *.ipk` >> $GITHUB_ENV
       - run: yarn manifest
 

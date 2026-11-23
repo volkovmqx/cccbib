@@ -1,2 +1,2 @@
 export { Player } from './ui/Player';
-export { readNowPlaying } from './model/nowPlaying';
+export { readNowPlaying, subscribeNowPlaying } from './model/nowPlaying';

@@ -5,6 +5,21 @@ import { API_BASE } from '@/shared/api';
 import { ListView } from '@/shared/ui';
 import { useTranslation } from '@/shared/i18n';
 
+const MAX_LOGO_PIXELS = 1e6;
+
+// A few logos are far larger than their slot, the TV needs up to a second to decode one and the list stands still meanwhile
+const ConferenceLogo = React.memo(function ConferenceLogo({ url, title, near }: { url: string; title: string; near: boolean }) {
+  const [fits, setFits] = useState(false);
+  useEffect(() => {
+    if (!near) return undefined;
+    const probe = new Image();
+    probe.onload = () => setFits(probe.naturalWidth * probe.naturalHeight <= MAX_LOGO_PIXELS);
+    probe.src = url;
+    return () => { probe.onload = null; };
+  }, [near, url]);
+  return fits ? <img src={url} alt={title} className="eventsListView__logo" /> : <div className="eventsListView__logo" aria-hidden="true" />;
+});
+
 const EventsListView = React.memo(function EventsListView({ onClose, onSelectEvent, onFocusSidebar, sidebarFocused, selectedIndex, setSelectedIndex }: PageProps & { onSelectEvent: (id: string) => void; selectedIndex: number; setSelectedIndex: React.Dispatch<React.SetStateAction<number>> }) {
   const t = useTranslation();
   const [conferences, setConferences] = useState<ConferenceSummary[]>([]);
@@ -44,16 +59,9 @@ const EventsListView = React.memo(function EventsListView({ onClose, onSelectEve
     onSelectEvent(item.acronym);
   }, [onSelectEvent]);
 
-  const renderItem = useCallback((conference: ConferenceSummary) => (
+  const renderItem = useCallback((conference: ConferenceSummary, _index: number, near: boolean) => (
     <>
-      {conference.logo_url && (
-        <img
-          src={conference.logo_url}
-          alt={conference.title}
-          className="eventsListView__logo"
-          loading="lazy"
-        />
-      )}
+      {conference.logo_url && <ConferenceLogo url={conference.logo_url} title={conference.title} near={near} />}
       <div className="eventsListView__info">
         <div className="eventsListView__title">{conference.title}</div>
         {conference.acronym && (

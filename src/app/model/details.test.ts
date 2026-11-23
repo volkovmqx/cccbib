@@ -1,7 +1,9 @@
+import { renderHook } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { json, talk } from '../../../tests/fixtures';
 import { backfillTalkDetails } from './talkDetails';
 import { buildReport, talkLink } from './report';
+import { useFocusedTalk } from '@/entities/talk';
 import { readWatchlist, writeWatchlist } from '@/features/watchlist';
 import { readPlaybackHistory, replacePlaybackHistory } from '@/features/playback-history';
 import { setNowPlayingReader } from '@/widgets/player/model/nowPlaying';
@@ -61,6 +63,16 @@ test('details backfill skips malformed saved entries and preserves valid progres
   expect(readPlaybackHistory()).toMatchObject([{ event: { guid: 'talk', slug: 'found' }, positionSeconds: 100 }]);
 });
 
+test('the report names the talk under the remote with its link, and nothing for a talk without a link', () => {
+  expect(buildReport().focused).toBeNull();
+  const first = renderHook(() => useFocusedTalk(talk(), true));
+  expect(buildReport().focused).toEqual({ title: 'Test talk', link: 'https://media.ccc.de/v/talk' });
+  first.unmount();
+  const without = renderHook(() => useFocusedTalk(talk({ slug: undefined }), true));
+  expect(buildReport().focused).toBeNull();
+  without.unmount();
+});
+
 test('report combines playback, watchlist, and progress using stable links and rounded numbers', () => {
   setNowPlayingReader(null);
   expect(buildReport()).toMatchObject({ v: 1, state: 'idle', now: null, watchlist: [], progress: [] });
@@ -68,10 +80,10 @@ test('report combines playback, watchlist, and progress using stable links and r
   writeWatchlist([talk(), talk({ guid: 'other', slug: undefined })]);
   replacePlaybackHistory([{ event: talk(), positionSeconds: 100.2, durationSeconds: 600 }]);
   for (const playing of [true, false]) {
-    setNowPlayingReader(() => ({ event: talk(), playing, position: 50.6, duration: 600 }));
+    setNowPlayingReader(() => ({ event: talk(), playing, running: playing, position: 50.6, duration: 600, rate: 1 }));
     expect(buildReport()).toMatchObject({ state: playing ? 'playing' : 'paused', now: { position: 51, duration: 600 }, watchlist: [{ position: 100 }, { position: 0, link: null }], progress: [{ percent: 17, position: 100 }] });
   }
-  setNowPlayingReader(() => ({ event: talk(), playing: true, position: 0, duration: 0 }));
+  setNowPlayingReader(() => ({ event: talk(), playing: true, running: true, position: 0, duration: 0, rate: 1 }));
   expect(buildReport().now).toMatchObject({ position: 0, duration: 0 });
   setNowPlayingReader(null);
 });

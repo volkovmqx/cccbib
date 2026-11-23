@@ -1,6 +1,6 @@
 {
   "id": "org.webosbrew.cccbib",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "vendor": "volkovmqx",
   "type": "web",
   "main": "index.html",

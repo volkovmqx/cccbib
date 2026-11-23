@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
+import { readFocusedTalk } from '@/entities/talk';
 import { talk } from '../../../../tests/fixtures';
 import Search from './Search';
 import { searchLectures, getCachedSearch } from '../api/search';
@@ -33,6 +34,21 @@ test('search debounces input, selects results, and moves focus with remote keys'
   expect(props.onClose).toHaveBeenCalledTimes(2);
   view.rerender(<Search {...props} sidebarFocused />);
   fireEvent.keyDown(window, { key: 'Escape' }); expect(props.onClose).toHaveBeenCalledTimes(2);
+});
+
+test('search results follow a moving pointer and open on click', async () => {
+  const props = callbacks();
+  const results = [talk(), talk({ guid: 'second', title: 'Second', images: {} })];
+  vi.mocked(searchLectures).mockResolvedValue(results);
+  const view = render(<Search {...props} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  const second = screen.getByText('Second').closest('.listItem')!;
+  fireEvent.mouseMove(second, { clientX: 41, clientY: 61 });
+  expect(second).toHaveClass('listItem--selected');
+  fireEvent.mouseMove(view.container.querySelector('.listItem')!, { clientX: 41, clientY: 61 });
+  expect(second).toHaveClass('listItem--selected');
+  fireEvent.click(second); expect(props.onSelectEvent).toHaveBeenCalledWith(results[1]);
 });
 
 test('search uses cached results and Enter submits without the debounce delay', async () => {
@@ -71,4 +87,88 @@ test('search ignores aborted and obsolete requests', async () => {
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'aborted' } });
   await act(async () => { await vi.advanceTimersByTimeAsync(200); });
   expect(view.container.querySelector('.errorText')).not.toBeInTheDocument();
+});
+
+test('the left key leaves the results for the side menu even when the field is not focused', async () => {
+  const props = callbacks();
+  vi.mocked(searchLectures).mockResolvedValue([talk()]);
+  render(<Search {...props} />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  fireEvent.change(input, { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  input.blur();
+  input.setSelectionRange(3, 3);
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  expect(props.onFocusSidebar).toHaveBeenCalledTimes(1);
+});
+
+test('the results follow the selection at once, also when it wraps around, instead of scrolling smoothly', async () => {
+  const props = callbacks();
+  const results = Array.from({ length: 12 }, (_, index) => talk({ guid: `r${index}`, title: `Result ${index}` }));
+  vi.mocked(searchLectures).mockResolvedValue(results);
+  const view = render(<Search {...props} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  const container = view.container.querySelector('.searchResults') as HTMLElement;
+  Object.defineProperty(container, 'clientHeight', { configurable: true, value: 400 });
+  container.getBoundingClientRect = () => ({ top: 100 } as DOMRect);
+  const rows = [...view.container.querySelectorAll('.listItem')] as HTMLElement[];
+  rows.forEach((row, index) => { row.getBoundingClientRect = () => ({ top: 100 + index * 100 - container.scrollTop, height: 100 } as DOMRect); });
+  const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+  for (let step = 0; step < 6; step += 1) fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(container.scrollTop).toBeGreaterThan(0);
+  const before = container.scrollTop;
+  fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(container.scrollTop).toBeGreaterThan(before);
+  for (let step = 0; step < 5; step += 1) fireEvent.keyDown(window, { key: 'ArrowDown' });
+  expect(rows[0]).toHaveClass('listItem--selected');
+  expect(container.scrollTop).toBe(0);
+  expect(scrollIntoView).not.toHaveBeenCalled();
+});
+
+test('with rows of different heights a key never moves the highlighted row against its direction on the screen', async () => {
+  const props = callbacks();
+  const results = Array.from({ length: 24 }, (_, index) => talk({ guid: `h${index}`, title: `Result ${index}` }));
+  vi.mocked(searchLectures).mockResolvedValue(results);
+  const view = render(<Search {...props} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  const container = view.container.querySelector('.searchResults') as HTMLElement;
+  Object.defineProperty(container, 'clientHeight', { configurable: true, value: 960 });
+  container.getBoundingClientRect = () => ({ top: 0 } as DOMRect);
+  const heights = results.map((_, index) => (index % 5 === 3 || index % 7 === 4 ? 225 : 154));
+  const tops = heights.map((_, index) => heights.slice(0, index).reduce((sum, height) => sum + height + 10, 0));
+  const rows = [...view.container.querySelectorAll('.listItem')] as HTMLElement[];
+  rows.forEach((row, index) => { row.getBoundingClientRect = () => ({ top: tops[index] - container.scrollTop, height: heights[index] } as DOMRect); });
+  const onScreen = (index: number) => tops[index] - container.scrollTop;
+  const moved: number[] = [];
+  for (let step = 1; step < 20; step += 1) {
+    const before = onScreen(step - 1);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    moved.push(onScreen(step) - before);
+  }
+  expect(moved.every((delta) => delta >= 0)).toBe(true);
+  moved.length = 0;
+  for (let step = 19; step > 0; step -= 1) {
+    const before = onScreen(step);
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    moved.push(onScreen(step - 1) - before);
+  }
+  expect(moved.every((delta) => delta <= 0)).toBe(true);
+});
+
+
+test('a result is only the focused talk while the search is in front', async () => {
+  const props = callbacks();
+  vi.mocked(searchLectures).mockResolvedValue([talk()]);
+  const view = render(<Search {...props} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  expect(readFocusedTalk()?.title).toBe('Test talk');
+  view.rerender(<Search {...props} playerIsOpen />);
+  expect(readFocusedTalk()).toBeNull();
+  view.rerender(<Search {...props} />);
+  expect(readFocusedTalk()?.title).toBe('Test talk');
+  view.rerender(<Search {...props} sidebarFocused />);
+  expect(readFocusedTalk()).toBeNull();
 });

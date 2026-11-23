@@ -83,3 +83,10 @@ test('history hook responds to local updates and matching storage events', () =>
   unmount();
   expect(remove).toHaveBeenCalledWith('storage', expect.any(Function));
 });
+
+test('a history item without any conference title is stored with an empty one', () => {
+  expect(savePlaybackHistoryItem({ event: talk({ guid: 'untitled', conference_title: undefined }), positionSeconds: 120, durationSeconds: 600 })).toBe(true);
+  expect(readPlaybackHistory().find((item) => item.event.guid === 'untitled')?.conferenceTitle).toBe('');
+  expect(savePlaybackHistoryItem({ event: talk({ guid: 'titled', conference_title: 'From the event' }), positionSeconds: 120, durationSeconds: 600 })).toBe(true);
+  expect(readPlaybackHistory().find((item) => item.event.guid === 'titled')?.conferenceTitle).toBe('From the event');
+});

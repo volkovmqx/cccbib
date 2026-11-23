@@ -6,7 +6,7 @@ const optionalString = (value: unknown) => value === undefined || typeof value =
 const optionalNumber = (value: unknown) => value === undefined || (typeof value === 'number' && Number.isFinite(value));
 const isSource = (value: unknown) => isObject(value)
   && ['url', 'mimeType', 'language'].every(key => typeof value[key] === 'string')
-  && optionalNumber(value.width) && optionalNumber(value.height);
+  && optionalNumber(value.width) && optionalNumber(value.height) && optionalNumber(value.size ?? undefined);
 
 export function isTalk(value: unknown): value is Talk {
   return isObject(value)

@@ -1,1 +1,1 @@
-export { formatNumber, initLanguage, t, useLanguage, useTranslation } from './translation';
+export { formatNumber, initLanguage, loadActiveLanguage, t, useLanguage, useTranslation } from './translation';

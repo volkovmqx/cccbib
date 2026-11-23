@@ -154,8 +154,10 @@ test('settings: the selected theme remains after a Simulator restart', async ({ 
   await simulator.key('ArrowRight');
   await simulator.key('ArrowDown');
   await expect(simulator.page.locator('.settingsView__row--focused .settingsView__rowName')).toHaveText('Theme');
-  await simulator.key('ArrowRight');
-  await simulator.key('ArrowRight');
+  await simulator.key('Enter');
+  await expect(simulator.page.locator('.picker')).toBeVisible();
+  await simulator.key('ArrowDown');
+  await simulator.key('ArrowDown');
   await simulator.key('Enter');
   await expect(simulator.page.locator('html')).toHaveAttribute('data-theme', 'light');
   await simulator.restart();

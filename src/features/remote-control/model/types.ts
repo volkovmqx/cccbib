@@ -1,5 +1,5 @@
-export type CommandName = 'play' | 'add' | 'remove' | 'progress' | 'progress-set' | 'progress-clear'
-  | 'pause' | 'resume' | 'toggle' | 'seek' | 'mute' | 'aspect' | 'subtitle' | 'language' | 'stop';
+export type CommandName = 'play' | 'add' | 'remove' | 'progress' | 'progress-set' | 'progress-clear' | 'mqtt'
+  | 'pause' | 'resume' | 'toggle' | 'seek' | 'mute' | 'aspect' | 'speed' | 'subtitle' | 'language' | 'stop';
 
 export interface RemoteCommand {
   cmd: CommandName;
@@ -15,6 +15,9 @@ export interface RemoteCommand {
   aspect?: string;
   subtitle?: string;
   language?: string;
+  url?: string;
+  username?: string;
+  password?: string;
 }
 
 export interface CommandItem {

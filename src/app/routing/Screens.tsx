@@ -1,11 +1,12 @@
 import type { Talk } from '@/entities/talk';
 import type { PlaybackPageProps } from '@/shared/ui';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Home } from '@/pages/home';
 import { Player } from '@/widgets/player';
 import { ErrorBoundary, LoadingScreen } from '@/shared/ui';
 
 interface ScreenProps extends Omit<PlaybackPageProps, 'onClose'> { selectedItem: string; onSelectItem: (item: string) => void }
+interface SelectedScreenProps extends ScreenProps { previousView: string; setPreviousView: (view: string) => void }
 
 
 
@@ -60,14 +61,15 @@ const LazyView = ({ children }: React.PropsWithChildren) => (
   </ErrorBoundary>
 );
 
-function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen }: ScreenProps) {
+function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFocused, setIsPlayerFullscreen, previousView, setPreviousView }: SelectedScreenProps) {
   const [selectedSearchEvent, setSelectedSearchEvent] = useState<Talk | null>(null);
-  const [previousView, setPreviousView] = useState('recent');
   const [eventsSelectedIndex, setEventsSelectedIndex] = useState(0);
   useEffect(() => {
     if (selectedSearchEvent) setIsPlayerFullscreen(true);
     else if (selectedItem !== 'search') setIsPlayerFullscreen(false);
   }, [selectedSearchEvent, selectedItem, setIsPlayerFullscreen]);
+  const goHome = useCallback(() => onSelectItem('recent'), [onSelectItem]);
+  const goBack = useCallback(() => onSelectItem(previousView), [onSelectItem, previousView]);
   if (selectedItem === 'recent') return null;
   if (selectedItem === 'search') {
     return (
@@ -84,7 +86,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
             />
           </div>
         )}
-        <div style={{ display: selectedSearchEvent ? 'none' : 'block' }}>
+        <div className={selectedSearchEvent ? 'pageUnderPlayer' : undefined}>
           <LazyView>
             <Search
               onClose={() => {
@@ -95,6 +97,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
               onSelectEvent={setSelectedSearchEvent}
               onFocusSidebar={onFocusSidebar}
               sidebarFocused={sidebarFocused}
+              playerIsOpen={Boolean(selectedSearchEvent)}
             />
           </LazyView>
         </div>
@@ -106,7 +109,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
     return (
       <LazyView>
         <PopularView
-          onClose={() => onSelectItem('recent')}
+          onClose={goHome}
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
           setIsPlayerFullscreen={setIsPlayerFullscreen}
@@ -119,7 +122,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
     return (
       <LazyView>
         <EventsListView
-          onClose={() => onSelectItem('recent')}
+          onClose={goHome}
           onSelectEvent={(conferenceId) => {
             setPreviousView('events');
             onSelectItem(conferenceId);
@@ -137,7 +140,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
     return (
       <LazyView>
         <WatchlistView
-          onClose={() => onSelectItem('recent')}
+          onClose={goHome}
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
           setIsPlayerFullscreen={setIsPlayerFullscreen}
@@ -150,7 +153,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
     return (
       <LazyView>
         <Settings
-          onClose={() => onSelectItem('recent')}
+          onClose={goHome}
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
         />
@@ -166,7 +169,7 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
           onFocusSidebar={onFocusSidebar}
           sidebarFocused={sidebarFocused}
           setIsPlayerFullscreen={setIsPlayerFullscreen}
-          onClose={() => onSelectItem(previousView)}
+          onClose={goBack}
         />
       </LazyView>
     );
@@ -176,9 +179,15 @@ function SelectedScreen({ selectedItem, onSelectItem, onFocusSidebar, sidebarFoc
 }
 
 export function Screens(props: ScreenProps) {
+  const { onSelectItem } = props;
+  const [previousView, setPreviousView] = useState('recent');
+  const openConference = useCallback((conferenceId: string) => {
+    setPreviousView('recent');
+    onSelectItem(conferenceId);
+  }, [onSelectItem]);
   return <>
     <Home active={props.selectedItem === 'recent'} onReady={preloadViews} onFocusSidebar={props.onFocusSidebar}
-      sidebarFocused={props.sidebarFocused} setIsPlayerFullscreen={props.setIsPlayerFullscreen} />
-    <SelectedScreen {...props} />
+      sidebarFocused={props.sidebarFocused} setIsPlayerFullscreen={props.setIsPlayerFullscreen} onOpenConference={openConference} />
+    <SelectedScreen {...props} previousView={previousView} setPreviousView={setPreviousView} />
   </>;
 }
